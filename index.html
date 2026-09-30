@@ -434,7 +434,7 @@
       position: fixed;
       inset: 0;
       pointer-events: none;
-      z-index: 700;
+      z-index: 0;
       background:
         radial-gradient(ellipse at center, transparent 48%, rgba(0,0,0,.28) 100%),
         linear-gradient(rgba(255,255,255,.012), rgba(255,255,255,0));
@@ -686,6 +686,196 @@
       .field-control-grid { grid-template-columns:repeat(4,1fr); }
       .bracket.bl,.bracket.br { bottom:64px; }
     }
+
+    .point-readout {
+      display:flex; flex-direction:column; gap:6px; padding:9px 10px;
+      border:1px solid var(--border); background:rgba(0,0,0,.22);
+      font-size:10px; color:var(--text-dim);
+    }
+    .point-readout div { display:flex; justify-content:space-between; gap:10px; }
+    .point-readout span { color:var(--field-dim); letter-spacing:.08em; }
+    .point-readout strong { color:var(--text-main); font-weight:800; text-align:right; max-width:70%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* ============================================================
+       95. MOBILE FIELD TERMINAL V5
+       iPhone Safe Area / bottom controls / drawer touch target
+       ============================================================ */
+    :root { --mobile-bottom-ui: calc(52px + env(safe-area-inset-bottom)); }
+
+    .btn-close-osd {
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 44px;
+      padding: 0;
+      position: relative;
+      z-index: 10;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .wp-drawer {
+      z-index: 3000;
+      height: 100dvh;
+      max-height: 100dvh;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      box-sizing: border-box;
+      background: var(--field-panel-solid, var(--bg-panel));
+    }
+    .wp-drawer .drawer-head {
+      min-height: 58px;
+      box-sizing: border-box;
+      padding: 7px 10px 7px 14px;
+      flex: 0 0 auto;
+    }
+    .wp-drawer .drawer-head > div {
+      padding-right: 8px;
+    }
+    .wp-drawer .btn-close-osd {
+      color: var(--field-active, var(--accent));
+      border: 1px solid var(--field-line, var(--border));
+      background: rgba(255,255,255,.025);
+    }
+
+    @media (max-width:768px) {
+      /* 하단 메뉴가 실제 차지하는 영역만큼 지도 UI를 위로 띄운다. */
+      .mfd-bottom-bar {
+        bottom: 0;
+        min-height: var(--mobile-bottom-ui);
+        height: auto;
+        box-sizing: border-box;
+        padding: 5px 8px env(safe-area-inset-bottom);
+        padding-bottom: max(5px, env(safe-area-inset-bottom));
+        z-index: 2200;
+        isolation: isolate;
+      }
+      .mfd-bottom-bar > .osb-cluster:last-child {
+        min-width: 0;
+      }
+      .mfd-bottom-bar .osb-btn {
+        min-height: 42px;
+        min-width: 0;
+        flex: 1 1 0;
+        padding: 0 5px;
+        font-size: 10px;
+        touch-action: manipulation;
+      }
+      .mfd-bottom-bar .btn-gps-sync {
+        width: 50px;
+        min-width: 50px;
+        flex: 0 0 50px;
+        margin-right: 4px;
+      }
+      .mfd-bottom-bar > .osb-cluster:last-child {
+        display: flex;
+        flex: 1 1 auto;
+        justify-content: stretch;
+      }
+
+      /* 모서리 프레임은 하단 메뉴 위에서 끝나도록 분리 */
+      .bracket.bl,
+      .bracket.br {
+        bottom: calc(var(--mobile-bottom-ui) + 8px);
+      }
+
+      /* 펼침 메뉴도 하단 메뉴와 안전영역을 정확히 피한다. */
+      .field-control-tray {
+        left: 8px;
+        right: 8px;
+        bottom: calc(var(--mobile-bottom-ui) + 2px);
+        z-index: 2250;
+        max-height: min(34vh, 270px);
+        overflow-y: auto;
+        padding: 10px;
+      }
+      .field-control-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .field-control-grid .osb-btn {
+        min-height: 44px;
+        touch-action: manipulation;
+      }
+
+      /* SITREP은 하단 메뉴 위에서 독립적으로 닫을 수 있게 한다. */
+      .sitrep-panel {
+        left: 8px;
+        right: 8px;
+        bottom: calc(var(--mobile-bottom-ui) + 8px);
+        top: auto;
+        width: auto;
+        max-height: min(42vh, 390px);
+        overflow-y: auto;
+        z-index: 2400;
+        padding: 10px;
+        padding-bottom: 12px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .sitrep-head {
+        min-height: 52px;
+        align-items: center;
+      }
+      .sitrep-head > div:last-child {
+        flex: 0 0 auto;
+      }
+      .sitrep-head .btn-close-osd {
+        color: var(--field-active);
+        border: 1px solid var(--field-line);
+        background: rgba(255,255,255,.025);
+      }
+
+      /* Telemetry는 아이폰 14 폭에서 지도 시야를 덜 가리도록 축소 */
+      .telemetry-osd {
+        top: 50px;
+        left: 10px;
+        width: 164px;
+        padding: 6px 8px;
+      }
+      .osd-subgrid { gap: 2px 5px; }
+
+      /* 기록부는 모바일에서 우측 슬라이드 패널이 아니라 전체 화면 패널 */
+      .wp-drawer {
+        top: 0;
+        right: -100%;
+        width: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
+        border-left: 0;
+        box-shadow: none;
+        transition: right .22s ease;
+      }
+      .wp-drawer.open { right: 0; }
+      .wp-drawer .drawer-head {
+        min-height: 60px;
+        padding-left: 14px;
+        padding-right: 8px;
+      }
+      .wp-drawer .drawer-head .btn-close-osd {
+        width: 44px;
+        height: 44px;
+      }
+      .wp-drawer #wpListContainer {
+        min-height: 0;
+      }
+      .wp-drawer > div:last-child {
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+      }
+
+      /* 포인트/개척 모달도 홈 인디케이터와 겹치지 않게 */
+      .promo-modal-backdrop {
+        z-index: 2900;
+        padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
+        box-sizing: border-box;
+      }
+      .promo-modal {
+        max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
   </style>
 </head>
 <body class="theme-nvg-green">
@@ -723,8 +913,8 @@
     <div class="osd-subgrid">
       <div>LAT: <b id="reticleLat">00.00000</b></div>
       <div>LON: <b id="reticleLon">000.00000</b></div>
-      <div>ZOOM: <b id="reticleZoom">LVL 12</b></div>
-      <div>ELEV: <b>MSL REL</b></div>
+      <div>ZOOM: <b id="reticleZoom">LVL --</b></div>
+      <div>ELEV: <b id="reticleElev">--- MSL</b></div>
     </div>
   </div>
 
@@ -762,7 +952,7 @@
       </div>
     </div>
 
-    <div class="sitrep-intel" id="sitrepDesc">정찰 인텔 브리핑</div>
+    <div class="sitrep-intel" id="sitrepDesc">현장 정보</div>
 
     <div class="sitrep-meta">
       <span id="sitrepDist">DIST: -- KM</span>
@@ -771,7 +961,7 @@
 
     <div class="sitrep-actions">
       <button class="btn-promote" id="btnPromote" onclick="openPromotionModal()">
-        [ RECON COMPLETED // 개척지 승격 ]
+        [ RECON COMPLETED // 개척 완료 ]
       </button>
 
       <button class="sitrep-address" id="sitrepAddress" type="button" onclick="copySitrepAddress(this)" title="탭하여 주소 복사">
@@ -802,13 +992,14 @@
     <div class="field-control-section" id="control-target">
       <div style="font-size:9px;color:var(--field-dim);margin-bottom:6px;">RECON TASK</div>
       <div class="field-control-grid" style="grid-template-columns:1fr 1fr;">
-        <button class="osb-btn" onclick="deployCuratedRecon();closeFieldControls();">등록 거점</button>
+        <button class="osb-btn" onclick="deployCuratedRecon();closeFieldControls();">거점 탐색</button>
         <button class="osb-btn" onclick="deployWildRecon();">미개척 정찰</button>
+        <button class="osb-btn" style="grid-column:1 / -1;" onclick="openPointPlacement();">거점 지정</button>
       </div>
     </div>
 
     <div class="field-control-section" id="control-optic">
-      <div style="font-size:9px;color:var(--field-dim);margin-bottom:6px;">DISPLAY MODE</div>
+      <div style="font-size:9px;color:var(--field-dim);margin-bottom:6px;">OPTIC MODE</div>
       <div class="field-control-grid">
         <button class="osb-btn" onclick="setOpticTheme('stealth',this)">STH</button>
         <button class="osb-btn active" onclick="setOpticTheme('nvg-green',this)">NVG-G</button>
@@ -827,33 +1018,52 @@
       <button class="osb-btn" onclick="openFieldControls('radar')">RADAR</button>
       <button class="osb-btn" onclick="openFieldControls('target')">TARGET</button>
       <button class="osb-btn" onclick="openFieldControls('optic')">OPTIC</button>
-      <button class="osb-btn" onclick="toggleWpDrawer()">기록</button>
+      <button class="osb-btn" onclick="toggleWpDrawer()">WAYPOINTS</button>
     </div>
   </div>
 
-  <!-- 현장 승격 모달 -->
-  <div class="promo-modal-backdrop" id="promoModalBackdrop">
+  <!-- 거점 지정 모달 -->
+  <div class="promo-modal-backdrop" id="pointPlacementBackdrop">
     <div class="promo-modal">
-      <div class="promo-title">현장 정찰 완료 및 개척지 승격</div>
-      <div style="font-size:11px;color:var(--text-dim);">확인된 지형 정보를 입력하여 정식 개척 거점으로 영구 등록하십시오.</div>
-      <input type="text" class="promo-input" id="promoNameInput" placeholder="거점 명칭 (예: 양평 구둔고개 임도 정상)" />
-      <textarea class="promo-input" id="promoMemoInput" rows="3" placeholder="현장 인텔 (예: 차단기 없음, 바이크 진입 용이, 탁 트인 능선 전망)"></textarea>
+      <div class="promo-title">이 위치에 거점 지정</div>
+      <div style="font-size:11px;color:var(--text-dim);line-height:1.5;">지도 중앙 조준점의 위치를 신규 정찰 거점으로 저장합니다.</div>
+      <div class="point-readout">
+        <div><span>MGRS</span><strong id="pointMgrsReadout">CALCULATING...</strong></div>
+        <div><span>WGS84</span><strong id="pointLatLonReadout">--</strong></div>
+        <div><span>ADDRESS</span><strong id="pointAddressReadout">조회 중...</strong></div>
+      </div>
+      <input type="text" class="promo-input" id="pointNameInput" placeholder="거점 명칭 (예: 능선 전망지점)" maxlength="60" />
+      <textarea class="promo-input" id="pointMemoInput" rows="3" placeholder="메모 (선택사항)"></textarea>
       <div class="promo-actions">
-        <button class="osb-btn" onclick="closePromotionModal()">취소</button>
-        <button class="osb-btn active" onclick="confirmPromotion()">승격 등록</button>
+        <button class="osb-btn" onclick="closePointPlacement()">취소</button>
+        <button class="osb-btn active" onclick="savePointPlacement()">거점 저장</button>
       </div>
     </div>
   </div>
 
-  <!-- 웨이포인트 수첩 서랍 -->
+  <!-- 개척 완료 모달 -->
+  <div class="promo-modal-backdrop" id="promoModalBackdrop">
+    <div class="promo-modal">
+      <div class="promo-title">현장 확인 및 개척 등록</div>
+      <div style="font-size:11px;color:var(--text-dim);">확인된 지형 정보를 입력하여 개척 거점으로 영구 등록하십시오.</div>
+      <input type="text" class="promo-input" id="promoNameInput" placeholder="거점 명칭 (예: 양평 구둔고개 임도 정상)" />
+      <textarea class="promo-input" id="promoMemoInput" rows="3" placeholder="현장 메모 (예: 차단기 없음, 바이크 진입 용이, 탁 트인 능선 전망)"></textarea>
+      <div class="promo-actions">
+        <button class="osb-btn" onclick="closePromotionModal()">취소</button>
+        <button class="osb-btn active" onclick="confirmPromotion()">개척 완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 기록부 서랍 -->
   <div class="wp-drawer" id="wpDrawer">
     <div class="drawer-head">
-      <div style="font-size:12px;font-weight:900;color:var(--accent);">전술 기록부 (WAYPOINTS)</div>
+      <div style="font-size:12px;font-weight:900;color:var(--accent);">WAYPOINTS</div>
       <button class="btn-close-osd" onclick="toggleWpDrawer()">✕</button>
     </div>
     <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px;" id="wpListContainer"></div>
     <div style="padding:10px; border-top:1px solid var(--border); display:flex; gap:6px;">
-      <button class="osb-btn" style="flex:1;" onclick="exportToGPX()">GPX 반출</button>
+      <button class="osb-btn" style="flex:1;" onclick="exportToGPX()">GPX 내보내기</button>
       <button class="osb-btn" style="color:#ef4444;" onclick="clearAllWP()">전체 삭제</button>
     </div>
   </div>
@@ -944,7 +1154,12 @@
       document.getElementById('reticleMgrs').innerText = mgrsStr;
       document.getElementById('reticleLat').innerText = center.lat.toFixed(5);
       document.getElementById('reticleLon').innerText = center.lng.toFixed(5);
-      document.getElementById('reticleZoom').innerText = `LVL ${map.getZoom().toFixed(2)}`;
+      document.getElementById('reticleZoom').innerText = `LVL ${map.getZoom().toFixed(0)}`;
+      const elevEl = document.getElementById('reticleElev');
+      if (elevEl) {
+        const alt = (typeof currentGpsAltitude === 'number' && Number.isFinite(currentGpsAltitude)) ? currentGpsAltitude : null;
+        elevEl.innerText = alt === null ? '--- MSL' : `${Math.round(alt)} M MSL`;
+      }
     }
 
     map.on('move', updateReticleTelemetry);
@@ -983,9 +1198,14 @@
       renderAllMarkers();
     }
 
+    function getWaypoints() {
+      return getLocalIntel().filter(item => item.source === 'USER_PLACED' || item.status === 'SECURED');
+    }
+
     function updateWpCounter() {
-      const count = getLocalIntel().length;
-      document.getElementById('btnWpCount').innerText = `수첩 (${count})`;
+      const count = getWaypoints().length;
+      const counter = document.getElementById('btnWpCount');
+      if (counter) counter.innerText = `WAYPOINTS (${count})`;
     }
 
     /* 마커 렌더링 */
@@ -1138,6 +1358,71 @@
       currentActiveTarget = null;
     }
 
+    let pointPlacementAddressToken = 0;
+
+    function openPointPlacement() {
+      closeFieldControls();
+      const center = map.getCenter();
+      document.getElementById('pointMgrsReadout').innerText = calcMGRS(center.lat, center.lng);
+      document.getElementById('pointLatLonReadout').innerText = `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`;
+      document.getElementById('pointAddressReadout').innerText = '조회 중...';
+      document.getElementById('pointNameInput').value = '';
+      document.getElementById('pointMemoInput').value = '';
+      document.getElementById('pointPlacementBackdrop').style.display = 'flex';
+      resolvePointPlacementAddress(center.lat, center.lng);
+      setTimeout(() => document.getElementById('pointNameInput').focus(), 80);
+    }
+
+    function closePointPlacement() {
+      document.getElementById('pointPlacementBackdrop').style.display = 'none';
+    }
+
+    async function resolvePointPlacementAddress(lat, lon) {
+      const token = ++pointPlacementAddressToken;
+      const el = document.getElementById('pointAddressReadout');
+      const fallback = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=18&addressdetails=1&accept-language=ko`, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('geocoding failed');
+        const data = await res.json();
+        if (token === pointPlacementAddressToken) el.innerText = data.display_name || fallback;
+      } catch (e) {
+        if (token === pointPlacementAddressToken) el.innerText = fallback;
+      }
+    }
+
+    function savePointPlacement() {
+      const center = map.getCenter();
+      const name = document.getElementById('pointNameInput').value.trim();
+      const memo = document.getElementById('pointMemoInput').value.trim();
+      if (!name) {
+        alert('거점 명칭을 입력하십시오.');
+        document.getElementById('pointNameInput').focus();
+        return;
+      }
+      const now = Date.now();
+      const point = {
+        id: `WP-${now}`,
+        opCode: `OP-USER-${String(now).slice(-6)}`,
+        name,
+        coords: [center.lat, center.lng],
+        desc: memo || '사용자가 지도 중앙 조준점에서 직접 지정한 정찰 거점.',
+        tips: '',
+        status: 'UNEXPLORED',
+        createdAt: new Date(now).toISOString(),
+        source: 'USER_PLACED'
+      };
+      try {
+        const list = getLocalIntel();
+        list.unshift(point);
+        saveLocalIntel(list);
+        closePointPlacement();
+        openSitrep(point, 'UNEXPLORED');
+      } catch (e) {
+        alert('거점 저장에 실패했습니다. 브라우저 저장 공간을 확인하십시오.');
+      }
+    }
+
     function deployCuratedRecon() {
       const pool = RECON_TARGETS.filter(t => {
         if (selectedRadius === 'all') return true;
@@ -1247,6 +1532,8 @@
       }
       navigator.geolocation.getCurrentPosition(pos => {
         baseLocation = [pos.coords.latitude, pos.coords.longitude];
+        currentGpsAltitude = (typeof pos.coords.altitude === 'number' && Number.isFinite(pos.coords.altitude)) ? pos.coords.altitude : null;
+        updateReticleTelemetry();
         map.flyTo(baseLocation, 13);
         renderAllMarkers();
       }, err => {
@@ -1262,21 +1549,21 @@
 
     function renderWpDrawerList() {
       const c = document.getElementById('wpListContainer');
-      const list = getLocalIntel();
+      const list = getWaypoints();
       c.innerHTML = "";
 
       if (list.length === 0) {
-        c.innerHTML = `<div style="text-align:center;color:var(--text-dim);font-size:11px;padding:30px 10px;">저장된 정찰 포인트가 없습니다.</div>`;
+        c.innerHTML = `<div style="text-align:center;color:var(--text-dim);font-size:11px;padding:30px 10px;">저장된 WAYPOINTS가 없습니다.</div>`;
         return;
       }
 
-      list.forEach((item, index) => {
+      list.forEach(item => {
         const div = document.createElement('div');
         div.style = "background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:3px; padding:10px; cursor:pointer;";
         div.innerHTML = `
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:${item.status==='SECURED'?'#22ff66':'#38bdf8'};font-weight:900;">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:${item.status==='SECURED'?'#22ff66':'var(--accent)'};font-weight:900;">
             <span>[${item.status}] ${item.opCode}</span>
-            <button onclick="event.stopPropagation(); deleteWP(${index})" style="background:transparent;border:none;color:#ef4444;font-size:11px;cursor:pointer;padding:2px 4px;">삭제</button>
+            <button onclick="event.stopPropagation(); deleteWPById('${String(item.id).replace(/'/g, "\\'")}')" style="background:transparent;border:none;color:#ef4444;font-size:11px;cursor:pointer;padding:8px 6px;min-width:44px;min-height:36px;">삭제</button>
           </div>
           <div style="font-size:13px;font-weight:800;color:var(--text-main);margin:4px 0;">${item.name}</div>
           <div style="font-size:11px;color:var(--text-dim);">${calcMGRS(item.coords[0], item.coords[1])}</div>
@@ -1289,31 +1576,41 @@
       });
     }
 
-    function deleteWP(idx) {
+    function deleteWPById(id) {
       const list = getLocalIntel();
-      list.splice(idx, 1);
-      saveLocalIntel(list);
+      const next = list.filter(item => String(item.id) !== String(id));
+      saveLocalIntel(next);
       renderWpDrawerList();
+      renderAllMarkers();
     }
 
     function clearAllWP() {
-      if (confirm("보관된 모든 정찰/개척 데이터를 삭제하시겠습니까?")) {
-        saveLocalIntel([]);
+      if (confirm("WAYPOINTS만 삭제하시겠습니까? 미개척 정찰 데이터는 유지됩니다.")) {
+        const list = getLocalIntel().filter(item => !(item.source === 'USER_PLACED' || item.status === 'SECURED'));
+        saveLocalIntel(list);
         renderWpDrawerList();
+        renderAllMarkers();
       }
     }
 
+    function escapeXml(value) {
+      return String(value ?? '').replace(/[<>&'"]/g, ch => ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', "'":'&apos;', '"':'&quot;' }[ch]));
+    }
+
     function exportToGPX() {
-      const list = getLocalIntel();
+      const list = getWaypoints();
       if (list.length === 0) {
-        alert("내보낼 포인트가 없습니다.");
+        alert("내보낼 WAYPOINTS가 없습니다.");
         return;
       }
-      let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="TacticalReconApp">\n`;
+      let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="TacticalReconFieldTerminal" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n`;
       list.forEach(wp => {
+        const mgrs = calcMGRS(wp.coords[0], wp.coords[1]);
+        const desc = `[${wp.status}] ${wp.opCode} / MGRS: ${mgrs}${wp.desc ? ` / ${wp.desc}` : ''}`;
         gpx += `  <wpt lat="${wp.coords[0]}" lon="${wp.coords[1]}">\n`;
-        gpx += `    <name>${wp.name}</name>\n`;
-        gpx += `    <desc>[${wp.status}] ${wp.opCode} / MGRS: ${calcMGRS(wp.coords[0], wp.coords[1])}</desc>\n`;
+        gpx += `    <name>${escapeXml(wp.name)}</name>\n`;
+        gpx += `    <desc>${escapeXml(desc)}</desc>\n`;
+        gpx += `    <type>Waypoint</type>\n`;
         gpx += `  </wpt>\n`;
       });
       gpx += `</gpx>`;
@@ -1330,7 +1627,7 @@
     function openFieldControls(section) {
       const tray = document.getElementById('fieldControlTray');
       const title = document.getElementById('fieldControlTitle');
-      const titles = { radar: 'RADAR / SEARCH RANGE', target: 'RECON / TARGET SELECTION', optic: 'OPTIC / DISPLAY MODE' };
+      const titles = { radar: 'RADAR / SEARCH RANGE', target: 'RECON / TARGET SELECTION', optic: 'OPTIC / MODE' };
       title.innerText = titles[section] || 'FIELD CONTROLS';
       tray.querySelectorAll('.field-control-section').forEach(el => el.classList.remove('active'));
       const target = document.getElementById(`control-${section}`);
