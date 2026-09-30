@@ -4,12 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>TACTICAL RECON // SATELLITE OPTICAL OSD</title>
-  <meta name="theme-color" content="#02080f" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="TACTICAL RECON" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -370,9 +364,331 @@
       padding: 14px; border-bottom: 1px solid var(--border);
       display: flex; justify-content: space-between; align-items: center;
     }
+
+
+    /* ============================================================
+       90. FIELD TERMINAL UI — 야전 관측 단말 모드
+       장식보다 판독성과 장비성을 우선한다.
+       ============================================================ */
+    :root {
+      --field-black: #050806;
+      --field-panel: rgba(5, 10, 7, 0.86);
+      --field-panel-solid: #07100a;
+      --field-line: rgba(76, 138, 92, 0.42);
+      --field-line-strong: rgba(102, 176, 115, 0.72);
+      --field-text: #b8cbb9;
+      --field-dim: #66806b;
+      --field-active: #9de3a4;
+      --field-warning: #d5b35a;
+      --field-map-filter: grayscale(82%) brightness(48%) contrast(92%) saturate(42%);
+    }
+
+    /* OPTIC 모드가 바뀌면 야전 단말 UI 전체가 같은 계열로 따라간다. */
+    body.theme-stealth {
+      --field-panel: rgba(8, 10, 12, 0.90);
+      --field-panel-solid: #0a0c0f;
+      --field-line: rgba(148, 163, 184, 0.28);
+      --field-line-strong: rgba(203, 213, 225, 0.52);
+      --field-text: #cbd5e1;
+      --field-dim: #64748b;
+      --field-active: #e2e8f0;
+      --field-map-filter: grayscale(82%) brightness(48%) contrast(92%) saturate(25%);
+    }
+    body.theme-nvg-green {
+      --field-panel: rgba(3, 11, 6, 0.90);
+      --field-panel-solid: #061008;
+      --field-line: rgba(61, 135, 77, 0.40);
+      --field-line-strong: rgba(91, 174, 105, 0.64);
+      --field-text: #b8cbb9;
+      --field-dim: #66806b;
+      --field-active: #9de3a4;
+      --field-map-filter: grayscale(86%) brightness(46%) contrast(96%) saturate(30%);
+    }
+    body.theme-nvg-white {
+      --field-panel: rgba(4, 11, 17, 0.90);
+      --field-panel-solid: #07111a;
+      --field-line: rgba(72, 137, 166, 0.40);
+      --field-line-strong: rgba(88, 176, 215, 0.64);
+      --field-text: #c5dce8;
+      --field-dim: #64879b;
+      --field-active: #a9ddf5;
+      --field-map-filter: grayscale(86%) brightness(46%) contrast(96%) saturate(35%);
+    }
+    body.theme-flir {
+      --field-panel: rgba(13, 9, 3, 0.90);
+      --field-panel-solid: #120b03;
+      --field-line: rgba(167, 112, 32, 0.42);
+      --field-line-strong: rgba(225, 158, 49, 0.66);
+      --field-text: #e2c78e;
+      --field-dim: #9b7330;
+      --field-active: #ffc45c;
+      --field-map-filter: grayscale(86%) brightness(46%) contrast(96%) saturate(38%);
+    }
+
+    body::after {
+      opacity: 0.05 !important;
+      background-size: 100% 4px;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 700;
+      background:
+        radial-gradient(ellipse at center, transparent 48%, rgba(0,0,0,.28) 100%),
+        linear-gradient(rgba(255,255,255,.012), rgba(255,255,255,0));
+    }
+
+    #map { z-index: 1; }
+    .leaflet-tile-pane {
+      filter: var(--field-map-filter) !important;
+    }
+    .leaflet-control-zoom { display:none !important; }
+
+    .viewfinder-frame {
+      z-index: 850;
+      padding: 0;
+    }
+    .bracket {
+      width: 34px;
+      height: 34px;
+      border-width: 1px;
+      border-color: var(--field-line-strong);
+      opacity: .78;
+    }
+    .bracket.tl { top: 14px; left: 14px; }
+    .bracket.tr { top: 14px; right: 14px; }
+    .bracket.bl { bottom: 76px; left: 14px; }
+    .bracket.br { bottom: 76px; right: 14px; }
+    .bracket::after {
+      content:"";
+      position:absolute;
+      background:var(--field-line-strong);
+      opacity:.55;
+    }
+    .bracket.tl::after,.bracket.tr::after { width:70px;height:1px;top:-1px; }
+    .bracket.bl::after,.bracket.br::after { width:70px;height:1px;bottom:-1px; }
+    .bracket.tl::after,.bracket.bl::after { left:-1px; }
+    .bracket.tr::after,.bracket.br::after { right:-1px; }
+
+    .top-compass-bar {
+      top: 8px;
+      width: calc(100% - 88px);
+      max-width: 900px;
+      min-height: 34px;
+      padding: 4px 8px;
+      background: transparent;
+      border: 0;
+      border-bottom: 1px solid var(--field-line);
+      border-radius: 0;
+      box-shadow: none;
+      z-index: 1000;
+    }
+    .top-compass-bar::before {
+      content:"REC  ●";
+      position:absolute;
+      left:-42px;
+      top:7px;
+      color:var(--field-active);
+      font-size:9px;
+      letter-spacing:1px;
+      white-space:nowrap;
+    }
+    .compass-tape {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--field-dim);
+      gap: 8px;
+    }
+    .compass-label {
+      color: var(--field-dim);
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+    .compass-center {
+      color: var(--field-active);
+      background: transparent;
+      padding: 0 8px;
+      border: 0;
+      border-left: 1px solid var(--field-line);
+      border-right: 1px solid var(--field-line);
+      border-radius: 0;
+    }
+    .sys-telemetry { font-size:9px; gap:8px; color:var(--field-dim); }
+    .sys-telemetry span b { color:var(--field-active) !important; font-weight:600; }
+
+    .telemetry-osd {
+      top: 54px;
+      left: 18px;
+      width: 184px;
+      background: rgba(3,8,5,.68);
+      border: 0;
+      border-left: 1px solid var(--field-line-strong);
+      border-radius: 0;
+      padding: 7px 10px;
+      gap: 4px;
+      box-shadow: none;
+      z-index: 1000;
+    }
+    .osd-head { font-size:8px; letter-spacing:1.2px; color:var(--field-dim); }
+    .osd-mgrs-btn {
+      background:transparent;
+      border:0;
+      border-top:1px solid var(--field-line);
+      border-bottom:1px solid var(--field-line);
+      border-radius:0;
+      padding:5px 0;
+    }
+    .osd-mgrs-val { font-size:12px; color:var(--field-active); letter-spacing:.2px; }
+    .osd-subgrid { grid-template-columns:1fr 1fr; gap:2px 8px; font-size:9px; color:var(--field-dim); }
+    .osd-subgrid div b { color:var(--field-text); font-weight:500; }
+
+    .reticle-container {
+      width: 112px;
+      height: 112px;
+      z-index: 900;
+    }
+    .reticle-container::before,
+    .reticle-container::after { display:none; }
+    .target-gate {
+      top:50%; left:50%; width:40px; height:40px;
+      transform:translate(-50%,-50%);
+      border:1px solid var(--field-active);
+      opacity:.9;
+    }
+    .reticle-axis-v {
+      left:50%; top:0; width:1px; height:100%;
+      transform:translateX(-50%);
+      opacity:.78;
+      background:var(--field-active);
+    }
+    .reticle-axis-h {
+      left:0; top:50%; width:100%; height:1px;
+      transform:translateY(-50%);
+      opacity:.78;
+      background:var(--field-active);
+    }
+
+    .reticle-container .target-gate::before,
+    .reticle-container .target-gate::after {
+      content:""; position:absolute; background:var(--field-active);
+    }
+    .reticle-container .target-gate::before { width:8px;height:1px;left:50%;top:50%;transform:translate(-50%,-50%); }
+    .reticle-container .target-gate::after { width:1px;height:8px;left:50%;top:50%;transform:translate(-50%,-50%); }
+
+    .mfd-bottom-bar {
+      width:100%;
+      left:0;
+      bottom:0;
+      transform:none;
+      max-width:none;
+      border:0;
+      border-top:1px solid var(--field-line-strong);
+      border-radius:0;
+      background:rgba(3,8,5,.93);
+      padding:5px 8px max(5px, env(safe-area-inset-bottom));
+      box-shadow:none;
+      z-index:1200;
+      gap:0;
+      flex-wrap:nowrap;
+    }
+    .mfd-bottom-bar > .osb-cluster { display:none; }
+    .mfd-bottom-bar > .osb-cluster:last-child { display:flex; flex:1; justify-content:space-around; }
+    .btn-gps-sync {
+      width:54px;
+      margin-right:4px;
+      color:var(--field-text);
+      border:0;
+      border-right:1px solid var(--field-line);
+      border-radius:0;
+      background:transparent;
+    }
+    .osb-btn {
+      min-height:42px;
+      border:0;
+      border-radius:0;
+      background:transparent;
+      color:var(--field-dim);
+      font-size:10px;
+      letter-spacing:.5px;
+    }
+    .osb-btn:hover { border:0; color:var(--field-text); }
+    .osb-btn.active { background:transparent; color:var(--field-active); box-shadow:none; }
+    .osb-btn.action-primary { background:transparent; border:0; color:var(--field-text); }
+    .osb-btn.action-primary::before { content:""; }
+
+    .field-control-tray {
+      position:absolute;
+      left:8px; right:8px;
+      bottom:62px;
+      z-index:1250;
+      display:none;
+      background:rgba(4,10,6,.96);
+      border:1px solid var(--field-line-strong);
+      border-bottom:0;
+      padding:10px;
+      box-shadow:none;
+    }
+    .field-control-tray.open { display:block; }
+    .field-control-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding-bottom:7px; margin-bottom:7px;
+      border-bottom:1px solid var(--field-line);
+      color:var(--field-active); font-size:9px; letter-spacing:1.2px;
+    }
+    .field-control-section { display:none; }
+    .field-control-section.active { display:block; }
+    .field-control-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+    .field-control-grid .osb-btn { border:1px solid var(--field-line); min-height:40px; }
+    .field-control-grid .osb-btn.active { border-color:var(--field-line-strong); background:rgba(95,170,105,.10); }
+
+    .sitrep-panel {
+      background:rgba(4,10,6,.97);
+      border:1px solid var(--field-line-strong);
+      border-radius:0;
+      box-shadow:none;
+    }
+    .sitrep-head { border-bottom:1px solid var(--field-line); }
+    .sitrep-code { color:var(--field-active); }
+    .sitrep-coords { background:transparent; border:1px solid var(--field-line); border-radius:0; }
+    .sitrep-intel { background:rgba(0,0,0,.18); border-left:1px solid var(--field-line-strong); border-radius:0; }
+    .nav-button-grid .btn-osb-nav { border:1px solid var(--field-line); border-radius:0; background:transparent; }
+
+    .sitrep-address {
+      width:100%; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:9px;
+      margin-top:6px; padding:8px 9px; text-align:left; cursor:pointer;
+      color:var(--field-text); background:transparent; border:1px solid var(--field-line); border-radius:0;
+      font:inherit;
+    }
+    .sitrep-address:active { background:rgba(255,255,255,.035); }
+    .address-label { color:var(--field-dim); font-size:8px; letter-spacing:1px; white-space:nowrap; }
+    .address-value { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--field-text); font-size:10px; line-height:1.4; }
+    .address-copy { color:var(--field-active); font-size:8px; letter-spacing:1px; white-space:nowrap; }
+
+    .tactical-pin-wrapper { filter:none; }
+    .pin-curated { border-color:var(--field-active); background:var(--field-panel-solid); box-shadow:none; }
+    .pin-curated::after { background:var(--field-active); }
+    .pin-wild { border-color:var(--field-dim); background:var(--field-panel-solid); box-shadow:none; }
+    .pin-secured { border-color:var(--field-active); background:var(--field-panel-solid); box-shadow:none; }
+    .pin-secured::after { background:var(--field-active); }
+
+    .leaflet-control-attribution { background:rgba(0,0,0,.35) !important; color:#536458 !important; font-size:8px !important; }
+    .leaflet-control-attribution a { color:#718a75 !important; }
+
+    @media (max-width:768px) {
+      .top-compass-bar { width:calc(100% - 72px); top:7px; }
+      .top-compass-bar::before { left:-34px; }
+      .telemetry-osd { top:50px; left:10px; width:176px; }
+      .reticle-container { width:94px; height:94px; }
+      .target-gate { width:34px; height:34px; }
+      .field-control-tray { bottom:58px; }
+      .field-control-grid { grid-template-columns:repeat(4,1fr); }
+      .bracket.bl,.bracket.br { bottom:64px; }
+    }
   </style>
 </head>
-<body class="theme-nvg-white">
+<body class="theme-nvg-green">
 
   <!-- OSD 화각 프레임 -->
   <div class="viewfinder-frame">
@@ -385,9 +701,8 @@
   <!-- 상단 컴퍼스 HUD -->
   <div class="top-compass-bar">
     <div class="compass-tape">
-      <span>020</span> <span>·</span>
-      <span class="compass-center" id="hudBearing">035° NNE</span>
-      <span>·</span> <span>050</span>
+      <span class="compass-label">BRG</span>
+      <span class="compass-center" id="hudBearing">---° --</span>
     </div>
     <div class="sys-telemetry">
       <span>UTC <b id="hudUtcClock">--:--:--Z</b></span>
@@ -459,40 +774,60 @@
         [ RECON COMPLETED // 개척지 승격 ]
       </button>
 
-      <div class="nav-button-grid">
-        <a class="btn-osb-nav" id="linkKakao" target="_blank" rel="noopener noreferrer">카카오</a>
-        <a class="btn-osb-nav" id="linkNaver" target="_blank" rel="noopener noreferrer">네이버</a>
-        <a class="btn-osb-nav" id="linkTmap" target="_blank" rel="noopener noreferrer">티맵</a>
+      <button class="sitrep-address" id="sitrepAddress" type="button" onclick="copySitrepAddress(this)" title="탭하여 주소 복사">
+        <span class="address-label">ADDRESS</span>
+        <span class="address-value" id="sitrepAddressValue">주소 조회 중...</span>
+        <span class="address-copy" id="sitrepAddressCopy">COPY</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 하단 야전 단말 조작부 -->
+  <div class="field-control-tray" id="fieldControlTray">
+    <div class="field-control-head">
+      <span id="fieldControlTitle">FIELD CONTROLS</span>
+      <button class="btn-close-osd" onclick="closeFieldControls()">×</button>
+    </div>
+
+    <div class="field-control-section" id="control-radar">
+      <div style="font-size:9px;color:var(--field-dim);margin-bottom:6px;">SEARCH / RADIUS</div>
+      <div class="field-control-grid">
+        <button class="osb-btn active" onclick="setRadar('all',this)">ALL</button>
+        <button class="osb-btn" onclick="setRadar(30,this)">30 KM</button>
+        <button class="osb-btn" onclick="setRadar(80,this)">80 KM</button>
+        <button class="osb-btn" onclick="setRadar(150,this)">150 KM</button>
+      </div>
+    </div>
+
+    <div class="field-control-section" id="control-target">
+      <div style="font-size:9px;color:var(--field-dim);margin-bottom:6px;">RECON TASK</div>
+      <div class="field-control-grid" style="grid-template-columns:1fr 1fr;">
+        <button class="osb-btn" onclick="deployCuratedRecon();closeFieldControls();">등록 거점</button>
+        <button class="osb-btn" onclick="deployWildRecon();">미개척 정찰</button>
+      </div>
+    </div>
+
+    <div class="field-control-section" id="control-optic">
+      <div style="font-size:9px;color:var(--field-dim);margin-bottom:6px;">DISPLAY MODE</div>
+      <div class="field-control-grid">
+        <button class="osb-btn" onclick="setOpticTheme('stealth',this)">STH</button>
+        <button class="osb-btn active" onclick="setOpticTheme('nvg-green',this)">NVG-G</button>
+        <button class="osb-btn" onclick="setOpticTheme('nvg-white',this)">NVG-W</button>
+        <button class="osb-btn" onclick="setOpticTheme('flir',this)">FLIR</button>
       </div>
     </div>
   </div>
 
-  <!-- 하단 MFD 베젤 조작 바 -->
   <div class="mfd-bottom-bar">
     <button class="osb-btn btn-gps-sync" onclick="locateUser()" title="GPS 동기화">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+      <span style="margin-left:5px;">GPS</span>
     </button>
-
     <div class="osb-cluster">
-      <span class="osb-label">RADAR:</span>
-      <button class="osb-btn active" onclick="setRadar('all', this)">ALL</button>
-      <button class="osb-btn" onclick="setRadar(30, this)">30K</button>
-      <button class="osb-btn" onclick="setRadar(80, this)">80K</button>
-      <button class="osb-btn" onclick="setRadar(150, this)">150K</button>
-    </div>
-
-    <div class="osb-cluster">
-      <span class="osb-label">OPTIC:</span>
-      <button class="osb-btn" onclick="setOpticTheme('stealth', this)">STH</button>
-      <button class="osb-btn" onclick="setOpticTheme('nvg-green', this)">NVG-G</button>
-      <button class="osb-btn active" onclick="setOpticTheme('nvg-white', this)">NVG-W</button>
-      <button class="osb-btn" onclick="setOpticTheme('flir', this)">FLIR</button>
-    </div>
-
-    <div class="osb-cluster">
-      <button class="osb-btn action-primary" onclick="deployCuratedRecon()">거점 무작위</button>
-      <button class="osb-btn action-primary" onclick="deployWildRecon()">미개척 정찰</button>
-      <button class="osb-btn" id="btnWpCount" onclick="toggleWpDrawer()">수첩 (0)</button>
+      <button class="osb-btn" onclick="openFieldControls('radar')">RADAR</button>
+      <button class="osb-btn" onclick="openFieldControls('target')">TARGET</button>
+      <button class="osb-btn" onclick="openFieldControls('optic')">OPTIC</button>
+      <button class="osb-btn" onclick="toggleWpDrawer()">기록</button>
     </div>
   </div>
 
@@ -741,16 +1076,65 @@
         btnPromote.style.display = 'none';
       }
 
-      document.getElementById('linkKakao').href = `https://map.kakao.com/link/to/${encodeURIComponent(target.name)},${target.coords[0]},${target.coords[1]}`;
-      document.getElementById('linkNaver').href = `https://map.naver.com/v5/search/${target.coords[0]},${target.coords[1]}`;
-      document.getElementById('linkTmap').href = `tmap://route?goalname=${encodeURIComponent(target.name)}&goallat=${target.coords[0]}&goallng=${target.coords[1]}`;
+      const addressValue = document.getElementById('sitrepAddressValue');
+      const addressCopy = document.getElementById('sitrepAddressCopy');
+      addressValue.innerText = '주소 조회 중...';
+      addressCopy.innerText = 'COPY';
+      resolveSitrepAddress(target.coords[0], target.coords[1]);
 
       panel.style.display = 'flex';
       map.flyTo(target.coords, 14, { duration: 1.2 });
     }
 
+    async function resolveSitrepAddress(lat, lon) {
+      const valueEl = document.getElementById('sitrepAddressValue');
+      if (!valueEl) return;
+      const fallback = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=18&addressdetails=1&accept-language=ko`, {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (!res.ok) throw new Error('geocoding failed');
+        const data = await res.json();
+        const address = data.display_name || fallback;
+        valueEl.innerText = address;
+        valueEl.dataset.copyValue = address;
+      } catch (e) {
+        valueEl.innerText = fallback;
+        valueEl.dataset.copyValue = fallback;
+      }
+    }
+
+    async function copySitrepAddress(btn) {
+      const valueEl = document.getElementById('sitrepAddressValue');
+      const copyEl = document.getElementById('sitrepAddressCopy');
+      if (!valueEl) return;
+      const value = valueEl.dataset.copyValue || valueEl.innerText;
+      if (!value || value === '주소 조회 중...') return;
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = value;
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      if (copyEl) {
+        copyEl.innerText = 'COPIED';
+        setTimeout(() => { if (copyEl) copyEl.innerText = 'COPY'; }, 1200);
+      }
+    }
+
     function closeSitrep() {
       document.getElementById('sitrepPanel').style.display = 'none';
+      document.getElementById('hudBearing').innerText = '---° --';
+      const addressValue = document.getElementById('sitrepAddressValue');
+      const addressCopy = document.getElementById('sitrepAddressCopy');
+      if (addressValue) { addressValue.innerText = '주소 조회 중...'; delete addressValue.dataset.copyValue; }
+      if (addressCopy) addressCopy.innerText = 'COPY';
       currentActiveTarget = null;
     }
 
@@ -801,10 +1185,15 @@
         savedAt: new Date().toISOString().substring(0, 16).replace('T', ' ')
       };
 
-      const list = getLocalIntel();
-      list.unshift(wildSpot);
-      saveLocalIntel(list);
+      try {
+        const list = getLocalIntel();
+        list.unshift(wildSpot);
+        saveLocalIntel(list);
+      } catch (e) {
+        console.warn('미개척 거점 저장 실패:', e);
+      }
       openSitrep(wildSpot, 'UNEXPLORED');
+      closeFieldControls();
     }
 
     function openPromotionModal() {
@@ -938,17 +1327,23 @@
       URL.revokeObjectURL(url);
     }
 
+    function openFieldControls(section) {
+      const tray = document.getElementById('fieldControlTray');
+      const title = document.getElementById('fieldControlTitle');
+      const titles = { radar: 'RADAR / SEARCH RANGE', target: 'RECON / TARGET SELECTION', optic: 'OPTIC / DISPLAY MODE' };
+      title.innerText = titles[section] || 'FIELD CONTROLS';
+      tray.querySelectorAll('.field-control-section').forEach(el => el.classList.remove('active'));
+      const target = document.getElementById(`control-${section}`);
+      if (target) target.classList.add('active');
+      tray.classList.add('open');
+    }
+
+    function closeFieldControls() {
+      document.getElementById('fieldControlTray').classList.remove('open');
+    }
+
     updateWpCounter();
     renderAllMarkers();
-  </script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').catch(err => {
-          console.warn('PWA service worker registration failed:', err);
-        });
-      });
-    }
   </script>
 </body>
 </html>
