@@ -1,0 +1,96 @@
+name: V27.1 browser smoke
+
+on:
+  push:
+    branches: [v27.1-ui]
+    paths:
+      - '.github/workflows/v271-browser-smoke.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v27.1-ui
+          fetch-depth: 0
+      - name: Install browser test dependency
+        run: python3 -m pip install --quiet selenium
+      - name: Start local server
+        run: |
+          python3 -m http.server 8765 >/tmp/v271-http.log 2>&1 &
+          echo $! > /tmp/v271-http.pid
+      - name: Run browser interaction smoke test
+        run: |
+          python3 - <<'PY'
+          from selenium import webdriver
+          from selenium.webdriver.chrome.options import Options
+          import time
+
+          opts=Options()
+          opts.add_argument('--headless=new')
+          opts.add_argument('--no-sandbox')
+          opts.add_argument('--disable-gpu')
+          opts.add_argument('--window-size=390,844')
+          opts.set_capability('goog:loggingPrefs', {'browser':'ALL'})
+          d=webdriver.Chrome(options=opts)
+          try:
+              d.get('http://127.0.0.1:8765/index.html')
+              time.sleep(3)
+              assert 'V27.1' in d.title, d.title
+              for eid in ['globalGpsControls','gpsPowerBtn','gpsCenterBtn','targetModePanel','targetModeToolbar','planSearchSheet','planPointSheet','navMoreSheet']:
+                  assert d.find_element('id',eid)
+              funcs=['openPlanSearch','enterPlanSetMode','enterPlanDrawMode','setPlanPointAtReticle','undoPlanEdit','startTargetNavigation','stopTargetNavigation','syncKnownActionAvailability']
+              for fn in funcs:
+                  assert d.execute_script(f"return typeof {fn} === 'function'"), fn
+
+              # Enter a target and verify PLAN submodes/sheets actually switch.
+              d.execute_script("tempMarkPoint={name:'TEMP',coords:[37.5,127.0],source:'RETICLE'}; renderTempMark(); enterTargetMode({id:'SMOKE',name:'SMOKE TARGET',coords:[37.51,127.01],status:'USER_PLACED',source:'USER'});")
+              assert d.execute_script("return document.body.classList.contains('target-mode')")
+              d.execute_script("openPlanSearch()")
+              assert d.execute_script("return document.getElementById('planSearchSheet').classList.contains('open')")
+              d.execute_script("closePlanSearch(); enterPlanSetMode()")
+              assert d.execute_script("return document.body.classList.contains('plan-set-submode')")
+              d.execute_script("setPlanPointAtReticle('START'); setPlanPointAtReticle('VIA'); setPlanPointAtReticle('END')")
+              assert d.execute_script("return !!routeStartPoint && routeViaPoints.length===1 && !!routeEndPoint")
+              d.execute_script("undoPlanEdit()")
+              assert d.execute_script("return routeEndPoint===null")
+              d.execute_script("exitPlanSubmode(); enterPlanDrawMode()")
+              assert d.execute_script("return document.body.classList.contains('plan-draw-submode') && routeDrawEnabled")
+              assert d.execute_script("return document.getElementById('targetDrawKindBtn').textContent.trim()==='ROUTE'")
+              d.execute_script("toggleDrawKind()")
+              assert d.execute_script("return document.getElementById('targetDrawKindBtn').textContent.trim()==='OVERLAY'")
+              d.execute_script("exitPlanSubmode()")
+
+              # Known impossible GPS recenter is disabled with no fix, then enabled for a simulated valid fix.
+              d.execute_script("gpsPowerEnabled=false; hasGpsFix=false; refreshGpsPowerUi()")
+              assert d.execute_script("return document.getElementById('gpsCenterBtn').disabled")
+              d.execute_script("gpsPowerEnabled=true; hasGpsFix=true; baseLocation=[37.5,127.0]; refreshGpsPowerUi()")
+              assert not d.execute_script("return document.getElementById('gpsCenterBtn').disabled")
+
+              # NAV entry/collapse/stop lifecycle.
+              d.execute_script("startTargetNavigation()")
+              assert d.execute_script("return document.body.classList.contains('target-nav') && targetModePhase==='NAV'")
+              d.execute_script("toggleNavPanelCollapse({stopPropagation(){}})")
+              assert d.execute_script("return document.body.classList.contains('nav-panel-collapsed')")
+              assert d.execute_script("return document.getElementById('navHudElapsed').textContent.includes('TOTAL')")
+              d.execute_script("stopTargetNavigation()")
+              assert d.execute_script("return targetModePhase==='PLAN' && !document.body.classList.contains('target-nav')")
+
+              severe=[x for x in d.get_log('browser') if x.get('level')=='SEVERE' and 'favicon' not in x.get('message','').lower()]
+              if severe:
+                  raise AssertionError('Browser console severe errors: '+repr(severe))
+              print('V27.1 browser smoke passed')
+          finally:
+              d.quit()
+          PY
+      - name: Remove one-shot workflow
+        run: |
+          git rm .github/workflows/v271-browser-smoke.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'test: pass V27.1 browser smoke check'
+          git push origin HEAD:v27.1-ui
