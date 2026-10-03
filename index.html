@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>TACTICAL RECON // FIELD TERMINAL V26</title>
+  <title>TACTICAL RECON // FIELD TERMINAL V27</title>
   <meta name="theme-color" content="#020904" id="appThemeColor" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -122,7 +122,7 @@
       height: 100dvh;
       z-index: 1;
     }
-    .leaflet-tile-pane { filter: var(--map-filter); transition: filter 0.3s ease; }
+    .leaflet-tile-pane .leaflet-tile { filter: var(--map-filter); }
 
     /* ============================================================
        02. 광학 화각 프레임 & 상단 HUD
@@ -262,7 +262,7 @@
     }
 
     /* ============================================================
-       05. SITREP 브리핑 패널
+       05. POINT INFO 브리핑 패널
        ============================================================ */
     .sitrep-panel {
       position: absolute; top: 52px; right: 14px; width: 320px;
@@ -564,6 +564,7 @@
     /* 모달 & 서랍 */
     .promo-modal-backdrop {
       position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      height:100dvh;
       background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
       z-index: 4000; display: none; align-items: center; justify-content: center;
       touch-action: manipulation; overscroll-behavior: contain;
@@ -620,7 +621,7 @@
       --field-warning: #d5b35a;
     }
 
-    /* OPTIC 모드가 바뀌면 야전 단말 UI 전체가 같은 계열로 따라간다. */
+    /* DISPLAY 모드가 바뀌면 야전 단말 UI 전체가 같은 계열로 따라간다. */
     body.theme-stealth {
       --field-panel: rgba(8, 10, 12, 0.90);
       --field-panel-solid: #0a0c0f;
@@ -674,9 +675,8 @@
     }
 
     #map { z-index: 1; }
-    .leaflet-tile-pane {
-      filter: var(--map-filter) !important;
-    }
+    /* Filter individual tiles, not the translated/scaled pane (Safari compositing). */
+    .leaflet-tile-pane { filter:none; }
     .leaflet-control-zoom { display:none !important; }
 
     .viewfinder-frame {
@@ -1027,7 +1027,7 @@
         touch-action: manipulation;
       }
 
-      /* SITREP은 하단 메뉴 위에서 독립적으로 닫을 수 있게 한다. */
+      /* POINT INFO은 하단 메뉴 위에서 독립적으로 닫을 수 있게 한다. */
       .sitrep-panel {
         left: 8px;
         right: 8px;
@@ -1149,7 +1149,7 @@
     body.target-nav .target-mode-actions.v26-plan-actions { grid-template-columns:repeat(4,minmax(0,1fr)); }
     .target-mode-actions .v26-secondary { color:var(--field-dim); }
     .draw-kind-btn.active { border-color:var(--field-active) !important; color:var(--field-active) !important; }
-    body.route-marking .target-mode-kicker::after { content:' · MARK SOLID'; color:var(--field-active); }
+    body.route-marking .target-mode-kicker::after { content:' · OVERLAY SOLID'; color:var(--field-active); }
     body.route-drawing:not(.route-marking) .target-mode-kicker::after { content:' · ROUTE DASHED · 1F DRAW / 2F PAN-ZOOM'; color:var(--field-active); }
 
     .nav-hud-elapsed { color:var(--field-dim); font-size:9px; font-weight:900; letter-spacing:.4px; }
@@ -1181,16 +1181,17 @@
     .route-end-marker::before { content:'E'; }
     .v26-map-label { position:absolute; top:26px; left:50%; transform:translateX(-50%); white-space:nowrap; font:800 8px var(--font-mono); color:var(--accent); background:rgba(2,7,4,.84); border:1px solid var(--border); padding:2px 4px; }
 
-    .road-boost-tiles { mix-blend-mode:screen; filter:grayscale(100%) contrast(155%) brightness(72%); }
-    body.theme-nvg-green .road-boost-tiles { filter:grayscale(100%) sepia(35%) hue-rotate(70deg) saturate(130%) contrast(155%) brightness(66%); }
-    body.theme-nvg-white .road-boost-tiles { filter:grayscale(100%) sepia(18%) hue-rotate(150deg) saturate(110%) contrast(155%) brightness(68%); }
-    body.theme-flir .road-boost-tiles { filter:grayscale(100%) sepia(34%) hue-rotate(350deg) saturate(125%) contrast(155%) brightness(66%); }
+    .road-boost-tiles { mix-blend-mode:screen; }
+    .road-boost-tiles .leaflet-tile { filter:grayscale(100%) contrast(155%) brightness(72%); }
+    body.theme-nvg-green .road-boost-tiles .leaflet-tile { filter:grayscale(100%) sepia(35%) hue-rotate(70deg) saturate(130%) contrast(155%) brightness(66%); }
+    body.theme-nvg-white .road-boost-tiles .leaflet-tile { filter:grayscale(100%) sepia(18%) hue-rotate(150deg) saturate(110%) contrast(155%) brightness(68%); }
+    body.theme-flir .road-boost-tiles .leaflet-tile { filter:grayscale(100%) sepia(34%) hue-rotate(350deg) saturate(125%) contrast(155%) brightness(66%); }
 
     .offline-badge { font-size:8px; color:var(--field-dim); }
     .offline-badge.active { color:var(--field-active); }
 
     @media (max-width:768px) {
-      .mfd-bottom-bar { padding:5px; gap:4px; }
+      .mfd-bottom-bar { padding:5px 5px max(5px, env(safe-area-inset-bottom)); gap:4px; }
       .mfd-bottom-bar .v26-primary { min-height:43px; font-size:9px; padding:0 4px; }
       .mfd-bottom-bar .osb-cluster.v26-main-cluster { gap:4px; }
       .target-mode-actions.v26-plan-actions,
@@ -1198,7 +1199,11 @@
       .gps-detail-grid { grid-template-columns:1fr; }
       .gps-detail-wide { grid-column:auto; }
       .field-control-tray { max-height:min(42vh,360px); }
+      .bracket.bl, .bracket.br { bottom:calc(76px + env(safe-area-inset-bottom)); }
     }
+
+    .coord-copy { border:0; background:transparent; color:var(--accent); font:inherit; text-align:right; min-height:44px; touch-action:manipulation; cursor:pointer; }
+    .coord-copy-feedback { display:block; min-height:12px; font-size:8px; color:var(--text-dim); }
 
   </style>
 </head>
@@ -1277,10 +1282,11 @@
     <div class="map-scale-label" id="mapScaleLabel">--</div>
   </div>
 
-  <!-- SITREP 브리핑 패널 -->
+  <!-- POINT INFO 브리핑 패널 -->
   <div class="sitrep-panel" id="sitrepPanel">
     <div class="sitrep-head">
       <div>
+        <div style="font-size:9px;color:var(--text-dim);">POINT INFO</div>
         <div class="sitrep-code" id="sitrepCode">SEC-KOR // OP-NONE</div>
         <div class="sitrep-title" id="sitrepName">거점 명칭</div>
       </div>
@@ -1293,11 +1299,11 @@
     <div class="sitrep-coords">
       <div class="coord-row">
         <span style="color:var(--text-dim);font-size:10px;">10-DIGIT MGRS</span>
-        <span class="coord-val" id="sitrepMgrs">--</span>
+        <button class="coord-copy" type="button" onclick="copyPointCoordinate('sitrepMgrs')" aria-label="MGRS 복사"><span class="coord-val" id="sitrepMgrs">--</span><span class="coord-copy-feedback" aria-live="polite"></span></button>
       </div>
       <div class="coord-row">
         <span style="color:var(--text-dim);font-size:10px;">WGS84 LAT/LON</span>
-        <span class="coord-val" id="sitrepLatLon">--</span>
+        <button class="coord-copy" type="button" onclick="copyPointCoordinate('sitrepLatLon')" aria-label="WGS84 복사"><span class="coord-val" id="sitrepLatLon">--</span><span class="coord-copy-feedback" aria-live="polite"></span></button>
       </div>
     </div>
 
@@ -1367,13 +1373,14 @@
       <button class="osb-btn plan-only" id="targetLocateBtn" onclick="openRouteLocate()">LOCATE / VIA</button>
       <button class="osb-btn plan-only" id="targetSaveBtn" onclick="saveTargetRoute()">SAVE</button>
       <button class="osb-btn plan-only" id="targetShareBtn" onclick="shareTargetRoute()">SHARE</button>
-      <button class="osb-btn plan-only action-primary" id="targetNavStartBtn" onclick="startTargetNavigation()">NAV START</button>
+      <button class="osb-btn plan-only action-primary" id="targetNavStartBtn" onclick="startTargetNavigation()">이동 정보</button>
 
-      <button class="osb-btn nav-only action-primary" id="targetRecenterBtn" onclick="recenterTargetNavigation()">RE-CENTER</button>
+      <button class="osb-btn nav-only action-primary" id="targetRecenterBtn" onclick="recenterTargetNavigation()">RECENTER</button>
+      <button class="osb-btn nav-only gps-follow-toggle" onclick="toggleGpsFollow()" aria-pressed="false">FOLLOW OFF</button>
       <button class="osb-btn nav-only" id="targetNextLegBtn" onclick="nextNavLeg()">NEXT LEG</button>
       <button class="osb-btn nav-only" id="targetTrackRecBtn" onclick="toggleTrackRecording()">TRACK REC</button>
       <button class="osb-btn nav-only" id="targetBacktrackBtn" onclick="toggleBacktrack()">BACKTRACK</button>
-      <button class="osb-btn nav-only" id="targetNavOpticBtn" onclick="openNavOptic()">OPTIC</button>
+      <button class="osb-btn nav-only" id="targetNavOpticBtn" onclick="openNavOptic()">DISPLAY</button>
       <button class="osb-btn nav-only" id="targetOrientationBtn" onclick="toggleNavMapOrientation()">NORTH UP</button>
       <button class="osb-btn nav-only" onclick="returnToTargetPlan()">PLAN</button>
       <button class="osb-btn" onclick="exitTargetMode()">EXIT</button>
@@ -1390,18 +1397,21 @@
     <div class="field-control-section" id="control-menu">
       <div style="font-size:9px;color:var(--field-dim);margin-bottom:6px;">FIELD MENU</div>
       <div class="v26-menu-grid">
-        <button class="osb-btn" onclick="openFieldControls('radar')">RADAR</button>
+        <button class="osb-btn" onclick="openFieldControls('radar')">NEARBY</button>
         <button class="osb-btn" onclick="openFieldControls('layers')">LAYERS</button>
-        <button class="osb-btn" onclick="openFieldControls('optic')">OPTIC</button>
-        <button class="osb-btn" id="btnWpCount" onclick="closeFieldControls();openWpDrawer();">WAYPOINTS</button>
+        <button class="osb-btn" onclick="openFieldControls('optic')">DISPLAY</button>
+        <button class="osb-btn" id="btnWpCount" onclick="closeFieldControls();openWpDrawer();">POINTS</button>
         <button class="osb-btn" onclick="openGpsDetail()">GPS STATUS</button>
+        <button class="osb-btn gps-follow-toggle" onclick="toggleGpsFollow()" aria-pressed="false">FOLLOW OFF</button>
         <button class="osb-btn" id="roadBoostBtn" onclick="toggleRoadBoost(this)">ROAD BOOST</button>
-        <button class="osb-btn" onclick="setTempMarkAtReticle();closeFieldControls();">TEMP @ RETICLE</button>
-        <button class="osb-btn" onclick="quickOfflineMark();closeFieldControls();">OFFLINE MARK</button>
+        <button class="osb-btn" onclick="setTempMarkAtReticle();closeFieldControls();">TEMP POS @ RETICLE</button>
+        <button class="osb-btn" onclick="quickOfflineMark();closeFieldControls();">SAVE POINT</button>
         <button class="osb-btn" onclick="setHomeAtReticle();closeFieldControls();">SET HOME</button>
-        <button class="osb-btn" onclick="centerHome();closeFieldControls();">CENTER HOME</button>
+        <button class="osb-btn" onclick="centerHome();closeFieldControls();">RECENTER HOME</button>
+        <button class="osb-btn" onclick="clearHomePoint()">CLEAR HOME</button>
+        <button class="osb-btn" onclick="clearTempMark()">CLEAR TEMP POS</button>
       </div>
-      <div class="v26-menu-note">GPS가 꺼져 있으면 TEMP MARK를 현재 위치 기준으로 사용합니다. 좌표/MGRS 검색은 오프라인에서도 작동합니다.</div>
+      <div class="v26-menu-note">GPS가 꺼져 있으면 TEMP POS를 현재 위치 기준으로 사용합니다. 좌표/MGRS 검색은 오프라인에서도 작동합니다.</div>
     </div>
 
     <div class="field-control-section" id="control-radar">
@@ -1412,7 +1422,7 @@
         <button class="osb-btn" data-radius="80" onclick="setRadar(80,this)">80 KM</button>
         <button class="osb-btn" data-radius="150" onclick="setRadar(150,this)">150 KM</button>
       </div>
-      <div style="font-size:8px;color:var(--field-dim);margin-top:7px;line-height:1.45;">RADAR는 REGISTERED 거점에만 적용됩니다. 저장된 WAYPOINTS는 거리와 관계없이 유지됩니다.</div>
+      <div style="font-size:8px;color:var(--field-dim);margin-top:7px;line-height:1.45;">NEARBY는 REGISTERED 거점에만 적용됩니다. 저장된 POINTS는 거리와 관계없이 유지됩니다.</div>
     </div>
 
     <div class="field-control-section" id="control-layers">
@@ -1437,7 +1447,7 @@
     </div>
 
     <div class="field-control-section" id="control-optic">
-      <div style="font-size:9px;color:var(--field-dim);margin-bottom:6px;">OPTIC MODE</div>
+      <div style="font-size:9px;color:var(--field-dim);margin-bottom:6px;">DISPLAY MODE</div>
       <div class="field-control-grid">
         <button class="osb-btn" onclick="setOpticTheme('stealth',this)">STH</button>
         <button class="osb-btn active" onclick="setOpticTheme('nvg-green',this)">NVG-G</button>
@@ -1453,7 +1463,7 @@
       <span id="gpsPowerLabel" style="margin-left:5px;">GPS OFF</span>
     </button>
     <div class="osb-cluster v26-main-cluster">
-      <button class="osb-btn v26-primary" id="primaryCenterBtn" onclick="recenterPrimary()">CENTER</button>
+      <button class="osb-btn v26-primary" id="primaryCenterBtn" onclick="recenterPrimary()">RECENTER</button>
       <button class="osb-btn v26-primary" onclick="openFieldControls('target')">TARGET</button>
       <button class="osb-btn v26-primary" onclick="openPlanShortcut()">PLAN</button>
       <button class="osb-btn v26-primary" onclick="openFieldControls('menu')">MENU</button>
@@ -1494,7 +1504,7 @@
       <div class="promo-actions">
         <button class="osb-btn" onclick="closeAddressSearch()">닫기</button>
         <button class="osb-btn" id="addressMoveButton" onclick="moveToSelectedAddress()" disabled>지도에서 보기</button>
-        <button class="osb-btn" id="addressTempButton" onclick="setTempMarkFromSelectedSearch()" disabled>TEMP MARK</button>
+        <button class="osb-btn" id="addressTempButton" onclick="setTempMarkFromSelectedSearch()" disabled>TEMP POS</button>
         <button class="osb-btn active" id="addressSaveButton" onclick="saveSelectedAddressAsWaypoint()" disabled>거점 저장</button>
       </div>
     </div>
@@ -1503,7 +1513,7 @@
   <!-- ROUTE PLAN 위치 탐색 / 임시 경유지 -->
   <div class="promo-modal-backdrop" id="routeLocateBackdrop">
     <div class="promo-modal">
-      <div class="promo-title">ROUTE LOCATE / VIA</div>
+      <div class="promo-title" id="routeLocateTitle">PLAN INPUT / VIA</div>
       <div class="route-locate-hint">주소·장소명, WGS84 좌표 또는 10-DIGIT MGRS를 입력하십시오. 검색 위치는 저장 없이 확인하거나 현재 ROUTE의 임시 경유지(VIA)로 추가할 수 있습니다.</div>
       <div style="display:flex;gap:6px;margin-top:10px;">
         <input type="search" class="promo-input" id="routeLocateInput" placeholder="주소 / 37.12345, 127.12345 / 52S..." autocomplete="off" style="margin:0;flex:1;min-width:0;" />
@@ -1535,9 +1545,22 @@
         <div class="route-point-row">
           <div class="route-point-head"><span>START</span><strong id="routeStartReadout">NOT SET</strong></div>
           <div class="route-point-actions">
-            <button class="osb-btn" onclick="setRouteStartFromReference()">GPS/TEMP</button>
-            <button class="osb-btn" onclick="setRouteStartFromReticle()">RETICLE</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('START','GPS')">GPS</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('START','HOME')">HOME</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('START','TEMP')">TEMP POS</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('START','RETICLE')">RETICLE</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('START','INPUT')">INPUT</button>
             <button class="osb-btn" onclick="clearRouteStart()">CLEAR</button>
+          </div>
+        </div>
+        <div class="route-point-row">
+          <div class="route-point-head"><span>VIA</span><strong id="routeViaReadout">0 VIA</strong></div>
+          <div class="route-point-actions">
+            <button class="osb-btn" onclick="setPlanPointFromSource('VIA','GPS')">GPS</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('VIA','HOME')">HOME</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('VIA','TEMP')">TEMP POS</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('VIA','RETICLE')">RETICLE</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('VIA','INPUT')">INPUT</button>
           </div>
         </div>
         <div class="route-point-row">
@@ -1546,8 +1569,11 @@
         <div class="route-point-row">
           <div class="route-point-head"><span>END</span><strong id="routeEndReadout">NOT SET</strong></div>
           <div class="route-point-actions">
-            <button class="osb-btn" onclick="setRouteEndFromReticle()">RETICLE</button>
-            <button class="osb-btn" onclick="setRouteEndFromHome()">HOME</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('END','GPS')">GPS</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('END','HOME')">HOME</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('END','TEMP')">TEMP POS</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('END','RETICLE')">RETICLE</button>
+            <button class="osb-btn" onclick="setPlanPointFromSource('END','INPUT')">INPUT</button>
             <button class="osb-btn" onclick="clearRouteEnd()">CLEAR</button>
           </div>
         </div>
@@ -1578,10 +1604,10 @@
     </div>
   </div>
 
-  <!-- NAV OPTIC quick control -->
+  <!-- Movement information DISPLAY quick control -->
   <div class="promo-modal-backdrop" id="navOpticBackdrop">
     <div class="promo-modal">
-      <div class="promo-title">NAV OPTIC</div>
+      <div class="promo-title">DISPLAY</div>
       <div class="field-control-grid">
         <button class="osb-btn" onclick="setOpticTheme('stealth',this);closeNavOptic();">STH</button>
         <button class="osb-btn" onclick="setOpticTheme('nvg-green',this);closeNavOptic();">NVG-G</button>
@@ -1609,10 +1635,10 @@
   <!-- 기록부 서랍 -->
   <div class="wp-drawer" id="wpDrawer" aria-hidden="true">
     <div class="drawer-head">
-      <div style="font-size:12px;font-weight:900;color:var(--accent);">WAYPOINTS</div>
+      <div style="font-size:12px;font-weight:900;color:var(--accent);">POINTS</div>
       <button class="btn-close-osd" onclick="toggleWpDrawer()">✕</button>
     </div>
-    <div class="wp-filter-bar" role="tablist" aria-label="WAYPOINTS category">
+    <div class="wp-filter-bar" role="tablist" aria-label="POINTS category">
       <button class="wp-filter-btn active" data-filter="ALL" onclick="setWaypointFilter('ALL', this)">ALL</button>
       <button class="wp-filter-btn" data-filter="REGISTERED" onclick="setWaypointFilter('REGISTERED', this)">REGISTERED</button>
       <button class="wp-filter-btn" data-filter="UNEXPLORED" onclick="setWaypointFilter('UNEXPLORED', this)">UNEXPLORED</button>
@@ -1674,6 +1700,7 @@
     let radiusCircle = null;
     let currentGpsAltitude = null;
     let gpsWatchId = null;
+    let gpsSessionId = 0;
     let gpsLockState = 'NO FIX';
     let hasGpsFix = false;
     let currentOpticMode = 'NVG-G';
@@ -1735,6 +1762,7 @@
     let navLegTimes = [];
     let routeViaLayer = null;
     let routeLocateSelected = null;
+    let routeLocateRole = 'VIA';
     let routeLocateSearchToken = 0;
     let targetReferenceLine = null;
     let routeDirty = false;
@@ -1773,7 +1801,7 @@
     const map = L.map('map', mapOptions);
 
     L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-      maxZoom:17, attribution:'Map data © OpenStreetMap contributors · Map style © OpenTopoMap'
+      maxNativeZoom:17, maxZoom:19, attribution:'Map data © OpenStreetMap contributors · Map style © OpenTopoMap'
     }).addTo(map);
     map.createPane('roadBoostPane');
     map.getPane('roadBoostPane').style.zIndex = '250';
@@ -1783,12 +1811,23 @@
       attribution:'© OpenStreetMap contributors'
     });
     markersLayer = L.layerGroup().addTo(map);
-    // 큰 RADAR 원은 SVG보다 Canvas 렌더러가 iOS Safari 이동/줌에서 훨씬 가볍다.
+    // 큰 NEARBY 원은 SVG보다 Canvas 렌더러가 iOS Safari 이동/줌에서 훨씬 가볍다.
     const radarRenderer = L.canvas({ padding: 0.25 });
     const routeRenderer = L.canvas({ padding: 0.35 });
     routeDraftLayer = L.layerGroup().addTo(map);
     routeViaLayer = L.layerGroup().addTo(map);
     trackLiveLayer = L.layerGroup().addTo(map);
+
+    // Dynamic viewport/keyboard/PWA changes do not always emit a window resize on iOS.
+    let mapSizeFrame = 0;
+    function refreshMapSize() {
+      cancelAnimationFrame(mapSizeFrame);
+      mapSizeFrame = requestAnimationFrame(() => map.invalidateSize({ animate:false, pan:false }));
+    }
+    if (window.ResizeObserver) new ResizeObserver(refreshMapSize).observe(map.getContainer());
+    window.visualViewport?.addEventListener('resize', refreshMapSize);
+    window.addEventListener('pageshow', refreshMapSize);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshMapSize(); });
 
     /* 10계단 MGRS 계산 엔진 */
     function calcMGRS(lat, lon) {
@@ -1940,7 +1979,9 @@
         ta.style.left = '-9999px';
         ta.style.opacity = '0';
         document.body.appendChild(ta);
+        ta.focus({preventScroll:true});
         ta.select();
+        ta.setSelectionRange(0, ta.value.length);
         const ok = document.execCommand('copy');
         ta.remove();
         return ok;
@@ -1984,13 +2025,13 @@
         const parsed = JSON.parse(d);
         return Array.isArray(parsed) ? parsed.filter(item => item && Array.isArray(item.coords) && item.coords.length === 2 && item.coords.every(Number.isFinite)) : [];
       } catch (e) {
-        console.warn('WAYPOINTS 저장 데이터 읽기 실패:', e);
+        console.warn('POINTS 저장 데이터 읽기 실패:', e);
         return [];
       }
     }
 
     function saveLocalIntel(list) {
-      if (!Array.isArray(list)) throw new TypeError('WAYPOINTS 데이터는 배열이어야 합니다.');
+      if (!Array.isArray(list)) throw new TypeError('POINTS 데이터는 배열이어야 합니다.');
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
       updateWpCounter();
       renderAllMarkers();
@@ -2028,7 +2069,7 @@
     function updateWpCounter() {
       const count = getWaypoints('ALL').length;
       const counter = document.getElementById('btnWpCount');
-      if (counter) counter.innerText = count > 0 ? `WAYPOINTS (${count})` : 'WAYPOINTS';
+      if (counter) counter.innerText = count > 0 ? `POINTS (${count})` : 'POINTS';
     }
 
     function setWaypointFilter(filter, btn) {
@@ -2128,7 +2169,7 @@
       }
       const layerKey = markerLayerKey(entry);
       if (!markerLayerVisibility[layerKey]) return false;
-      // RADAR는 REGISTERED DB에만 적용. 저장된 WAYPOINTS는 거리와 무관하게 유지.
+      // NEARBY는 REGISTERED DB에만 적용. 저장된 POINTS는 거리와 무관하게 유지.
       if (layerKey !== 'REGISTERED') return true;
       if (selectedRadius === 'all' || !hasGpsFix) return true;
       const id = String(entry.data?.id || '');
@@ -2262,7 +2303,7 @@
       return display.length ? display.reverse().join(' ') : fallback;
     }
 
-    /* SITREP 패널 제어 */
+    /* POINT INFO 패널 제어 */
     function updateActiveTargetNavigation() {
       const distEl = document.getElementById('sitrepDist');
       const brgEl = document.getElementById('sitrepBrg');
@@ -2276,7 +2317,7 @@
       }
       const dist = calcDistanceKm(ref.coords[0], ref.coords[1], currentActiveTarget.coords[0], currentActiveTarget.coords[1]);
       const brg = calcBearing(ref.coords[0], ref.coords[1], currentActiveTarget.coords[0], currentActiveTarget.coords[1]);
-      if (distEl) distEl.innerText = `DIST: ${dist} KM · ${ref.type}`;
+      if (distEl) distEl.innerText = `DIST: ${dist} KM · ${referenceLabel(ref.type)}`;
       if (brgEl) brgEl.innerText = `BRG: ${brg}`;
       if (hudEl) hudEl.innerText = brg;
     }
@@ -2309,16 +2350,18 @@
     }
 
     function openSitrep(target, statusType) {
+      sitrepAddressToken++;
       currentActiveTarget = target;
 
       const panel = document.getElementById('sitrepPanel');
       const mgrs = calcMGRS(target.coords[0], target.coords[1]);
-      const latLon = `${target.coords[0].toFixed(5)}°N, ${target.coords[1].toFixed(5)}°E`;
+      const latLon = `${target.coords[0].toFixed(5)}, ${target.coords[1].toFixed(5)}`;
 
       document.getElementById('sitrepCode').innerText = `SEC-KOR // ${target.opCode}`;
       document.getElementById('sitrepName').innerText = target.name;
       document.getElementById('sitrepMgrs').innerText = mgrs;
       document.getElementById('sitrepLatLon').innerText = latLon;
+      document.querySelectorAll('.coord-copy-feedback').forEach(el => { el.textContent = ''; });
       renderSitrepIntel(target);
       updateActiveTargetNavigation();
 
@@ -2353,17 +2396,21 @@
         addressValue.dataset.copyValue = target.address;
       } else {
         addressValue.innerText = '주소 조회 중...';
+        delete addressValue.dataset.copyValue;
         resolveSitrepAddress(target.coords[0], target.coords[1]);
       }
 
       panel.style.display = 'flex';
       map.setView(target.coords, 14, { animate:false });
+      refreshMapSize();
     }
 
     let sitrepAddressToken = 0;
 
     async function resolveSitrepAddress(lat, lon) {
       const token = ++sitrepAddressToken;
+      const target = currentActiveTarget;
+      const isCurrent = () => token === sitrepAddressToken && currentActiveTarget === target && target?.coords?.[0] === lat && target?.coords?.[1] === lon;
       const valueEl = document.getElementById('sitrepAddressValue');
       if (!valueEl) return;
       const fallback = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
@@ -2374,11 +2421,11 @@
         if (!res.ok) throw new Error('geocoding failed');
         const data = await res.json();
         const address = normalizeKoreanAddress(data, fallback);
-        if (token !== sitrepAddressToken) return;
+        if (!isCurrent()) return;
         valueEl.innerText = address;
         valueEl.dataset.copyValue = address;
       } catch (e) {
-        if (token !== sitrepAddressToken) return;
+        if (!isCurrent()) return;
         valueEl.innerText = fallback;
         valueEl.dataset.copyValue = fallback;
       }
@@ -2396,6 +2443,18 @@
         copyEl.innerText = 'COPIED';
         setTimeout(() => { if (copyEl) copyEl.innerText = 'COPY'; }, 1200);
       }
+    }
+
+    async function copyPointCoordinate(id) {
+      const target = currentActiveTarget;
+      const valueEl = document.getElementById(id);
+      const text = valueEl?.textContent;
+      if (!target || !text || text === '--' || text.includes('UNAVAILABLE')) return;
+      if (!await writeClipboardText(text) || currentActiveTarget !== target) return;
+      const feedback = valueEl.parentElement.querySelector('.coord-copy-feedback');
+      feedback.textContent = 'COPIED';
+      clearTimeout(feedback.copyTimer);
+      feedback.copyTimer = setTimeout(() => { feedback.textContent = ''; }, 1000);
     }
 
     function closeSitrep() {
@@ -2477,7 +2536,11 @@
       }
     }
 
+    let addressSearchToken = 0;
+
     function openAddressSearch() {
+      addressSearchToken++;
+      document.getElementById('addressSearchButton').disabled = false;
       closeFieldControls();
       closeWpDrawer();
       selectedAddressResult = null;
@@ -2491,6 +2554,7 @@
     }
 
     function closeAddressSearch() {
+      addressSearchToken++;
       document.getElementById('addressSearchBackdrop').style.display = 'none';
       selectedAddressResult = null;
     }
@@ -2517,6 +2581,7 @@
       const button = document.getElementById('addressSearchButton');
       const query = input?.value.trim();
       if (!query) { input?.focus(); return; }
+      const token = ++addressSearchToken;
       selectedAddressResult = null;
       setAddressSearchActionsEnabled(false);
       resultsEl.innerHTML = '<div class="address-search-empty">SEARCHING...</div>';
@@ -2542,6 +2607,7 @@
         const res = await fetch(url, { headers:{ 'Accept':'application/json' } });
         if (!res.ok) throw new Error('address search failed');
         const data = await res.json();
+        if (token !== addressSearchToken) return;
         resultsEl.innerHTML = '';
         if (!Array.isArray(data) || data.length === 0) {
           resultsEl.innerHTML = '<div class="address-search-empty">검색 결과가 없습니다.</div>';
@@ -2558,9 +2624,10 @@
           item.append(name, coords); item.onclick=()=>selectAddressResult(result,item); resultsEl.appendChild(item);
         });
       } catch (e) {
+        if (token !== addressSearchToken) return;
         console.warn('위치 검색 실패:', e);
         resultsEl.innerHTML = '<div class="address-search-empty">검색에 실패했습니다. 주소는 네트워크가 필요하며 좌표/MGRS는 오프라인에서도 사용할 수 있습니다.</div>';
-      } finally { if (button) button.disabled = false; }
+      } finally { if (button && token === addressSearchToken) button.disabled = false; }
     }
 
     function moveToSelectedAddress() {
@@ -2667,10 +2734,17 @@
       closeFieldControls();
     }
 
+    function validCoordinates(coords) {
+      return Array.isArray(coords) && coords.length >= 2 &&
+        typeof coords[0] === 'number' && typeof coords[1] === 'number' &&
+        Number.isFinite(coords[0]) && Number.isFinite(coords[1]) &&
+        Math.abs(coords[0]) <= 90 && Math.abs(coords[1]) <= 180;
+    }
+
     function cloneRouteSegments(value) {
       if (!Array.isArray(value)) return [];
       return value.map(segment => Array.isArray(segment)
-        ? segment.filter(pt => Array.isArray(pt) && pt.length === 2 && pt.every(Number.isFinite)).map(pt => [pt[0], pt[1]])
+        ? segment.filter(validCoordinates).map(pt => [pt[0], pt[1]])
         : []
       ).filter(segment => segment.length >= 2);
     }
@@ -2844,7 +2918,7 @@
       if (panel) panel.classList.toggle('active', targetModeActive);
       if (kicker) kicker.innerText = 'TARGET MODE // ROUTE PLAN';
       if (name) name.innerText = targetModeTarget?.name || 'NO TARGET';
-      if (stats) stats.innerHTML = `ROUTE ${routeLengthKm().toFixed(1)} KM<br>${routeDraftSegments.length} SEG · ${routeViaPoints.length} VIA · ${routeMarkSegments.length} MARK`;
+      if (stats) stats.innerHTML = `ROUTE ${routeLengthKm().toFixed(1)} KM<br>${routeDraftSegments.length} SEG · ${routeViaPoints.length} VIA · ${routeMarkSegments.length} OVERLAY`;
 
       const navTarget = document.getElementById('navHudTarget');
       const navOrient = document.getElementById('navHudOrient');
@@ -2880,7 +2954,7 @@
       if (navLeg) navLeg.innerText = backtrackActive ? 'BACKTRACK · REVERSE TRACK' : (navLegIndex === 0 ? 'LEG 1 · TARGET' : 'LEG 2 · END');
       if (navDistanceLabel) navDistanceLabel.innerText = backtrackActive ? 'DIRECT TO TRACK POINT' : (navLegIndex === 0 ? 'DIRECT TO TARGET' : 'DIRECT TO END');
       if (navElapsed) { const now=Date.now(); navElapsed.innerText = `TOTAL ${formatElapsed(navStartedAt ? now-navStartedAt : 0)} · LEG ${formatElapsed(navLegStartedAt ? now-navLegStartedAt : 0)}`; }
-      if (navRefEl) navRefEl.innerText = `REF ${navRef?.type || '--'}`;
+      if (navRefEl) navRefEl.innerText = `REF ${referenceLabel(navRef?.type)}`;
       if (navGps) navGps.innerText = gpsPowerEnabled ? `GPS ${gpsLockState}${gpsFollowEnabled ? ' · FOLLOW' : ''}` : 'GPS OFF';
       if (navTrack) {
         const dist = trackLogDistanceKm();
@@ -2904,8 +2978,8 @@
       if (save) save.classList.toggle('route-save-dirty', routeDirty);
       if (navStart) navStart.disabled = pendingNavStart;
       if (recenter) {
-        recenter.classList.toggle('active', gpsFollowEnabled);
-        recenter.innerText = gpsFollowEnabled ? 'FOLLOW ON' : 'RE-CENTER';
+        recenter.classList.remove('active');
+        recenter.innerText = 'RECENTER';
       }
       if (orient) {
         orient.style.display = ROTATION_AVAILABLE ? '' : 'none';
@@ -2919,7 +2993,7 @@
       }
       if (collapseBtn) collapseBtn.innerText = navPanelCollapsed ? 'SHOW' : 'HIDE';
       if (drawKindBtn) {
-        drawKindBtn.innerText = routeDrawKind === 'MARK' ? 'MARK · SOLID' : 'ROUTE · DASH';
+        drawKindBtn.innerText = routeDrawKind === 'MARK' ? 'OVERLAY · SOLID' : 'ROUTE · DASH';
         drawKindBtn.classList.toggle('active', routeDrawKind === 'MARK');
       }
       if (nextLegBtn) nextLegBtn.disabled = !routeEndPoint || navLegIndex >= 1 || backtrackActive;
@@ -3117,6 +3191,7 @@
     function renderRouteDraft() {
       if (!routeDraftLayer) return;
       routeDraftLayer.clearLayers();
+      if (!targetModeActive) { renderRouteViaPoints(); renderRouteEndpoints(); return; }
       routeDraftSegments.forEach(segment => {
         L.polyline(segment, routeStyle()).addTo(routeDraftLayer);
       });
@@ -3167,6 +3242,9 @@
     }
 
     function resetRouteGestureState(cancelStroke = true) {
+      routeActivePointers.forEach((_, id) => {
+        try { map.getContainer().releasePointerCapture(id); } catch (e) {}
+      });
       routeActivePointers.clear();
       routeGestureMode = false;
       routeGestureAwaitRelease = false;
@@ -3221,6 +3299,11 @@
 
     function enterTargetMode(target) {
       if (!target?.coords) return;
+      if (!preserveActivePlan()) return;
+      // Saving the outgoing plan may replace its local point object.
+      target = getLocalIntel().find(item => String(item.id) === String(target.id)) || target;
+      closeRouteLocate(); closeRoutePoints(); closeNavOptic();
+      stopNavElapsed();
       if (trackRecording || pendingTrackStart) stopTrackRecording(true, true);
       clearActiveTrack();
       targetModeTarget = target;
@@ -3263,8 +3346,11 @@
 
     function exitTargetMode(force = false) {
       if (!targetModeActive) return;
-      if (!force && routeDirty && !confirm('저장하지 않은 ROUTE 변경사항이 있습니다. 종료하시겠습니까?')) return;
+      // force is reserved for explicit point deletion, never normal PLAN closing.
+      if (!force && !preserveActivePlan()) return;
       closeRouteLocate();
+      closeRoutePoints();
+      closeNavOptic();
       setMapRouteDrawInteraction(false);
       if (trackRecording || pendingTrackStart) stopTrackRecording(true, true);
       targetModeActive = false;
@@ -3282,6 +3368,7 @@
       routeViaPoints = [];
       routeStartPoint = null;
       routeEndPoint = null;
+      renderRouteEndpoints();
       navLegIndex = 0; backtrackActive = false;
       stopNavElapsed();
       routeDirty = false;
@@ -3319,7 +3406,7 @@
 
     function clearRouteDraft() {
       if (!targetModeActive) return;
-      const label = routeDrawKind === 'MARK' ? 'MARK' : 'ROUTE';
+      const label = routeDrawKind === 'MARK' ? 'OVERLAY' : 'ROUTE';
       const bucket = routeDrawKind === 'MARK' ? routeMarkSegments : routeDraftSegments;
       if (!bucket.length) return;
       if (!confirm(`${label} 선을 모두 지우시겠습니까?`)) return;
@@ -3328,8 +3415,15 @@
       renderRouteDraft();
     }
 
+    function preserveActivePlan() {
+      return !targetModeActive || (!routeDirty && !(routeCurrentSegment?.length >= 2)) || saveTargetRoute();
+    }
+
     function saveTargetRoute() {
       if (!targetModeActive || !targetModeTarget) return false;
+      if (routePointerId !== null && routeCurrentSegment?.length >= 2) {
+        finishRoutePointer({pointerId:routePointerId, preventDefault(){}});
+      }
       const routePlan = {
         segments: cloneRouteSegments(routeDraftSegments),
         markSegments: cloneRouteSegments(routeMarkSegments),
@@ -3389,8 +3483,15 @@
       if (name && !name.value.trim() && result?.name) name.value = String(result.name).slice(0,40);
     }
 
-    function openRouteLocate() {
-      if (!targetModeActive || targetModePhase !== 'PLAN') return;
+    function openRouteLocate(role = 'VIA') {
+      if (!targetModeActive || targetModePhase !== 'PLAN' || !['START','VIA','END'].includes(role)) return;
+      routeLocateRole = role;
+      closeRoutePoints();
+      document.getElementById('routeLocateTitle').textContent = `PLAN INPUT / ${role}`;
+      document.getElementById('routeLocateViaBtn').textContent = `${role} 지정`;
+      document.getElementById('routeViaNameInput').placeholder = `${role} 명칭 (선택)`;
+      document.querySelector('#routeLocateBackdrop .route-locate-hint').textContent = `주소·장소명, WGS84 또는 MGRS를 입력하여 ${role} 위치를 지정합니다.`;
+      document.getElementById('routeLocateSearchBtn').disabled = false;
       setMapRouteDrawInteraction(false);
       routeLocateSelected = null;
       routeLocateSearchToken++;
@@ -3498,10 +3599,11 @@
           resultsEl.appendChild(item);
         });
       } catch (e) {
+        if (token !== routeLocateSearchToken) return;
         console.warn('ROUTE LOCATE 실패:', e);
         resultsEl.innerHTML = '<div class="address-search-empty">위치 검색에 실패했습니다. 네트워크 또는 좌표 형식을 확인하십시오.</div>';
       } finally {
-        if (button) button.disabled = false;
+        if (button && token === routeLocateSearchToken) button.disabled = false;
       }
     }
 
@@ -3516,18 +3618,13 @@
     function addRouteViaPoint() {
       if (!targetModeActive || targetModePhase !== 'PLAN' || !routeLocateSelected) return;
       const nameInput = document.getElementById('routeViaNameInput');
-      const idx = routeViaPoints.length + 1;
       const via = {
-        id:`VIA-${Date.now()}-${idx}`,
-        name:(nameInput?.value.trim() || `VIA ${String(idx).padStart(2,'0')}`).slice(0,60),
+        name:(nameInput?.value.trim() || routeLocateRole).slice(0,60),
         coords:[Number(routeLocateSelected.lat), Number(routeLocateSelected.lon)],
         address:String(routeLocateSelected.address || '').slice(0,500),
-        source:String(routeLocateSelected.source || 'ROUTE')
+        source:String(routeLocateSelected.source || 'INPUT')
       };
-      routeViaPoints.push(via);
-      routeDirty = true;
-      renderRouteViaPoints();
-      updateTargetModePanel();
+      if (!assignPlanPoint(routeLocateRole, via)) return;
       const coords = [...via.coords];
       closeRouteLocate();
       map.setView(coords, Math.max(map.getZoom(), 15), { animate:false });
@@ -3539,7 +3636,12 @@
       const ref = getReferencePosition();
       if (!ref?.coords) return;
       pendingNavStart = false;
-      if (!routeStartPoint) { routeStartPoint = { name:ref.type === 'GPS' ? 'GPS START' : 'TEMP START', coords:[...ref.coords], source:ref.type }; routeDirty = true; saveTargetRoute(); }
+      if (!routeStartPoint) {
+        routeStartPoint = { name:ref.type === 'GPS' ? 'GPS START' : 'TEMP POS START', coords:[...ref.coords], source:ref.type };
+        routeDirty = true;
+        renderRouteEndpoints();
+        if (!saveTargetRoute()) return;
+      }
       targetModePhase = 'NAV';
       navPanelCollapsed = false;
       navLegIndex = 0;
@@ -3551,7 +3653,7 @@
       setMapRouteDrawInteraction(false);
       syncGpsMarkerVisibility();
       syncTargetReferenceLine();
-      if (ref.type === 'GPS') setGpsFollow(true, true); else { gpsFollowEnabled=false; map.setView(ref.coords, Math.max(map.getZoom(),13), {animate:false}); }
+      map.setView(ref.coords, Math.max(map.getZoom(),13), {animate:false});
       startNavElapsed();
       updateTrackUpFromGps(latestGpsPosition);
       renderRouteEndpoints();
@@ -3560,7 +3662,7 @@
 
     function startTargetNavigation() {
       if (!targetModeActive || !targetModeTarget) return;
-      if (routeDirty && !saveTargetRoute()) return;
+      if (!preserveActivePlan()) return;
       setMapRouteDrawInteraction(false);
       const ref = getReferencePosition();
       if (!ref?.coords) {
@@ -3574,11 +3676,11 @@
     function recenterTargetNavigation() {
       if (!targetModeActive || targetModePhase !== 'NAV') return;
       const ref = getReferencePosition();
-      if (!ref?.coords) { alert('GPS 또는 TEMP MARK 위치가 필요합니다.'); return; }
+      if (!ref?.coords) { alert('GPS 또는 TEMP POS 위치가 필요합니다.'); return; }
       if (ref.type === 'GPS') {
         targetModeShowGps = true;
         syncGpsMarkerVisibility();
-        setGpsFollow(true, true);
+        map.setView(ref.coords, Math.max(map.getZoom(),13), { animate:false });
       } else {
         gpsFollowEnabled = false;
         map.setView(ref.coords, Math.max(map.getZoom(),13), { animate:false });
@@ -3766,7 +3868,7 @@
       const list = getLocalIntel();
       const idx = list.findIndex(i => String(i.id) === String(currentActiveTarget.id));
       if (idx === -1) {
-        alert('해당 WAYPOINT를 저장소에서 찾을 수 없습니다.');
+        alert('해당 POINT를 저장소에서 찾을 수 없습니다.');
         closePromotionModal();
         return;
       }
@@ -3823,7 +3925,7 @@
 
     function setRadar(r, btn) {
       if (r !== 'all' && !hasGpsFix) {
-        alert('RADAR 거리 필터는 GPS FIX 이후 사용할 수 있습니다.');
+        alert('NEARBY 거리 필터는 GPS FIX 이후 사용할 수 있습니다.');
         return;
       }
       selectedRadius = r;
@@ -3836,7 +3938,7 @@
     }
 
     function setGpsFollow(enabled, recenter = false) {
-      gpsFollowEnabled = Boolean(enabled && hasGpsFix);
+      gpsFollowEnabled = Boolean(enabled && gpsPowerEnabled && hasGpsFix);
       if (!gpsFollowEnabled && navMapOrientation === 'TRACK') stopTrackUpRotation(true);
       updateGpsTelemetry();
       if (gpsFollowEnabled && recenter) {
@@ -3845,6 +3947,11 @@
       }
       if (gpsFollowEnabled && navMapOrientation === 'TRACK') resumeTrackUpRotation();
       if (targetModeActive) updateTargetModePanel();
+    }
+
+    function toggleGpsFollow() {
+      if (!gpsPowerEnabled || !hasGpsFix) { alert('FOLLOW는 GPS ON + FIX 상태에서 사용할 수 있습니다.'); return; }
+      setGpsFollow(!gpsFollowEnabled, true);
     }
 
     function applyGpsPosition(pos, shouldRecenter = false) {
@@ -3879,7 +3986,10 @@
         startTrackRecording();
       }
       recordTrackPoint(pos);
-      if (shouldRecenter) setGpsFollow(true, true);
+      if (shouldRecenter) {
+        map.setView(baseLocation, Math.max(map.getZoom(),13), {animate:false});
+        updateGpsTelemetry();
+      }
       else {
         updateGpsTelemetry();
         if (gpsFollowEnabled && Date.now() - lastGpsFollowPanAt > 900) {
@@ -3905,7 +4015,7 @@
       // 이미 FIX가 있으면 GPS 버튼은 FOLLOW 재활성화/현재 위치 복귀 역할을 한다.
       if (hasGpsFix) {
         if (pendingNavStart && targetModeActive) activateTargetNavigation();
-        else setGpsFollow(true, true);
+        else recenterPrimary();
         return;
       }
 
@@ -3999,13 +4109,14 @@
 
             div.innerHTML = `
               <div class="wp-item-meta">
-                <span class="wp-item-status">[${displayStatus}] ${opCode}</span>
+                <span class="wp-item-status"></span>
                 ${deleteButton}
               </div>
               <div class="wp-item-name"></div>
               <div class="wp-item-coords">${calcMGRS(item.coords[0], item.coords[1])}</div>
             `;
             div.querySelector('.wp-item-name').textContent = item.name || '무명 거점';
+            div.querySelector('.wp-item-status').textContent = `[${displayStatus}] ${opCode}`;
 
             if (!isRegistered) {
               const del = div.querySelector('.wp-item-delete');
@@ -4028,7 +4139,7 @@
       });
 
       if (totalVisible === 0) {
-        c.innerHTML = `<div style="text-align:center;color:var(--text-dim);font-size:11px;padding:30px 10px;">저장된 WAYPOINTS가 없습니다.</div>`;
+        c.innerHTML = `<div style="text-align:center;color:var(--text-dim);font-size:11px;padding:30px 10px;">저장된 POINTS가 없습니다.</div>`;
       }
     }
 
@@ -4039,8 +4150,8 @@
       try {
         saveLocalIntel(next);
       } catch (e) {
-        console.warn('WAYPOINT 삭제 저장 실패:', e);
-        alert('WAYPOINT 삭제에 실패했습니다.');
+        console.warn('POINT 삭제 저장 실패:', e);
+        alert('POINT 삭제에 실패했습니다.');
         return;
       }
       if (targetModeActive && targetModeTarget && String(targetModeTarget.id) === String(id)) exitTargetMode(true);
@@ -4054,14 +4165,17 @@
         renderWpDrawerList();
         return;
       }
-      if (!confirm(`저장된 WAYPOINTS ${localList.length}개를 모두 삭제하시겠습니까?\n등록 거점(REGISTERED)은 기본 데이터이므로 유지됩니다.`)) return;
+      if (!confirm(`저장된 POINTS ${localList.length}개를 모두 삭제하시겠습니까?\n등록 거점(REGISTERED)은 기본 데이터이므로 유지됩니다.`)) return;
+
+      // Removing local points must not discard edits to an unrelated registered PLAN.
+      if (targetModeActive && isRegisteredTarget(targetModeTarget) && !preserveActivePlan()) return;
 
       const activeWasLocal = currentActiveTarget && !RECON_TARGETS.some(t => String(t.id) === String(currentActiveTarget.id));
       try {
         saveLocalIntel([]);
       } catch (e) {
-        console.warn('WAYPOINTS 전체 삭제 저장 실패:', e);
-        alert('WAYPOINTS 전체 삭제에 실패했습니다.');
+        console.warn('POINTS 전체 삭제 저장 실패:', e);
+        alert('POINTS 전체 삭제에 실패했습니다.');
         return;
       }
       if (targetModeActive) exitTargetMode(true);
@@ -4089,7 +4203,7 @@
 
     function buildRoutePackage() {
       if (!targetModeActive || !targetModeTarget) return null;
-      if (routeDirty && !saveTargetRoute()) return null;
+      if (!preserveActivePlan()) return null;
       const routePlan = getTargetRoutePlan(targetModeTarget) || {
         segments: cloneRouteSegments(routeDraftSegments),
         viaPoints: cloneRouteViaPoints(routeViaPoints),
@@ -4168,31 +4282,36 @@
       }
     }
 
-    function sanitizeImportedRouteSegments(raw) {
+    function importedCoordinates(raw) {
+      if (!Array.isArray(raw) || raw.length < 2 || raw.slice(0,2).some(v =>
+        !['number','string'].includes(typeof v) || String(v).trim() === '')) throw new Error('invalid coordinates');
+      const coords = [Number(raw[0]), Number(raw[1])];
+      if (!validCoordinates(coords)) throw new Error('invalid coordinates');
+      return coords;
+    }
+
+    function sanitizeImportedRouteSegments(raw, allowEmpty = false, budget = { count:0 }) {
+      if (raw == null && allowEmpty) return [];
       if (!Array.isArray(raw)) throw new Error('invalid route segments');
+      if (raw.length > 500) throw new Error('too many segments');
       const segments = [];
-      let pointCount = 0;
-      for (const segment of raw.slice(0, 500)) {
-        if (!Array.isArray(segment)) continue;
+      for (const segment of raw) {
+        if (!Array.isArray(segment) || segment.length < 2) throw new Error('invalid segment');
         const clean = [];
         for (const point of segment) {
-          if (!Array.isArray(point) || point.length < 2) continue;
-          const lat = Number(point[0]), lon = Number(point[1]);
-          if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) continue;
-          clean.push([lat, lon]);
-          pointCount++;
-          if (pointCount > ROUTE_IMPORT_MAX_POINTS) throw new Error('route too large');
+          clean.push(importedCoordinates(point));
+          if (++budget.count > ROUTE_IMPORT_MAX_POINTS) throw new Error('route too large');
         }
-        if (clean.length >= 2) segments.push(clean);
+        segments.push(clean);
       }
-      if (segments.length === 0) throw new Error('empty route');
+      if (!allowEmpty && segments.length === 0) throw new Error('empty route');
       return segments;
     }
 
     function sanitizeImportedTarget(raw) {
-      if (!raw || !Array.isArray(raw.coords) || raw.coords.length < 2) throw new Error('invalid target');
-      const lat = Number(raw.coords[0]), lon = Number(raw.coords[1]);
-      if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) throw new Error('invalid target coords');
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('invalid target');
+      const [lat, lon] = importedCoordinates(raw.coords);
+      if (['__proto__','constructor','prototype'].includes(String(raw.id))) throw new Error('invalid target id');
       const status = ['UNEXPLORED','SECURED','REGISTERED'].includes(String(raw.status)) ? String(raw.status) : 'UNEXPLORED';
       const source = String(raw.source || '');
       return {
@@ -4209,7 +4328,16 @@
     }
 
     function sanitizeImportedViaPoints(raw) {
+      if (raw == null) return [];
+      if (!Array.isArray(raw) || raw.length > 100) throw new Error('invalid vias');
+      raw.forEach(via => importedCoordinates(via?.coords));
       return cloneRouteViaPoints(raw);
+    }
+
+    function sanitizeImportedEndpoint(raw) {
+      if (raw == null) return null;
+      importedCoordinates(raw.coords);
+      return cloneRouteEndpoint(raw);
     }
 
     function readRouteFileText(file) {
@@ -4235,17 +4363,20 @@
         const fileVersion = Number(raw?.version);
         if (raw?.format !== ROUTE_FILE_FORMAT || ![1,2,3].includes(fileVersion)) throw new Error('unsupported route format');
         const target = sanitizeImportedTarget(raw.target);
-        const segments = sanitizeImportedRouteSegments(raw?.routePlan?.segments);
+        const budget = { count:0 };
+        const segments = sanitizeImportedRouteSegments(raw?.routePlan?.segments, false, budget);
         const routePlan = {
           segments,
-          markSegments:fileVersion >= 3 ? cloneRouteSegments(raw?.routePlan?.markSegments) : [],
+          markSegments:fileVersion >= 3 ? sanitizeImportedRouteSegments(raw?.routePlan?.markSegments, true, budget) : [],
           viaPoints:fileVersion >= 2 ? sanitizeImportedViaPoints(raw?.routePlan?.viaPoints) : [],
-          startPoint:fileVersion >= 3 ? cloneRouteEndpoint(raw?.routePlan?.startPoint) : null,
-          endPoint:fileVersion >= 3 ? cloneRouteEndpoint(raw?.routePlan?.endPoint) : null,
+          startPoint:fileVersion >= 3 ? sanitizeImportedEndpoint(raw?.routePlan?.startPoint) : null,
+          endPoint:fileVersion >= 3 ? sanitizeImportedEndpoint(raw?.routePlan?.endPoint) : null,
           distanceKm:Number(routeLengthKm(segments).toFixed(3)),
           updatedAt:String(raw?.routePlan?.updatedAt || raw?.exportedAt || new Date().toISOString())
         };
 
+        // Validate the complete file before any write, then preserve the outgoing PLAN.
+        if (!preserveActivePlan()) return;
         const registered = RECON_TARGETS.find(item => String(item.id) === String(target.id));
         let importedTarget;
         if (registered) {
@@ -4282,7 +4413,7 @@
       const list = getWaypoints('ALL');
       const trackLogs = getTrackLogs();
       if (list.length === 0 && trackLogs.length === 0) {
-        alert("내보낼 WAYPOINTS 또는 TRACK LOG가 없습니다.");
+        alert("내보낼 POINTS 또는 TRACK LOG가 없습니다.");
         return;
       }
       let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="TacticalReconFieldTerminal" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n`;
@@ -4330,7 +4461,7 @@
     function openFieldControls(section) {
       const tray = document.getElementById('fieldControlTray');
       const title = document.getElementById('fieldControlTitle');
-      const titles = { menu:'FIELD MENU', radar: 'RADAR / SEARCH RANGE', layers: 'LAYERS / MARKER DISPLAY', target: 'RECON / TARGET SELECTION', optic: 'OPTIC / MODE' };
+      const titles = { menu:'FIELD MENU', radar: 'NEARBY / SEARCH RANGE', layers: 'LAYERS / MARKER DISPLAY', target: 'RECON / TARGET SELECTION', optic: 'DISPLAY / MODE' };
       title.innerText = titles[section] || 'FIELD CONTROLS';
       tray.querySelectorAll('.field-control-section').forEach(el => el.classList.remove('active'));
       const target = document.getElementById(`control-${section}`);
@@ -4342,7 +4473,7 @@
       document.getElementById('fieldControlTray').classList.remove('open');
     }
 
-    // 작은 FIELD CONTROL 패널은 지도 탭으로 닫는다. WAYPOINTS/SITREP은 명시적 닫기 유지.
+    // 작은 FIELD CONTROL 패널은 지도 탭으로 닫는다. POINTS/POINT INFO은 명시적 닫기 유지.
     map.on('click', () => { if (!routeDrawEnabled) closeFieldControls(); });
     map.on('dragstart', () => {
       closeFieldControls();
@@ -4426,7 +4557,7 @@
     function setHomeAtReticle() {
       const c=map.getCenter();
       const home={name:'HOME / EXIT',coords:[c.lat,c.lng],source:'RETICLE'};
-      try { localStorage.setItem(HOME_POINT_STORAGE_KEY,JSON.stringify(home)); renderHomeMarker(); updateTargetModePanel(); }
+      try { localStorage.setItem(HOME_POINT_STORAGE_KEY,JSON.stringify(home)); refreshPositionState(); }
       catch(e){ alert('HOME 저장에 실패했습니다.'); }
     }
 
@@ -4436,24 +4567,45 @@
       map.setView(home.coords,Math.max(map.getZoom(),14),{animate:false}); flushReticleTelemetry();
     }
 
+    function clearHomePoint() {
+      try { localStorage.removeItem(HOME_POINT_STORAGE_KEY); }
+      catch (e) { alert('HOME 삭제에 실패했습니다.'); return; }
+      if (homeMarker) map.removeLayer(homeMarker);
+      homeMarker = null;
+      refreshPositionState();
+    }
+
+    function refreshPositionState() {
+      renderHomeMarker();
+      syncGpsMarkerVisibility(); syncMarkerVisibility(); syncTargetReferenceLine();
+      updateActiveTargetNavigation(); updateGpsTelemetry(); updateTargetModePanel(); updateGpsDetail();
+    }
+
     function renderTempMark() {
       if (!tempMarkPoint) { if(tempMarkMarker&&map.hasLayer(tempMarkMarker)) map.removeLayer(tempMarkMarker); return; }
-      if (!tempMarkMarker) tempMarkMarker=L.marker(tempMarkPoint.coords,{icon:fieldDivIcon('temp-marker','TEMP'),keyboard:false,zIndexOffset:70});
+      if (!tempMarkMarker) tempMarkMarker=L.marker(tempMarkPoint.coords,{icon:fieldDivIcon('temp-marker','TEMP POS'),keyboard:false,zIndexOffset:70});
       else tempMarkMarker.setLatLng(tempMarkPoint.coords);
       if (!map.hasLayer(tempMarkMarker)) tempMarkMarker.addTo(map);
       updateTargetModePanel();
     }
 
-    function setTempMark(coords,name='TEMP POSITION') {
+    function setTempMark(coords,name='TEMP POS') {
       const lat=Number(coords?.[0]), lon=Number(coords?.[1]);
-      if(!Number.isFinite(lat)||!Number.isFinite(lon)) return;
-      tempMarkPoint={name,coords:[lat,lon],source:'TEMP'}; renderTempMark(); updateGpsDetail();
+      if(!validCoordinates([lat,lon])) return;
+      tempMarkPoint={name,coords:[lat,lon],source:'TEMP'}; renderTempMark(); refreshPositionState();
     }
     function setTempMarkAtReticle(){ const c=map.getCenter(); setTempMark([c.lat,c.lng]); }
     function setTempMarkFromSelectedSearch(){
-      if(!selectedAddressResult) return; const r={...selectedAddressResult}; setTempMark([r.lat,r.lon],r.name||'TEMP POSITION'); closeAddressSearch(); map.setView([r.lat,r.lon],Math.max(map.getZoom(),15),{animate:false});
+      if(!selectedAddressResult) return; const r={...selectedAddressResult}; setTempMark([r.lat,r.lon],r.name||'TEMP POS'); closeAddressSearch(); map.setView([r.lat,r.lon],Math.max(map.getZoom(),15),{animate:false});
     }
-    function clearTempMark(){ tempMarkPoint=null; renderTempMark(); updateGpsDetail(); }
+    function clearTempMark(){
+      tempMarkPoint=null;
+      if (tempMarkMarker) map.removeLayer(tempMarkMarker);
+      tempMarkMarker=null;
+      refreshPositionState();
+    }
+
+    function referenceLabel(type){ return type === 'TEMP' ? 'TEMP POS' : (type || 'NONE'); }
 
     function getReferencePosition(){
       if(gpsPowerEnabled && hasGpsFix) return {type:'GPS',coords:[baseLocation[0],baseLocation[1]]};
@@ -4467,29 +4619,55 @@
       const center=document.getElementById('primaryCenterBtn');
       if(label) label.innerText=gpsPowerEnabled ? (hasGpsFix?'GPS ON':'GPS WAIT') : 'GPS OFF';
       if(btn) btn.classList.toggle('active',gpsPowerEnabled);
-      if(center) center.innerText=(gpsPowerEnabled&&hasGpsFix)?'RE-CENTER':(tempMarkPoint?'CENTER TEMP':'CENTER');
+      if(center) center.innerText='RECENTER';
+      document.querySelectorAll('.gps-follow-toggle').forEach(el => {
+        el.textContent = gpsFollowEnabled ? 'FOLLOW ON' : 'FOLLOW OFF';
+        el.classList.toggle('active',gpsFollowEnabled);
+        el.setAttribute('aria-pressed',String(gpsFollowEnabled));
+        el.disabled = !gpsPowerEnabled || !hasGpsFix;
+      });
     }
 
     function startGpsTracking(recenter=false){
       if(!navigator.geolocation){ alert('브라우저가 GPS를 지원하지 않습니다.'); return; }
+      const session = ++gpsSessionId;
+      if (gpsWatchId !== null) navigator.geolocation.clearWatch(gpsWatchId);
+      gpsWatchId = null;
       gpsPowerEnabled=true; gpsLockState='ACQUIRING'; updateGpsTelemetry();
-      const onOk=pos=>{ applyGpsPosition(pos,recenter); if(gpsWatchId===null){ gpsWatchId=navigator.geolocation.watchPosition(p=>applyGpsPosition(p,false),()=>{gpsLockState='SIGNAL LOST';updateGpsTelemetry();},{enableHighAccuracy:true,maximumAge:5000,timeout:15000}); } };
-      navigator.geolocation.getCurrentPosition(onOk,()=>{ gpsLockState='NO FIX'; hasGpsFix=false; gpsFollowEnabled=false; updateGpsTelemetry(); syncGpsMarkerVisibility(); alert('GPS 수신 실패. 위치 권한을 확인하십시오.'); },{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+      const isCurrent = () => gpsPowerEnabled && session === gpsSessionId;
+      const onError = (initial) => {
+        if (!isCurrent()) return;
+        gpsLockState = initial ? 'NO FIX' : 'SIGNAL LOST';
+        hasGpsFix = false; gpsFollowEnabled = false; currentGpsAltitude = null;
+        if (initial) { pendingNavStart = false; pendingTrackStart = false; }
+        refreshPositionState();
+        if (initial) alert('GPS 수신 실패. 위치 권한을 확인하십시오.');
+      };
+      const onOk = pos => {
+        if (!isCurrent()) return;
+        applyGpsPosition(pos,recenter,session);
+        if (isCurrent() && gpsWatchId === null) gpsWatchId = navigator.geolocation.watchPosition(
+          p => { if (isCurrent()) applyGpsPosition(p,false,session); },
+          () => onError(false), {enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+      };
+      navigator.geolocation.getCurrentPosition(onOk,()=>onError(true),{enableHighAccuracy:true,maximumAge:0,timeout:15000});
     }
 
     function stopGpsTracking(){
+      gpsSessionId++;
       if(gpsWatchId!==null){ try{navigator.geolocation.clearWatch(gpsWatchId);}catch(e){} gpsWatchId=null; }
       gpsPowerEnabled=false; hasGpsFix=false; gpsLockState='OFF'; gpsFollowEnabled=false; pendingNavStart=false; pendingTrackStart=false; currentGpsAltitude=null;
       if(trackRecording) stopTrackRecording(true,true);
-      syncGpsMarkerVisibility(); updateGpsTelemetry(); updateTargetModePanel(); updateGpsDetail();
+      latestGpsPosition = null;
+      refreshPositionState();
     }
 
     function toggleGpsPower(){ gpsPowerEnabled ? stopGpsTracking() : startGpsTracking(true); }
-    function locateUser(){ if(!gpsPowerEnabled) startGpsTracking(true); else if(hasGpsFix) setGpsFollow(true,true); else startGpsTracking(true); }
+    function locateUser(){ if(!gpsPowerEnabled) startGpsTracking(true); else if(hasGpsFix) recenterPrimary(); else startGpsTracking(true); }
     function recenterPrimary(){
-      if(gpsPowerEnabled&&hasGpsFix){ setGpsFollow(true,true); return; }
+      if(gpsPowerEnabled&&hasGpsFix){ map.setView(baseLocation,Math.max(map.getZoom(),13),{animate:false}); flushReticleTelemetry(); return; }
       if(tempMarkPoint){ map.setView(tempMarkPoint.coords,Math.max(map.getZoom(),14),{animate:false}); flushReticleTelemetry(); return; }
-      alert('GPS FIX 또는 TEMP MARK가 필요합니다.');
+      alert('GPS FIX 또는 TEMP POS가 필요합니다.');
     }
 
     function openPlanShortcut(){
@@ -4525,10 +4703,36 @@
     function updateRoutePointsModal(){
       const sEl=document.getElementById('routeStartReadout'), tEl=document.getElementById('routeTargetReadout'), eEl=document.getElementById('routeEndReadout');
       if(sEl) sEl.innerText=routePointLabel(routeStartPoint); if(tEl) tEl.innerText=routePointLabel(targetModeTarget); if(eEl) eEl.innerText=routePointLabel(routeEndPoint);
+      document.getElementById('routeViaReadout').textContent = `${routeViaPoints.length} VIA`;
+    }
+    function assignPlanPoint(role, point) {
+      if (!targetModeActive || targetModePhase !== 'PLAN' || !validCoordinates(point?.coords)) return false;
+      const snapshot = cloneRouteEndpoint(point);
+      if (role === 'START') routeStartPoint = snapshot;
+      else if (role === 'END') routeEndPoint = snapshot;
+      else if (role === 'VIA') {
+        if (routeViaPoints.length >= 100) { alert('VIA는 최대 100개까지 지정할 수 있습니다.'); return false; }
+        routeViaPoints.push({...snapshot, id:`VIA-${Date.now()}-${routeViaPoints.length+1}`, address:String(point.address || '').slice(0,500)});
+      } else return false;
+      routeDirty = true;
+      renderRouteEndpoints(); renderRouteViaPoints(); updateTargetModePanel();
+      return true;
+    }
+
+    function setPlanPointFromSource(role, source) {
+      if (!targetModeActive || targetModePhase !== 'PLAN') return;
+      if (source === 'INPUT') { openRouteLocate(role); return; }
+      let coords;
+      if (source === 'GPS' && gpsPowerEnabled && hasGpsFix) coords = baseLocation;
+      else if (source === 'HOME') coords = getHomePoint()?.coords;
+      else if (source === 'TEMP') coords = tempMarkPoint?.coords;
+      else if (source === 'RETICLE') { const c = map.getCenter(); coords = [c.lat,c.lng]; }
+      if (!coords) { alert(`${source === 'TEMP' ? 'TEMP POS' : source} 위치를 사용할 수 없습니다.`); return; }
+      assignPlanPoint(role, {name:`${source === 'TEMP' ? 'TEMP POS' : source} ${role}`,coords:[...coords],source});
     }
     function openRoutePoints(){ if(!targetModeActive||targetModePhase!=='PLAN')return; setMapRouteDrawInteraction(false);updateRoutePointsModal();document.getElementById('routePointsBackdrop').style.display='flex'; }
     function closeRoutePoints(){ document.getElementById('routePointsBackdrop').style.display='none'; }
-    function setRouteStartFromReference(){ const r=getReferencePosition(); if(!r){alert('GPS FIX 또는 TEMP MARK가 필요합니다.');return;} routeStartPoint={name:r.type==='GPS'?'GPS START':'TEMP START',coords:[...r.coords],source:r.type};routeDirty=true;renderRouteEndpoints();updateRoutePointsModal();updateTargetModePanel(); }
+    function setRouteStartFromReference(){ const r=getReferencePosition(); if(!r){alert('GPS FIX 또는 TEMP POS가 필요합니다.');return;} routeStartPoint={name:r.type==='GPS'?'GPS START':'TEMP POS START',coords:[...r.coords],source:r.type};routeDirty=true;renderRouteEndpoints();updateRoutePointsModal();updateTargetModePanel(); }
     function setRouteStartFromReticle(){ const c=map.getCenter();routeStartPoint={name:'RETICLE START',coords:[c.lat,c.lng],source:'RETICLE'};routeDirty=true;renderRouteEndpoints();updateRoutePointsModal();updateTargetModePanel(); }
     function clearRouteStart(){routeStartPoint=null;routeDirty=true;renderRouteEndpoints();updateRoutePointsModal();updateTargetModePanel();}
     function setRouteEndFromReticle(){ const c=map.getCenter();routeEndPoint={name:'END',coords:[c.lat,c.lng],source:'RETICLE'};routeDirty=true;renderRouteEndpoints();updateRoutePointsModal();updateTargetModePanel(); }
@@ -4556,7 +4760,7 @@
     function updateGpsDetail(){
       const ref=getReferencePosition(); const pos=latestGpsPosition; const acc=Number(pos?.coords?.accuracy),alt=Number(pos?.coords?.altitude),speed=Number(pos?.coords?.speed);
       const set=(id,v)=>{const el=document.getElementById(id);if(el)el.innerText=v;};
-      set('gpsDetailState',gpsPowerEnabled?gpsLockState:'OFF'); set('gpsDetailRef',ref?.type||'NONE');
+      set('gpsDetailState',gpsPowerEnabled?gpsLockState:'OFF'); set('gpsDetailRef',referenceLabel(ref?.type));
       set('gpsDetailLatLon',ref?.coords?`${ref.coords[0].toFixed(6)}, ${ref.coords[1].toFixed(6)}`:'--'); set('gpsDetailMgrs',ref?.coords?calcMGRS(ref.coords[0],ref.coords[1]):'--');
       set('gpsDetailAcc',gpsPowerEnabled&&Number.isFinite(acc)?`±${Math.round(acc)} M`:'--');set('gpsDetailAlt',gpsPowerEnabled&&Number.isFinite(alt)?`${Math.round(alt)} M MSL`:'--');set('gpsDetailSpeed',gpsPowerEnabled&&Number.isFinite(speed)?`${(speed*3.6).toFixed(1)} KM/H`:'--');set('gpsDetailNetwork',navigator.onLine?'ONLINE':'OFFLINE');
       const home=getHomePoint();
@@ -4568,15 +4772,18 @@
     async function copyFieldPosition(){const r=getReferencePosition();if(!r?.coords){alert('복사할 위치가 없습니다.');return;}const txt=`WGS84 ${r.coords[0].toFixed(6)}, ${r.coords[1].toFixed(6)}\nMGRS ${calcMGRS(r.coords[0],r.coords[1])}`;try{await navigator.clipboard.writeText(txt);}catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}}
 
     function quickOfflineMark(){
-      const ref=getReferencePosition(); if(!ref?.coords){alert('GPS FIX 또는 TEMP MARK가 필요합니다.');return;}
-      const memo=prompt('FIELD MARK 메모 (선택)')||''; const now=Date.now(); const d=new Date(); const hh=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');
-      const point={id:`WP-${now}`,opCode:`OP-MARK-${String(now).slice(-6)}`,name:`FIELD MARK ${hh}${mm}`,coords:[...ref.coords],desc:memo||`오프라인 현장 표식 · ${ref.type} 기준`,tips:'',status:'UNEXPLORED',createdAt:new Date(now).toISOString(),source:'USER_PLACED',address:''};
-      try{const list=getLocalIntel();list.unshift(point);saveLocalIntel(list);renderAllMarkers();updateWpCounter();}catch(e){alert('FIELD MARK 저장에 실패했습니다.');}
+      const ref=getReferencePosition(); if(!ref?.coords){alert('GPS FIX 또는 TEMP POS가 필요합니다.');return;}
+      const memo=prompt('FIELD POINT 메모 (선택)')||''; const now=Date.now(); const d=new Date(); const hh=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');
+      const point={id:`WP-${now}`,opCode:`OP-MARK-${String(now).slice(-6)}`,name:`FIELD POINT ${hh}${mm}`,coords:[...ref.coords],desc:memo||`오프라인 현장 표식 · ${referenceLabel(ref.type)} 기준`,tips:'',status:'UNEXPLORED',createdAt:new Date(now).toISOString(),source:'USER_PLACED',address:''};
+      try{const list=getLocalIntel();list.unshift(point);saveLocalIntel(list);renderAllMarkers();updateWpCounter();}catch(e){alert('FIELD POINT 저장에 실패했습니다.');}
     }
 
     // Existing GPS updates feed new UI as well.
     const v26ApplyGpsPosition=applyGpsPosition;
-    applyGpsPosition=function(pos,shouldRecenter=false){ gpsPowerEnabled=true; v26ApplyGpsPosition(pos,shouldRecenter); updateGpsDetail(); refreshGpsPowerUi(); };
+    applyGpsPosition=function(pos,shouldRecenter=false,session=gpsSessionId){
+      if (!gpsPowerEnabled || session !== gpsSessionId || !validCoordinates([pos?.coords?.latitude,pos?.coords?.longitude])) return;
+      v26ApplyGpsPosition(pos,shouldRecenter); updateGpsDetail(); refreshGpsPowerUi();
+    };
 
     // GPS off means marker really disappears, not only FOLLOW off.
     const v26SyncGpsMarkerVisibility=syncGpsMarkerVisibility;
@@ -4622,13 +4829,13 @@
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js?v=26', { scope: './', updateViaCache: 'none' })
+        navigator.serviceWorker.register('./service-worker.js?v=27', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-v26';
+        const reloadKey = 'tactical-recon-sw-reload-v27';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();
