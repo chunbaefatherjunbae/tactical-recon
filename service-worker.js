@@ -27,13 +27,6 @@ self.addEventListener('activate', event => {
         .map(key => caches.delete(key))
     );
     await self.clients.claim();
-    // The V27.1 page may already have consumed its one-shot controllerchange reload.
-    // Navigate existing clients once on this worker activation so V27.2 is actually loaded.
-    const clients = await self.clients.matchAll({ type:'window', includeUncontrolled:true });
-    await Promise.all(clients.map(client => {
-      if (typeof client.navigate !== 'function') return null;
-      return client.navigate(client.url).catch(() => null);
-    }));
   })());
 });
 
@@ -43,10 +36,10 @@ async function injectV272(response) {
   if (type && !type.includes('text/html')) return response;
   let html = await response.text();
   if (!html.includes('v27-2.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-2.css?v=27.2" />\n</head>');
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-2.css" />\n</head>');
   }
   if (!html.includes('v27-2.js')) {
-    html = html.replace('</body>', '  <script src="./v27-2.js?v=27.2"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./v27-2.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
