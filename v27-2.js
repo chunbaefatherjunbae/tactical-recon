@@ -75,6 +75,7 @@
       lastGpsSnapshotFromPosition(pos);
       tempReferenceOverride = false;
     }
+    syncLastGpsMarker();
     scheduleCenterControlSync();
     return result;
   };
@@ -95,7 +96,12 @@
   const v272BaseSetTempMark = setTempMark;
   setTempMark = function(coords, name = 'TEMP POS') {
     const result = v272BaseSetTempMark(coords, name);
-    if (!gpsPowerEnabled || !hasGpsFix) tempReferenceOverride = true;
+    if (!gpsPowerEnabled || !hasGpsFix) {
+      tempReferenceOverride = true;
+      // Base setTempMark refreshes once before this V27.2 override flag is applied.
+      // Refresh again so NAV distance/BRG immediately switch from LAST GPS to TEMP.
+      refreshPositionState();
+    }
     syncTempButtonState();
     scheduleCenterControlSync();
     return result;
