@@ -47,8 +47,8 @@ jobs:
               for fn in funcs:
                   assert d.execute_script(f"return typeof {fn} === 'function'"), fn
 
-              # Enter a target and verify PLAN submodes/sheets actually switch.
-              d.execute_script("tempMarkPoint={name:'TEMP',coords:[37.5,127.0],source:'RETICLE'}; renderTempMark(); enterTargetMode({id:'SMOKE',name:'SMOKE TARGET',coords:[37.51,127.01],status:'USER_PLACED',source:'USER'});")
+              # Use an actual registered target so PLAN persistence follows the same path as production.
+              d.execute_script("tempMarkPoint={name:'TEMP',coords:[37.5,127.0],source:'RETICLE'}; renderTempMark(); if(!RECON_TARGETS.length) throw new Error('NO REGISTERED TARGET'); enterTargetMode(RECON_TARGETS[0]);")
               assert d.execute_script("return document.body.classList.contains('target-mode')")
               d.execute_script("openPlanSearch()")
               assert d.execute_script("return document.getElementById('planSearchSheet').classList.contains('open')")
