@@ -47,7 +47,6 @@ jobs:
               for fn in funcs:
                   assert d.execute_script(f"return typeof {fn} === 'function'"), fn
 
-              # Use an actual registered target so PLAN persistence follows the same path as production.
               d.execute_script("tempMarkPoint={name:'TEMP',coords:[37.5,127.0],source:'RETICLE'}; renderTempMark(); if(!RECON_TARGETS.length) throw new Error('NO REGISTERED TARGET'); enterTargetMode(RECON_TARGETS[0]);")
               assert d.execute_script("return document.body.classList.contains('target-mode')")
               d.execute_script("openPlanSearch()")
@@ -65,16 +64,14 @@ jobs:
               assert d.execute_script("return document.getElementById('targetDrawKindBtn').textContent.trim()==='OVERLAY'")
               d.execute_script("exitPlanSubmode()")
 
-              # Known impossible GPS recenter is disabled with no fix, then enabled for a simulated valid fix.
               d.execute_script("gpsPowerEnabled=false; hasGpsFix=false; refreshGpsPowerUi()")
               assert d.execute_script("return document.getElementById('gpsCenterBtn').disabled")
               d.execute_script("gpsPowerEnabled=true; hasGpsFix=true; baseLocation=[37.5,127.0]; refreshGpsPowerUi()")
               assert not d.execute_script("return document.getElementById('gpsCenterBtn').disabled")
 
-              # NAV entry/collapse/stop lifecycle.
               d.execute_script("startTargetNavigation()")
               assert d.execute_script("return document.body.classList.contains('target-nav') && targetModePhase==='NAV'")
-              d.execute_script("toggleNavPanelCollapse({stopPropagation(){}})")
+              d.execute_script("toggleNavPanelCollapse({stopPropagation(){},preventDefault(){}})")
               assert d.execute_script("return document.body.classList.contains('nav-panel-collapsed')")
               assert d.execute_script("return document.getElementById('navHudElapsed').textContent.includes('TOTAL')")
               d.execute_script("stopTargetNavigation()")
