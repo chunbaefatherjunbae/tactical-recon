@@ -430,8 +430,32 @@
     const ref=currentReference();
     if(kicker)kicker.textContent=(lang()==='ko'?'계획 · ':'PLAN · ')+plan.name;
     if(name)name.textContent=objective?.name||t('noObjective');
-    if(hint)hint.textContent=!objective?t('objectiveHint'):(ref?.coords?t('navStart'):t('positionRequired'));
+    if(hint){
+      if(!objective)hint.textContent=t('objectiveHint');
+      else if(ref?.type==='LAST_FIX')hint.textContent=t('lastFix')+' · '+formatReferenceAge(ref.ageMs);
+      else hint.textContent=ref?.coords?t('navStart'):t('positionRequired');
+    }
     navArea?.classList.toggle('ready',Boolean(objective&&ref?.coords));
+  }
+
+  function installNavReferenceGuard(){
+    if(typeof startTargetNavigation!=='function'||startTargetNavigation.__v29ReferenceGuard)return;
+    const previous=startTargetNavigation;
+    const wrapped=function(){
+      const ref=currentReference();
+      if(ref?.type==='LAST_FIX'){
+        const age=formatReferenceAge(ref.ageMs);
+        const acc=Number(ref.accuracyM);
+        const detail=t('lastFix')+(age?' · '+age:'')+(Number.isFinite(acc)?' · ±'+Math.round(acc)+' M':'');
+        const message=lang()==='ko'
+          ? detail+'를 현재 위치 기준으로 사용해 항법을 시작할까요?\nGPS/TEMP보다 오래된 위치일 수 있습니다.'
+          : 'START NAV USING '+detail+' AS THE CURRENT REFERENCE?\nTHIS POSITION MAY BE STALE.';
+        if(!confirm(message))return;
+      }
+      return previous.apply(this,arguments);
+    };
+    wrapped.__v29ReferenceGuard=true;
+    startTargetNavigation=wrapped;
   }
 
   function wrapFinalPanelSync(){
@@ -894,9 +918,13 @@
   function trackSeed(){
     const ref=currentReference();
     if(!ref?.coords)return undefined;
-    return ref.type==='GPS'
-      ? {kind:'GPS',lat:Number(ref.coords[0]),lon:Number(ref.coords[1]),timestamp:Date.now()}
-      : {kind:'TEMP',coords:[Number(ref.coords[0]),Number(ref.coords[1])],timestamp:Date.now()};
+    if(ref.type==='GPS'){
+      return {kind:'GPS',lat:Number(ref.coords[0]),lon:Number(ref.coords[1]),timestamp:Date.now()};
+    }
+    if(ref.type==='TEMP'){
+      return {kind:'TEMP',coords:[Number(ref.coords[0]),Number(ref.coords[1])],timestamp:Date.now()};
+    }
+    return undefined;
   }
 
   function installSaferTrackHud(){
@@ -1137,6 +1165,7 @@
     }
     installSiteFilterData();
     installPlanHeader();
+    installNavReferenceGuard();
     wrapFinalPanelSync();
     bindObjectiveReticle();
     installSiteControls();
