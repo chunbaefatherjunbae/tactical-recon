@@ -226,7 +226,7 @@
 
   function configureNavToolbar(){
     const bar=document.getElementById('targetModeToolbar');if(!bar)return;const b=[...bar.querySelectorAll('.nav-only')];if(b.length<5)return;
-    b[0].id='navSearchBtn';b[0].textContent=window.reconT?.('search')||'SEARCH';b[0].removeAttribute('onclick');b[0].onclick=()=>openPlanSearch();b[0].disabled=false;
+    b[0].id='navSearchBtn';if(!document.body?.classList.contains('v28-integrated'))b[0].textContent=window.reconT?.('search')||'SEARCH';b[0].removeAttribute('onclick');b[0].onclick=()=>openPlanSearch();b[0].disabled=false;
     b[1].id='navPauseBtn';b[1].classList.remove('gps-follow-toggle');b[1].removeAttribute('onclick');b[1].onclick=toggleNavPause;b[1].disabled=false;
     b[2].id='targetNextLegBtn';b[2].textContent=window.reconT?.('nextLeg')||'NEXT LEG';b[2].classList.add('nav-next-hold');bindHold(b[2]);
     b[3].id='targetNavStopBtn';b[3].textContent=window.reconT?.('stopNav')||'STOP';b[4].id='navMoreBtn';b[4].textContent=window.reconT?.('more')||'MORE';
@@ -732,7 +732,7 @@
 
   function syncDynamicLanguage() {
     const search = document.getElementById('navSearchBtn');
-    if (search) search.textContent = window.reconT('search');
+    if (search && !document.body?.classList.contains('v28-integrated')) search.textContent = window.reconT('search');
     const pause = document.getElementById('navPauseBtn');
     if (pause) pause.textContent = window.reconT(pause.getAttribute('aria-pressed') === 'true' ? 'resume' : 'pause');
     const next = document.getElementById('targetNextLegBtn');
@@ -873,7 +873,7 @@
     if (navGps && currentLanguage === 'ko') navGps.textContent = String(navGps.textContent || '').replace(/FOLLOW/g, '자동추적');
 
     const trackButton = document.getElementById('targetTrackRecBtn');
-    if (trackButton) {
+    if (trackButton && !document.body?.classList.contains('v28-integrated')) {
       const raw = String(trackButton.textContent || '').trim();
       if (/TRACK WAIT|궤적 대기/.test(raw)) trackButton.textContent = window.reconT('trackWait');
       else if (/TRACK STOP|궤적 종료/.test(raw)) trackButton.textContent = window.reconT('trackStop');
@@ -893,7 +893,7 @@
     if (drawKindButton) drawKindButton.textContent = window.reconT(routeDrawKind === 'MARK' ? 'overlaySolid' : 'routeDash');
 
     const navTrack = document.getElementById('navHudTrack');
-    if (navTrack) {
+    if (navTrack && !document.body?.classList.contains('v28-integrated')) {
       const raw = String(navTrack.textContent || '').trim();
       const km = raw.match(/·\s*([\d.]+\s*KM)$/)?.[1] || '';
       if (/TRACK ACQUIRING|궤적 대기/.test(raw)) navTrack.textContent = window.reconT('trackWait');
