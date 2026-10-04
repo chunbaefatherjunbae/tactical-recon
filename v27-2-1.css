@@ -12,3 +12,8 @@
   margin-left:-21px !important;
   margin-top:-21px !important;
 }
+
+/* Waypoint drawer system references stay separate from mission/user points. */
+.v2721-reference-head { cursor:default; }
+.v2721-reference-item .wp-item-status { letter-spacing:.4px; }
+.v2721-reference-item .wp-item-coords { font-size:9px; }
