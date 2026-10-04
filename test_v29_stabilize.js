@@ -38,7 +38,7 @@ test('Index starts without Leaflet or MGRS CDN dependencies',()=>{
 
 test('Vendored MGRS performs WGS84 round trip',()=>{
   const holder={};
-  const mgrs=new Function(mgrsSource+'\\nreturn this.mgrs;').call(holder);
+  const mgrs=new Function(mgrsSource+'\nreturn this.mgrs;').call(holder);
   assert(mgrs&&typeof mgrs.forward==='function'&&typeof mgrs.toPoint==='function');
   const encoded=mgrs.forward([127,37.5],5);
   const point=mgrs.toPoint(encoded);
