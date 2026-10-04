@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v28-plan-ux-20261005-2';
+const CACHE_VERSION = 'v28-plan-ux-20261005-3';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
