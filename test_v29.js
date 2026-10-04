@@ -132,6 +132,14 @@ test('saved BACKTRACK selection is scoped to PLAN',()=>{
   assert.strictEqual(v29.backtrack.get(other.id),null);
 });
 
+test('BACKTRACK rejects tracks without usable measured nodes',()=>{
+  const p=v28.plans.create({name:'Empty Backtrack'});
+  const tr=v28.track.start(p.id);
+  v28.track.recordTemp([37,127],1000);
+  const done=v28.track.stop();
+  assert.strictEqual(v29.backtrack.set(p.id,done.id),false);
+});
+
 test('GPX default never disguises ESTIMATED as TRACK',()=>{
   const {plan,track}=makeTrack();
   const gpx=v29.gpx.buildSelected({planId:plan.id,trackIds:[track.id],includeEstimated:false});
