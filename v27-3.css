@@ -40,8 +40,39 @@
   background:rgba(255,255,255,.05);
 }
 
-.v273 .nav-draw-only { display:none; }
-.v273.target-nav.nav-draw-submode .target-mode-actions .nav-only { display:none !important; }
+/* Toolbar modes are mutually exclusive. Never allow a second control row to leak through. */
+.v273 .target-mode-actions .nav-draw-only { display:none !important; }
+
+.v273.plan-set-submode .target-mode-actions .plan-main-only,
+.v273.plan-set-submode .target-mode-actions .draw-only,
+.v273.plan-set-submode .target-mode-actions .nav-only,
+.v273.plan-set-submode .target-mode-actions .nav-draw-only {
+  display:none !important;
+}
+.v273.plan-set-submode .target-mode-actions .set-only { display:flex !important; }
+
+.v273.plan-draw-submode .target-mode-actions .plan-main-only,
+.v273.plan-draw-submode .target-mode-actions .set-only,
+.v273.plan-draw-submode .target-mode-actions .nav-only,
+.v273.plan-draw-submode .target-mode-actions .nav-draw-only {
+  display:none !important;
+}
+.v273.plan-draw-submode .target-mode-actions .draw-only { display:flex !important; }
+
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .plan-main-only,
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .set-only,
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .draw-only,
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .nav-draw-only {
+  display:none !important;
+}
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .nav-only { display:flex !important; }
+
+.v273.target-nav.nav-draw-submode .target-mode-actions .plan-main-only,
+.v273.target-nav.nav-draw-submode .target-mode-actions .set-only,
+.v273.target-nav.nav-draw-submode .target-mode-actions .draw-only,
+.v273.target-nav.nav-draw-submode .target-mode-actions .nav-only {
+  display:none !important;
+}
 .v273.target-nav.nav-draw-submode .target-mode-actions .nav-draw-only {
   display:flex !important;
   align-items:center;
@@ -81,5 +112,50 @@ html[lang="ko"] .v273.target-nav.nav-draw-submode .nav-hud-distance-label::after
   .v273.target-nav.nav-draw-submode .target-mode-actions .osb-btn {
     padding:0 3px;
     font-size:8px;
+  }
+}
+
+
+/* Scrollable panels keep their operational header/close controls visible. */
+.v273 .field-control-tray {
+  overscroll-behavior:contain;
+}
+.v273 .field-control-tray .field-control-head {
+  position:sticky;
+  top:-10px;
+  z-index:12;
+  margin:-10px -10px 7px;
+  padding:10px 10px 7px;
+  background:var(--field-panel-solid, #07100a);
+}
+
+.v273 .wp-drawer {
+  overflow:hidden;
+}
+.v273 .wp-drawer .drawer-head,
+.v273 .wp-drawer .wp-filter-bar {
+  flex:0 0 auto;
+  position:relative;
+  z-index:12;
+  background:var(--field-panel-solid, var(--bg-panel));
+}
+.v273 .wp-drawer #wpListContainer {
+  min-height:0;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+@media (max-width:768px) {
+  .v273 .sitrep-panel {
+    overscroll-behavior:contain;
+  }
+  .v273 .sitrep-panel .sitrep-head {
+    position:sticky;
+    top:-10px;
+    z-index:12;
+    margin:-10px -10px 0;
+    padding:10px 10px 8px;
+    background:rgba(4,10,6,.99);
   }
 }
