@@ -1,6 +1,11 @@
-const CACHE_VERSION = 'v29-dev-20261005-2';
+const CACHE_VERSION = 'v29-stabilized-20261005-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
+const VENDOR_ASSETS = [
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'https://cdn.jsdelivr.net/npm/mgrs@1.0.0/dist/mgrs.min.js'
+];
 const STATIC_ASSETS = [
   './manifest.json',
   './icons/icon-192.png',
@@ -9,16 +14,31 @@ const STATIC_ASSETS = [
   './v27-stable.js',
   './v28.css',
   './v28.js',
+  './v29-storage.js',
   './v28-runtime.js',
   './v29.css',
   './v29.js',
-  './v29-ui.js'
+  './v29-ui.js',
+  './v29-stabilize.css',
+  './v29-stabilize.js'
 ];
+
+async function cacheVendorAssets() {
+  const cache = await caches.open(STATIC_CACHE);
+  await Promise.allSettled(VENDOR_ASSETS.map(async url => {
+    try {
+      const request = new Request(url, { mode:'no-cors', cache:'reload' });
+      const response = await fetch(request);
+      if (response) await cache.put(request, response.clone());
+    } catch (e) {}
+  }));
+}
 
 self.addEventListener('install', event => {
   event.waitUntil(Promise.all([
     caches.open(STATIC_CACHE).then(cache => cache.addAll(STATIC_ASSETS)),
-    caches.open(PAGE_CACHE).then(cache => cache.add('./index.html'))
+    caches.open(PAGE_CACHE).then(cache => cache.add('./index.html')),
+    cacheVendorAssets()
   ]));
   self.skipWaiting();
 });
@@ -63,6 +83,9 @@ async function injectStableOverlay(response) {
   if (!html.includes('v28.js')) {
     html = html.replace('</body>', '  <script src="./v28.js"></script>\n</body>');
   }
+  if (!html.includes('v29-storage.js')) {
+    html = html.replace('</body>', '  <script src="./v29-storage.js"></script>\n</body>');
+  }
   if (!html.includes('v28-runtime.js')) {
     html = html.replace('</body>', '  <script src="./v28-runtime.js"></script>\n</body>');
   }
@@ -74,6 +97,12 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('v29-ui.js')) {
     html = html.replace('</body>', '  <script src="./v29-ui.js"></script>\n</body>');
+  }
+  if (!html.includes('v29-stabilize.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v29-stabilize.css" />\n</head>');
+  }
+  if (!html.includes('v29-stabilize.js')) {
+    html = html.replace('</body>', '  <script src="./v29-stabilize.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
@@ -104,6 +133,23 @@ self.addEventListener('fetch', event => {
 
   if (request.mode === 'navigate' || (url.origin === self.location.origin && url.pathname.endsWith('/index.html'))) {
     event.respondWith(networkFirstPage(request));
+    return;
+  }
+
+  if (VENDOR_ASSETS.includes(url.href)) {
+    event.respondWith((async () => {
+      const cached = await caches.match(request) || await caches.match(url.href);
+      if (cached) return cached;
+      try {
+        const response = await fetch(new Request(url.href, { mode:'no-cors' }));
+        if (response) {
+          const cache = await caches.open(STATIC_CACHE);
+          await cache.put(new Request(url.href, { mode:'no-cors' }), response.clone());
+          return response;
+        }
+      } catch (e) {}
+      return Response.error();
+    })());
     return;
   }
 
