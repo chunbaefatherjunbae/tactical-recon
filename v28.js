@@ -1001,6 +1001,10 @@ window.v28 = (function() {
     if (objectiveTitle) objectiveTitle.textContent = tV28('목표', 'OBJECTIVE');
     const newBtn = document.getElementById('v28NewPlanBtn');
     if (newBtn) newBtn.textContent = tV28('새 PLAN', 'NEW PLAN');
+    const targetSet = document.getElementById('btnTargetSet');
+    if (targetSet) targetSet.textContent = tV28('[ OBJECTIVE SET // 목표 설정 ]', '[ SET OBJECTIVE ]');
+    const sitesTitle = document.querySelector('#wpDrawer .drawer-head > div');
+    if (sitesTitle) sitesTitle.textContent = tV28('거점', 'SITES');
     renderPhase2Routes();
     renderPhase2Objective();
   }
