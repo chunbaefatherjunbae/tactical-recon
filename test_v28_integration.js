@@ -66,7 +66,7 @@ test('Track UI has Korean labels', () => {
 });
 
 test('NAV keeps position search and exposes track from HUD', () => {
-  assert(runtime.includes("set('navSearchBtn', '위치검색', 'POSITION SEARCH')"));
+  assert(runtime.includes("set('navSearchBtn', '위치검색', 'LOCATE')"));
   assert(runtime.includes("navTrackAccess.addEventListener('click'"));
   assert(runtime.includes("openTrackSheet();"));
   assert(runtime.includes("hud.setAttribute('role','button')"));
