@@ -680,6 +680,13 @@
     }[ch]));
   }
 
+  function estimatedAnchorCoords(value) {
+    if (validCoords(value)) return [Number(value[0]),Number(value[1])];
+    if (validCoords(value?.coords)) return [Number(value.coords[0]),Number(value.coords[1])];
+    const lat=Number(value?.lat),lon=Number(value?.lon);
+    return Number.isFinite(lat)&&Number.isFinite(lon)&&validCoords([lat,lon])?[lat,lon]:null;
+  }
+
   function trkPointXml(p) {
     return '<trkpt lat="'+Number(p.lat).toFixed(7)+'" lon="'+Number(p.lon).toFixed(7)+'">'+
       (Number.isFinite(Number(p.timestamp))?'<time>'+new Date(Number(p.timestamp)).toISOString()+'</time>':'')+
@@ -728,9 +735,10 @@
       parts.push('</trk>');
 
       if(includeEstimated){
-        (track.segments||[]).filter(seg=>seg?.kind==='ESTIMATED'&&validCoords(seg.from?.coords||seg.from)&&validCoords(seg.to?.coords||seg.to)).forEach((seg,index)=>{
-          const from=seg.from?.coords||seg.from;
-          const to=seg.to?.coords||seg.to;
+        (track.segments||[]).filter(seg=>seg?.kind==='ESTIMATED').forEach((seg,index)=>{
+          const from=estimatedAnchorCoords(seg.from);
+          const to=estimatedAnchorCoords(seg.to);
+          if(!from||!to)return;
           parts.push('<rte><name>'+xmlEscape('ESTIMATED · '+(seg.reason||'GAP')+' · '+(index+1))+'</name>');
           parts.push(rtePointXml(from,'EST FROM'));
           parts.push(rtePointXml(to,'EST TO'));
