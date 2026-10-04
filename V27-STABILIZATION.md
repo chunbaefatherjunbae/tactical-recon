@@ -163,3 +163,14 @@ V28은 기존 키를 읽을 수 있는 마이그레이션 계층을 먼저 둔 �
 ## 검증 수준
 
 이 문서와 안정화 패치는 정적 코드/로드순서/문법 기준 검증이다. 실제 iPhone Safari/PWA 및 실제 GPS 센서 동작은 실기기 검증이 별도로 필요하다.
+
+
+## V27.4.1 상태표시 수정
+
+- `planNavHint`, `targetModeName`, `navHudTarget`은 동적 상태/사용자 데이터이므로 정적 i18n binding 대상에서 제외한다.
+- GPS가 명시적으로 OFF일 때 유효 TEMP가 있으면 TEMP가 활성 기준위치다.
+- GPS ON + FIX는 항상 GPS가 우선이다.
+- NAV에서 GPS 신호만 손실된 경우 기존 정책대로 explicit TEMP override가 없으면 LAST FIX를 우선한다.
+- TARGET 이름은 번역하지 않는다.
+- TARGET이 없지만 VIA/END가 존재하는 비정상/미래 호환 상태에서는 `경로 · 다음 <지점>` / `ROUTE · NEXT <point>`를 표시한다.
+- 현재 V27 NAV 시작은 여전히 TARGET을 요구한다. TARGET 없는 PLAN의 저장/NAV 정책 자체는 V28의 PLAN ID 분리 전까지 변경하지 않는다.
