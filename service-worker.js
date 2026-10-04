@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v28-phase2-20261004';
+const CACHE_VERSION = 'v28-integrated-20261004';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
@@ -8,7 +8,8 @@ const STATIC_ASSETS = [
   './v27-stable.css',
   './v27-stable.js',
   './v28.css',
-  './v28.js'
+  './v28.js',
+  './v28-runtime.js'
 ];
 
 self.addEventListener('install', event => {
@@ -58,6 +59,9 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('v28.js')) {
     html = html.replace('</body>', '  <script src="./v28.js"></script>\n</body>');
+  }
+  if (!html.includes('v28-runtime.js')) {
+    html = html.replace('</body>', '  <script src="./v28-runtime.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
