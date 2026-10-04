@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  document.title = 'TACTICAL RECON // FIELD TERMINAL V27.3.1';
+  document.title = 'TACTICAL RECON // FIELD TERMINAL V27.3.2';
   document.body?.classList.add('v273','v2731');
 
   const LANG_KEY = 'tactical_recon_language_v1';
@@ -521,8 +521,16 @@
   }
 
   // The global adaptive position control owns RECENTER/CENTERED/FOLLOW.
-  // Keep it permanently visible and use the freed bottom slot for SITES.
+  // Main navigation stays focused on OBJECTIVE / SITES / MENU.
   document.getElementById('primaryCenterBtn')?.remove();
+
+  function removeMainRouteButton() {
+    const cluster = document.querySelector('.v26-main-cluster');
+    if (!cluster) return;
+    [...cluster.querySelectorAll('button')].forEach(btn => {
+      if (String(btn.getAttribute('onclick') || '').includes('openPlanShortcut()')) btn.remove();
+    });
+  }
 
   function ensureMainSitesButton() {
     const cluster = document.querySelector('.v26-main-cluster');
@@ -866,6 +874,7 @@
     }
   }, true);
 
+  removeMainRouteButton();
   ensureMainSitesButton();
   ensureLanguagePanel();
   ensureNavDrawControls();
