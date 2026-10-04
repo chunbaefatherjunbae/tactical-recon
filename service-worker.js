@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v27-4-1-20261004';
+const CACHE_VERSION = 'v28-phase2-20261004';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   './icons/icon-512.png',
   './v27-stable.css',
   './v27-stable.js',
+  './v28.css',
   './v28.js'
 ];
 
@@ -51,6 +52,9 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('v27-stable.js')) {
     html = html.replace('</body>', '  <script src="./v27-stable.js"></script>\n</body>');
+  }
+  if (!html.includes('v28.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v28.css" />\n</head>');
   }
   if (!html.includes('v28.js')) {
     html = html.replace('</body>', '  <script src="./v28.js"></script>\n</body>');
