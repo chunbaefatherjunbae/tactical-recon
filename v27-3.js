@@ -38,9 +38,11 @@
       gpsFieldPosition:'GPS 상태 / 기준위치', loadRoute:'경로 불러오기', exportGpx:'GPX 내보내기',
       mapMove:'지도이동', secure:'확인완료',
       routeDash:'경로선 · 점선', overlaySolid:'표식선 · 실선',
-      trackWait:'궤적 대기', trackSaved:'궤적 저장', siteEmpty:'저장된 거점이 없습니다.',
-      deleteSite:'삭제', startPoint:'출발점', viaPoint:'경유점', endPoint:'도착점', homePoint:'복귀점',
-      targetSet:'목표 지정', reconComplete:'확인완료'
+      trackWait:'궤적 대기', trackSaved:'궤적 저장', trackStop:'궤적 종료', siteEmpty:'저장된 거점이 없습니다.',
+      deleteSite:'삭제', clearAllSites:'거점 전체삭제', addVia:'경유점 추가',
+      startPoint:'출발점', viaPoint:'경유점', endPoint:'도착점', homePoint:'복귀점',
+      targetSet:'목표 지정', reconComplete:'확인완료', show:'펼치기',
+      setSiteHere:'현재 위치에 거점 지정', verifySite:'현장 확인'
     },
     en: {
       language:'LANGUAGE', languageTitle:'LANGUAGE', korean:'한국어', english:'ENGLISH',
@@ -69,9 +71,11 @@
       gpsFieldPosition:'GPS STATUS / REF POS', loadRoute:'LOAD ROUTE', exportGpx:'EXPORT GPX',
       mapMove:'MOVE MAP', secure:'VERIFIED',
       routeDash:'ROUTE · DASH', overlaySolid:'OVERLAY · SOLID',
-      trackWait:'TRACK WAIT', trackSaved:'TRACK SAVED', siteEmpty:'NO SAVED SITES.',
-      deleteSite:'DELETE', startPoint:'START PT', viaPoint:'VIA PT', endPoint:'END PT', homePoint:'RETURN PT',
-      targetSet:'SET OBJECTIVE', reconComplete:'VERIFY SITE'
+      trackWait:'TRACK WAIT', trackSaved:'TRACK SAVED', trackStop:'TRACK STOP', siteEmpty:'NO SAVED SITES.',
+      deleteSite:'DELETE', clearAllSites:'DELETE ALL SITES', addVia:'ADD VIA',
+      startPoint:'START PT', viaPoint:'VIA PT', endPoint:'END PT', homePoint:'RETURN PT',
+      targetSet:'SET OBJECTIVE', reconComplete:'VERIFY SITE', show:'SHOW',
+      setSiteHere:'SET SITE AT RETICLE', verifySite:'FIELD VERIFICATION'
     }
   };
 
@@ -182,6 +186,11 @@
     'GPX 내보내기':'exportGpx',
     '지도에서 보기':'mapMove',
     '거점 저장':'savePoint',
+    '검색':'search',
+    '기록 전체 삭제':'clearAllSites',
+    'VIA 추가':'addVia',
+    '이 위치에 거점 지정':'setSiteHere',
+    '현장 확인 및 개척 등록':'verifySite',
     '개척 완료':'secure',
     '[ TARGET SET // 목표 설정 ]':'targetSet',
     '[ RECON COMPLETED // 개척 완료 ]':'reconComplete',
@@ -272,20 +281,35 @@
     });
 
     const navDistanceLabel = document.getElementById('navHudDistanceLabel');
-    if (navDistanceLabel && currentLanguage === 'ko') {
-      const m = navDistanceLabel.textContent.match(/^DIRECT TO\s+(.+)$/);
+    if (navDistanceLabel) {
+      const raw = String(navDistanceLabel.textContent || '').trim();
+      const m = raw.match(/^DIRECT TO\s+(.+)$/) || raw.match(/^직행\s*·\s*(.+)$/);
       if (m) {
-        const role = ({TARGET:'target',VIA:'via',END:'end',START:'start'})[m[1]] || null;
-        navDistanceLabel.textContent = role ? `직행 · ${window.reconT(role)}` : navDistanceLabel.textContent;
+        const token = m[1].trim();
+        const role =
+          ['TARGET','OBJECTIVE','목표'].includes(token) ? 'target' :
+          ['VIA','경유점'].includes(token) ? 'via' :
+          ['END','도착점'].includes(token) ? 'end' :
+          ['START','출발점'].includes(token) ? 'start' : null;
+        if (role) navDistanceLabel.textContent = currentLanguage === 'ko'
+          ? `직행 · ${window.reconT(role)}`
+          : `DIRECT TO ${window.reconT(role)}`;
       }
     }
     const navLeg = document.getElementById('navHudLeg');
-    if (navLeg && currentLanguage === 'ko') {
-      const m = navLeg.textContent.match(/^LEG\s+([^·]+)·\s*(.+)$/);
+    if (navLeg) {
+      const raw = String(navLeg.textContent || '').trim();
+      const m = raw.match(/^LEG\s+([^·]+)·\s*(.+)$/) || raw.match(/^구간\s+([^·]+)·\s*(.+)$/);
       if (m) {
-        const rawRole = m[2].trim();
-        const role = ({TARGET:'target',VIA:'via',END:'end',START:'start'})[rawRole];
-        navLeg.textContent = `구간 ${m[1].trim()} · ${role ? window.reconT(role) : rawRole}`;
+        const token = m[2].trim();
+        const role =
+          ['TARGET','OBJECTIVE','목표'].includes(token) ? 'target' :
+          ['VIA','경유점'].includes(token) ? 'via' :
+          ['END','도착점'].includes(token) ? 'end' :
+          ['START','출발점'].includes(token) ? 'start' : null;
+        navLeg.textContent = currentLanguage === 'ko'
+          ? `구간 ${m[1].trim()} · ${role ? window.reconT(role) : token}`
+          : `LEG ${m[1].trim()} · ${role ? window.reconT(role) : token}`;
       }
     }
     const navRef = document.getElementById('navHudRef');
@@ -339,6 +363,39 @@
     if (targetSet) targetSet.textContent = `[ ${window.reconT('targetSet')} ]`;
     const reconComplete = document.getElementById('btnPromote');
     if (reconComplete) reconComplete.textContent = `[ ${window.reconT('reconComplete')} ]`;
+
+    const sitrepStatus = document.getElementById('sitrepStatus');
+    if (sitrepStatus) {
+      const raw = String(sitrepStatus.textContent || '').trim();
+      if (['REGISTERED','등록'].includes(raw)) sitrepStatus.textContent = window.reconT('registered');
+      else if (['UNEXPLORED','UNVERIFIED','미확인'].includes(raw)) sitrepStatus.textContent = window.reconT('unexplored');
+      else if (['SECURED','VERIFIED','확인완료'].includes(raw)) sitrepStatus.textContent = window.reconT('secured');
+      else if (['USER','사용자'].includes(raw)) sitrepStatus.textContent = window.reconT('user');
+    }
+
+    const stats = document.getElementById('targetModeStats');
+    if (stats && targetModeActive) {
+      stats.innerHTML = currentLanguage === 'ko'
+        ? `경로선 ${routeLengthKm().toFixed(1)} KM<br>${routeDraftSegments.length} 선분 · ${routeViaPoints.length} 경유점 · ${routeMarkSegments.length} 표식선`
+        : `ROUTE ${routeLengthKm().toFixed(1)} KM<br>${routeDraftSegments.length} SEG · ${routeViaPoints.length} VIA · ${routeMarkSegments.length} OVERLAY`;
+    }
+
+    const navGps = document.getElementById('navHudGps');
+    if (navGps && currentLanguage === 'ko') navGps.textContent = String(navGps.textContent || '').replace(/FOLLOW/g, '자동추적');
+
+    const trackButton = document.getElementById('targetTrackRecBtn');
+    if (trackButton) {
+      const raw = String(trackButton.textContent || '').trim();
+      if (/TRACK WAIT|궤적 대기/.test(raw)) trackButton.textContent = window.reconT('trackWait');
+      else if (/TRACK STOP|궤적 종료/.test(raw)) trackButton.textContent = window.reconT('trackStop');
+      else trackButton.textContent = window.reconT('trackRec');
+    }
+
+    const collapseButton = document.getElementById('targetPanelCollapseBtn');
+    if (collapseButton) {
+      const expanded = /SHOW|펼치기/.test(String(collapseButton.textContent || ''));
+      collapseButton.textContent = window.reconT(expanded ? 'show' : 'hide');
+    }
 
     const drawButton = document.getElementById('targetDrawBtn');
     if (drawButton) drawButton.textContent = window.reconT('draw');
@@ -737,6 +794,34 @@
     bindKnownTexts(document.getElementById('fieldControlTray'));
     applyBoundTexts(document.getElementById('fieldControlTray'));
     syncDynamicLanguage();
+    return out;
+  };
+
+  const baseOpenSitrepV2731 = openSitrep;
+  openSitrep = function(...args) {
+    const out = baseOpenSitrepV2731(...args);
+    syncDynamicLanguage();
+    return out;
+  };
+
+  const baseUpdateGpsDetailV2731 = updateGpsDetail;
+  updateGpsDetail = function(...args) {
+    const out = baseUpdateGpsDetailV2731(...args);
+    syncDynamicLanguage();
+    return out;
+  };
+
+  const baseOpenPlanPointInfoV2731 = openPlanPointInfo;
+  openPlanPointInfo = function(...args) {
+    const out = baseOpenPlanPointInfoV2731(...args);
+    syncDynamicLanguage();
+    return out;
+  };
+
+  const baseSetV271SheetV2731 = setV271Sheet;
+  setV271Sheet = function(id, open) {
+    const out = baseSetV271SheetV2731(id, open);
+    if (open) setTimeout(syncDynamicLanguage, 0);
     return out;
   };
 
