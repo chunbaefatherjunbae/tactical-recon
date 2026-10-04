@@ -40,7 +40,7 @@
     return new Promise(resolve=>{
       try{
         const tx=db.transaction(TRACK_STORE,'readwrite');
-        tx.objectStore(TRACK_STORE).put(structuredClone?structuredClone(track):JSON.parse(JSON.stringify(track)));
+        tx.objectStore(TRACK_STORE).put(typeof structuredClone==='function'?structuredClone(track):JSON.parse(JSON.stringify(track)));
         tx.oncomplete=()=>resolve(true);
         tx.onerror=()=>resolve(false);
         tx.onabort=()=>resolve(false);
