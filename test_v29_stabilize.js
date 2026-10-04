@@ -55,18 +55,21 @@ test('TRACK storage has IndexedDB safety mirror and failure event',()=>{
   assert(storage.includes('getAllTracks:getAllMirroredTracks'));
 });
 
-test('TRACK persistence batches localStorage checkpoints',()=>{
+test('TRACK persistence batches checkpoints and preserves delete semantics',()=>{
   assert(storage.includes('const FLUSH_DELAY_MS=2500'));
   assert(storage.includes('MAX_DIRTY_BEFORE_FLUSH'));
   assert(storage.includes("setTimeout(()=>flushLocalTracks('TIMER'),FLUSH_DELAY_MS)"));
   assert(storage.includes("if(isNew||sanitized.endedAt)"));
   assert(storage.includes("root.addEventListener('pagehide'"));
   assert(runtime.includes('window.v29Storage?.deleteTrack'));
+  assert(storage.includes("if(!local&&String(sanitized.id)!==activeRecoveryId)return;"));
+  assert(storage.includes('clearTracks:clearMirroredTracks'));
 });
 
 test('PLAN header splits objective and NAV actions and removes extra NAV button',()=>{
   assert(stabilize.includes("copy.classList.add('v29-objective-area')"));
   assert(stabilize.includes("navArea.className='v29-plan-nav-area'"));
+  assert(stabilize.includes("objectiveRequired:'목표 지정 필요'"));
   assert(stabilize.includes('base.ui.openObjective();'));
   assert(stabilize.includes("if(typeof startTargetNavigation==='function')startTargetNavigation();"));
   assert(stabilize.includes("document.getElementById('v28PlanNavBtn')?.remove()"));
@@ -164,10 +167,13 @@ test('Track HUD is start pause resume while STOP remains management action',()=>
   assert.strictEqual(block.includes('base.track.stop()'),false);
 });
 
-test('Full backup covers app localStorage and IndexedDB mirror',()=>{
+test('Full backup covers app data without resurrecting stale mirrored tracks',()=>{
   assert(stabilize.includes("key.startsWith('tactical_recon_')"));
   assert(stabilize.includes('trackMirror:mirror'));
   assert(stabilize.includes('root.v29Storage?.getAllTracks?.()'));
+  assert(stabilize.includes('const primaryIds=new Set(Object.keys(base.storage.getV28Tracks?.()||{}))'));
+  assert(stabilize.includes('mirrored.filter(track=>'));
+  assert(stabilize.includes('root.v29Storage?.clearTracks'));
   assert(stabilize.includes('root.v29Storage.mirrorTrack(track)'));
 });
 
