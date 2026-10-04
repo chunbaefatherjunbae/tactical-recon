@@ -20,8 +20,8 @@ function test(name, fn) {
   }
 }
 
-test('PWA cache version is V28 NAV controls', () => {
-  assert(sw.includes("const CACHE_VERSION = 'v28-nav-controls-20261005';"));
+test('PWA cache version is V28 PLAN NAV cleanup', () => {
+  assert(sw.includes("const CACHE_VERSION = 'v28-plan-nav-cleanup-20261005';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
@@ -112,6 +112,21 @@ test('Verified local sites support edit and revert', () => {
   assert(v28.includes("delete next.securedAt"));
   assert(v28.includes("preSecureOpCode"));
   assert(v28.includes('이름과 메모는 유지됩니다.'));
+});
+
+test('Site edits keep PLAN objective snapshots aligned', () => {
+  assert(v28.includes('function syncPlanObjectiveSnapshotsForSite(site)'));
+  assert(v28.includes("objectiveSiteId !== String(site.id)"));
+  assert(v28.includes('syncPlanObjectiveSnapshotsForSite(next);'));
+});
+
+test('PLAN header shows objective while kicker shows plan name', () => {
+  assert(v28.includes("kicker.textContent = tV28('계획 · ', 'PLAN · ') + plan.name"));
+  assert(v28.includes("name.textContent = hasObjective"));
+  assert(v28.includes("plan.objective.name"));
+  assert(v28.includes("tV28('목표 미지정', 'OBJECTIVE NOT SET')"));
+  assert(v28.includes("planHead.removeAttribute('onclick')"));
+  assert(v28.includes("navButton.id = 'v28PlanNavBtn'"));
 });
 
 test('active TrackV2 recovery key is exact', () => {
