@@ -1,19 +1,37 @@
 /* Tactical Recon V29 storage safety layer
- * Keeps the existing synchronous TrackV2 contract for compatibility while
- * mirroring tracks into IndexedDB and surfacing storage failures.
+ * Existing PlanV1/TrackV2 schemas remain unchanged.
+ * TrackV2 uses an in-memory cache + IndexedDB safety mirror and batches
+ * localStorage checkpoints to avoid rewriting the full track store per GPS point.
  */
 (() => {
   'use strict';
 
   const root=window;
   const base=root.v28;
-  if(!base?.storage)return;
+  if(!base?.storage||!base?.schemas)return;
 
   const DB_NAME='tactical_recon_v29';
   const DB_VERSION=1;
   const TRACK_STORE='tracks';
+  const TRACK_KEY='tactical_recon_track_logs_v2';
+  const FLUSH_DELAY_MS=2500;
+  const MAX_DIRTY_BEFORE_FLUSH=12;
+
   let dbPromise=null;
   let storageErrorAt=0;
+  let flushTimer=0;
+  let dirtyCount=0;
+  let trackCache={};
+
+  const originalGetTracks=base.storage.getV28Tracks.bind(base.storage);
+  const originalSaveTrack=base.storage.saveV28Track.bind(base.storage);
+  try{trackCache=originalGetTracks()||{};}catch(e){trackCache={};}
+
+  function cloneTrack(track){
+    if(!track)return null;
+    try{return typeof structuredClone==='function'?structuredClone(track):JSON.parse(JSON.stringify(track));}
+    catch(e){try{return JSON.parse(JSON.stringify(track));}catch(_){return null;}}
+  }
 
   function openDb(){
     if(!('indexedDB' in root))return Promise.resolve(null);
@@ -34,13 +52,28 @@
   }
 
   async function mirrorTrack(track){
-    if(!track?.id)return false;
+    const safe=cloneTrack(track);
+    if(!safe?.id)return false;
     const db=await openDb();
     if(!db)return false;
     return new Promise(resolve=>{
       try{
         const tx=db.transaction(TRACK_STORE,'readwrite');
-        tx.objectStore(TRACK_STORE).put(typeof structuredClone==='function'?structuredClone(track):JSON.parse(JSON.stringify(track)));
+        tx.objectStore(TRACK_STORE).put(safe);
+        tx.oncomplete=()=>resolve(true);
+        tx.onerror=()=>resolve(false);
+        tx.onabort=()=>resolve(false);
+      }catch(e){resolve(false);}
+    });
+  }
+
+  async function deleteMirroredTrack(id){
+    const db=await openDb();
+    if(!db||!id)return false;
+    return new Promise(resolve=>{
+      try{
+        const tx=db.transaction(TRACK_STORE,'readwrite');
+        tx.objectStore(TRACK_STORE).delete(String(id));
         tx.oncomplete=()=>resolve(true);
         tx.onerror=()=>resolve(false);
         tx.onabort=()=>resolve(false);
@@ -81,32 +114,86 @@
     root.dispatchEvent(new CustomEvent('recon-storage-error',{detail:{kind,error:String(error?.message||error||'SAVE FAILED')}}));
   }
 
-  const originalSaveTrack=base.storage.saveV28Track.bind(base.storage);
-  base.storage.saveV28Track=function(track){
-    // Mirror first so a quota failure in localStorage does not make the newest
-    // TrackV2 object disappear completely.
-    mirrorTrack(track).catch(()=>{});
-    let ok=false;
-    try{ok=Boolean(originalSaveTrack(track));}
-    catch(e){emitStorageError('TRACK',e);return false;}
-    if(!ok)emitStorageError('TRACK','LOCAL STORAGE WRITE FAILED');
-    return ok;
+  function flushLocalTracks(reason='BATCH'){
+    clearTimeout(flushTimer);flushTimer=0;
+    if(!dirtyCount&&reason!=='FORCE')return true;
+    try{
+      localStorage.setItem(TRACK_KEY,JSON.stringify(trackCache));
+      dirtyCount=0;
+      root.dispatchEvent(new CustomEvent('recon-track-checkpoint',{detail:{reason,at:Date.now()}}));
+      return true;
+    }catch(e){
+      emitStorageError('TRACK',e);
+      return false;
+    }
+  }
+
+  function scheduleFlush(){
+    clearTimeout(flushTimer);
+    if(dirtyCount>=MAX_DIRTY_BEFORE_FLUSH){flushLocalTracks('COUNT');return;}
+    flushTimer=setTimeout(()=>flushLocalTracks('TIMER'),FLUSH_DELAY_MS);
+  }
+
+  base.storage.getV28Tracks=function(){
+    return {...trackCache};
   };
 
-  const originalSavePlan=base.storage.saveV28Plan.bind(base.storage);
-  base.storage.saveV28Plan=function(plan){
-    let ok=false;
-    try{ok=Boolean(originalSavePlan(plan));}
-    catch(e){emitStorageError('PLAN',e);return false;}
-    if(!ok)emitStorageError('PLAN','LOCAL STORAGE WRITE FAILED');
-    return ok;
+  base.storage.saveV28Track=function(track){
+    const sanitized=base.schemas.sanitizeTrackV2(track);
+    if(!sanitized||!base.schemas.validateTrackV2(sanitized))return false;
+
+    const isNew=!trackCache[sanitized.id];
+    trackCache[sanitized.id]=sanitized;
+    dirtyCount++;
+    mirrorTrack(sanitized).catch(()=>{});
+
+    // A new track must exist synchronously for crash recovery. Finalized tracks
+    // are also checkpointed immediately. GPS samples between those boundaries
+    // are batched.
+    if(isNew||sanitized.endedAt){
+      if(!flushLocalTracks(isNew?'NEW':'FINAL'))return false;
+    }else{
+      scheduleFlush();
+    }
+    return true;
   };
+
+  function deleteTrack(id){
+    id=String(id||'');
+    if(!id)return false;
+    delete trackCache[id];
+    dirtyCount++;
+    deleteMirroredTrack(id).catch(()=>{});
+    return flushLocalTracks('DELETE');
+  }
+
+  async function mergeMirrorIntoCache(){
+    const mirrored=await getAllMirroredTracks();
+    if(!mirrored.length)return;
+    let changed=false;
+    mirrored.forEach(track=>{
+      const sanitized=base.schemas.sanitizeTrackV2(track);
+      if(!sanitized||!base.schemas.validateTrackV2(sanitized))return;
+      const local=trackCache[sanitized.id];
+      const localStamp=Math.max(Number(local?.endedAt)||0,Number(local?.startedAt)||0);
+      const mirrorStamp=Math.max(Number(sanitized.endedAt)||0,Number(sanitized.startedAt)||0);
+      const localPoints=Array.isArray(local?.segments)?JSON.stringify(local.segments).length:0;
+      const mirrorPoints=Array.isArray(sanitized.segments)?JSON.stringify(sanitized.segments).length:0;
+      if(!local||mirrorStamp>localStamp||mirrorPoints>localPoints){
+        trackCache[sanitized.id]=sanitized;
+        changed=true;
+      }
+    });
+    if(changed){
+      dirtyCount++;
+      flushLocalTracks('MIRROR_RECOVERY');
+      root.dispatchEvent(new CustomEvent('recon-track-mirror-restored'));
+    }
+  }
 
   async function mirrorExisting(){
-    try{
-      const tracks=base.storage.getV28Tracks();
-      await Promise.all(Object.values(tracks||{}).map(mirrorTrack));
-    }catch(e){}
+    try{await Promise.all(Object.values(trackCache).map(mirrorTrack));}catch(e){}
+    await mergeMirrorIntoCache();
   }
 
   async function estimate(){
@@ -119,10 +206,15 @@
     return {usage:0,quota:0};
   }
 
+  root.addEventListener('pagehide',()=>flushLocalTracks('FORCE'));
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)flushLocalTracks('FORCE');});
+
   root.v29Storage={
     mirrorTrack,
     getAllTracks:getAllMirroredTracks,
     getTrack:getMirroredTrack,
+    deleteTrack,
+    flush:()=>flushLocalTracks('FORCE'),
     estimate,
     dbName:DB_NAME
   };
