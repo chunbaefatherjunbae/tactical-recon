@@ -1,16 +1,12 @@
-const CACHE_VERSION = 'v27-3-4-20261004';
+const CACHE_VERSION = 'v27-stable-20261004';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './v27-2.css',
-  './v27-2.js',
-  './v27-2-1.css',
-  './v27-2-1.js',
-  './v27-3.css',
-  './v27-3.js'
+  './v27-stable.css',
+  './v27-stable.js'
 ];
 
 self.addEventListener('install', event => {
@@ -34,28 +30,26 @@ self.addEventListener('activate', event => {
   })());
 });
 
-async function injectV272(response) {
+async function injectStableOverlay(response) {
   if (!response || !response.ok) return response;
   const type = response.headers.get('content-type') || '';
   if (type && !type.includes('text/html')) return response;
   let html = await response.text();
-  if (!html.includes('v27-2.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-2.css" />\n</head>');
+  // Cached pages from older workers may already contain legacy overlay tags.
+  // Strip them before inserting the single stable bundle to avoid double execution.
+  html = html
+    .replace(/\s*<link[^>]+href=["']\.\/v27-2\.css["'][^>]*>\s*/g, '\n')
+    .replace(/\s*<link[^>]+href=["']\.\/v27-2-1\.css["'][^>]*>\s*/g, '\n')
+    .replace(/\s*<link[^>]+href=["']\.\/v27-3\.css["'][^>]*>\s*/g, '\n')
+    .replace(/\s*<script[^>]+src=["']\.\/v27-2\.js["'][^>]*><\/script>\s*/g, '\n')
+    .replace(/\s*<script[^>]+src=["']\.\/v27-2-1\.js["'][^>]*><\/script>\s*/g, '\n')
+    .replace(/\s*<script[^>]+src=["']\.\/v27-3\.js["'][^>]*><\/script>\s*/g, '\n');
+
+  if (!html.includes('v27-stable.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-stable.css" />\n</head>');
   }
-  if (!html.includes('v27-2-1.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-2-1.css" />\n</head>');
-  }
-  if (!html.includes('v27-3.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-3.css" />\n</head>');
-  }
-  if (!html.includes('v27-2.js')) {
-    html = html.replace('</body>', '  <script src="./v27-2.js"></script>\n</body>');
-  }
-  if (!html.includes('v27-2-1.js')) {
-    html = html.replace('</body>', '  <script src="./v27-2-1.js"></script>\n</body>');
-  }
-  if (!html.includes('v27-3.js')) {
-    html = html.replace('</body>', '  <script src="./v27-3.js"></script>\n</body>');
+  if (!html.includes('v27-stable.js')) {
+    html = html.replace('</body>', '  <script src="./v27-stable.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
@@ -67,14 +61,14 @@ async function networkFirstPage(request) {
   const cache = await caches.open(PAGE_CACHE);
   try {
     const response = await fetch(request, { cache: 'reload' });
-    const injected = await injectV272(response);
+    const injected = await injectStableOverlay(response);
     if (injected && injected.ok) await cache.put(request, injected.clone());
     return injected;
   } catch (error) {
     const cached = await cache.match(request);
-    if (cached) return injectV272(cached);
+    if (cached) return injectStableOverlay(cached);
     const fallback = await cache.match('./index.html') || await caches.match('./index.html');
-    if (fallback) return injectV272(fallback);
+    if (fallback) return injectStableOverlay(fallback);
     throw error;
   }
 }

@@ -1,6 +1,8 @@
 # Tactical Recon Field Terminal — 개발 규칙
 
-이 디렉터리의 V26을 현재 기준 버전으로 취급한다. 이후 작업에서는 사용자가 요청한 범위만 변경한다. 기존 기능을 임의로 삭제하거나 동작 의미를 바꾸지 않고, 요청하지 않은 대규모 리팩터링이나 코드 정리를 하지 않는다. 상세 구조와 근거는 `/workspace/recon-v26-analysis.md`를 참고한다.
+현재 런타임 기준은 **기존 `index.html` + `v27-stable.js` + `v27-stable.css`** 조합이다. `index.html`에는 V26/V27.1까지의 레거시 구현과 재정의가 남아 있고, V27.2/V27.2.1/V27.3.x의 안정화 동작은 단일 stable overlay에 실행 순서 그대로 묶여 있다. `v27-2*`, `v27-3*` 개별 파일은 이력/비교용으로 보존하지만 서비스워커 런타임에서는 직접 로드하지 않는다.
+
+이후 작업에서는 사용자가 요청한 범위만 변경한다. 기존 기능을 임의로 삭제하거나 동작 의미를 바꾸지 않고, 요청하지 않은 대규모 리팩터링을 하지 않는다. V28 작업 전 상태/회귀 기준은 `V27-STABILIZATION.md`를 우선 참고한다.
 
 ## 작업 착수와 판단
 
@@ -12,9 +14,9 @@
 
 ## 구조와 변경 전 확인
 
-- `index.html` 하나에 HTML, CSS, 등록 거점 DB, 전역 상태, 주요 JavaScript가 들어 있다. `service-worker.js`는 PWA 캐시, `manifest.json`은 설치 설정을 담당한다.
+- `index.html` 하나에 HTML, CSS, 등록 거점 DB, 전역 상태, 주요 JavaScript가 들어 있다. `v27-stable.js/css`는 V27 후속 패치의 단일 런타임 오버레이이며, `service-worker.js`가 이를 HTML에 주입하고 PWA 캐시를 관리한다. `manifest.json`은 설치 설정을 담당한다.
 - 상태는 전역 변수, Leaflet 레이어, `localStorage`, DOM 클래스·스타일에 분산되어 있다. 기능을 수정하기 전에 생성 → 표시 → 변경 → 사용 → 숨김 → 삭제 → 모드 진입·종료 → 저장·복원 → 앱 재실행까지 전체 lifecycle을 추적한다. 관련 호출 경로와 다른 기능·상태와의 충돌도 확인한다.
-- `index.html` 앞쪽 구현뿐 아니라 후반 V26 재정의·래퍼와 마지막 CSS override까지 확인한다. 같은 이름의 함수가 여럿 있으면 실제 최종 적용되는 구현을 기준으로 수정한다. 특히 `locateUser`, `applyGpsPosition`, `syncGpsMarkerVisibility`, `syncTargetReferenceLine`, `updateTargetModePanel`을 주의한다.
+- `index.html` 앞쪽 구현뿐 아니라 후반 V26/V27.1 재정의·래퍼와 마지막 CSS override, 그리고 `v27-stable.js/css`의 최종 오버레이까지 확인한다. 같은 이름의 함수가 여럿 있으면 실제 최종 적용되는 구현을 기준으로 수정한다. 특히 `locateUser`, `applyGpsPosition`, `syncGpsMarkerVisibility`, `syncTargetReferenceLine`, `updateTargetModePanel`, `renderWpDrawerList`, `refreshGpsPowerUi`를 주의한다.
 - GPS/TEMP/HOME/TARGET, PLAN/START/VIA/END, ROUTE/OVERLAY/TRACK/BACKTRACK 중 관련된 상태를 함께 검토한다. 일반 마커와 각 기능은 서로 다른 Leaflet 레이어·객체, UI 패널, `localStorage`를 사용하므로 상태 불일치를 확인한다. 화면에서 마커·레이어를 숨기는 것과 실제 상태 데이터를 삭제하는 것을 구분한다. 상태 제거가 필요하면 JavaScript 상태, Leaflet 객체, DOM/UI, `localStorage`를 필요한 범위에서 동기화하고 타이머·터치 상태도 정리한다.
 
 ## 제품과 UI 원칙
