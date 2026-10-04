@@ -28,6 +28,12 @@ test('Offline vendor dependencies are local static assets',()=>{
   assert.strictEqual(sw.includes('VENDOR_ASSETS'),false);
 });
 
+test('Index and service worker use the final V29 cache identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'v29-stabilized-20261005-2';"));
+  assert(index.includes('service-worker.js?v=29-stabilized-20261005-2'));
+  assert(index.includes('tactical-recon-sw-reload-v29-stabilized-20261005-2'));
+});
+
 test('Index starts without Leaflet or MGRS CDN dependencies',()=>{
   assert(index.includes('./vendor/leaflet-1.9.4.css'));
   assert(index.includes('./vendor/leaflet-1.9.4.js'));
