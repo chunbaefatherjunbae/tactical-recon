@@ -254,11 +254,28 @@ body.v28-integrated:not(.target-nav):not(.plan-set-submode):not(.plan-draw-submo
   #planUndoBtn {
   display:none !important;
 }
-body.v28-integrated .target-mode-actions.v271-mode-toolbar #v28PlanObjectiveBtn { order:1; }
-body.v28-integrated .target-mode-actions.v271-mode-toolbar #planSetBtn { order:2; }
-body.v28-integrated .target-mode-actions.v271-mode-toolbar #targetDrawBtn { order:3; }
-body.v28-integrated .target-mode-actions.v271-mode-toolbar #planSearchBtn { order:4; }
-body.v28-integrated .target-mode-actions.v271-mode-toolbar #v28PlanTrackBtn { order:5; }
+
+body.v28-integrated:not(.target-nav) #planInfoTrigger {
+  cursor:pointer;
+}
+body.v28-integrated:not(.target-nav) #planInfoTrigger:hover,
+body.v28-integrated:not(.target-nav) #planInfoTrigger:focus-visible {
+  background:rgba(255,255,255,.025);
+}
+body.v28-integrated:not(.target-nav) #planInfoTrigger #targetModeName {
+  text-decoration:underline;
+  text-decoration-style:dotted;
+  text-underline-offset:3px;
+  text-decoration-thickness:1px;
+}
+body.v28-integrated #v28PlanNavBtn.nav-unavailable {
+  opacity:.58;
+}
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #planSetBtn { order:1; }
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #targetDrawBtn { order:2; }
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #planSearchBtn { order:3; }
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #v28PlanTrackBtn { order:4; }
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #v28PlanNavBtn { order:5; }
 body.v28-integrated .target-mode-actions.v271-mode-toolbar #planExitBtn { order:6; }
 
 body.v28-integrated.target-nav:not(.nav-draw-submode)
