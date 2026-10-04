@@ -37,7 +37,7 @@
       freeTrack:'자유 궤적 시작',freeTrackManage:'자유 궤적 관리',
       pickerSearch:'위치 검색',pickerCancel:'취소',pickerSite:'이 위치 선택',pickerObjective:'목표로 지정',
       pickerTemp:'TEMP로 지정',pickerHome:'HOME으로 지정',
-      objectiveHint:'탭하여 목표 변경',navStart:'탭하여 항법 시작',positionRequired:'위치 기준 필요',
+      objectiveHint:'탭하여 목표 변경',objectiveRequired:'목표 지정 필요',navStart:'탭하여 항법 시작',positionRequired:'위치 기준 필요',
       noObjective:'목표 미지정',sensorOff:'센서 OFF',sensorOn:'센서 ON',sensorUse:'센서 나침반 사용',
       sensorStop:'센서 끄기',sensorUnavailable:'이 기기/브라우저에서 절대방위 센서를 사용할 수 없습니다.',
       sensorDenied:'센서 권한이 허용되지 않았습니다.',sensorNote:'기본은 계산형 방위각입니다. 센서는 필요할 때만 직접 켜며 이 화면을 벗어나면 자동으로 꺼집니다.',
@@ -61,7 +61,7 @@
       freeTrack:'START FREE TRACK',freeTrackManage:'MANAGE FREE TRACK',
       pickerSearch:'POSITION SEARCH',pickerCancel:'CANCEL',pickerSite:'USE THIS LOCATION',pickerObjective:'SET OBJECTIVE',
       pickerTemp:'SET TEMP',pickerHome:'SET HOME',
-      objectiveHint:'TAP TO CHANGE OBJECTIVE',navStart:'TAP TO START NAV',positionRequired:'REFERENCE REQUIRED',
+      objectiveHint:'TAP TO CHANGE OBJECTIVE',objectiveRequired:'OBJECTIVE REQUIRED',navStart:'TAP TO START NAV',positionRequired:'REFERENCE REQUIRED',
       noObjective:'OBJECTIVE NOT SET',sensorOff:'SENSOR OFF',sensorOn:'SENSOR ON',sensorUse:'USE COMPASS SENSOR',
       sensorStop:'STOP SENSOR',sensorUnavailable:'ABSOLUTE ORIENTATION SENSOR IS NOT AVAILABLE.',sensorDenied:'SENSOR PERMISSION WAS NOT GRANTED.',
       sensorNote:'BEARING CALCULATION WORKS WITH THE SENSOR OFF. THE COMPASS SENSOR STARTS ONLY ON REQUEST AND STOPS WHEN YOU LEAVE THIS SCREEN.',
@@ -431,7 +431,7 @@
     if(kicker)kicker.textContent=(lang()==='ko'?'계획 · ':'PLAN · ')+plan.name;
     if(name)name.textContent=objective?.name||t('noObjective');
     if(hint){
-      if(!objective)hint.textContent=t('objectiveHint');
+      if(!objective)hint.textContent=t('objectiveRequired');
       else if(ref?.type==='LAST_FIX')hint.textContent=t('lastFix')+' · '+formatReferenceAge(ref.ageMs);
       else hint.textContent=ref?.coords?t('navStart'):t('positionRequired');
     }
@@ -1045,7 +1045,10 @@
   }
 
   async function exportFullBackup(){
-    const mirror=await root.v29Storage?.getAllTracks?.()||[];
+    const mirrored=await root.v29Storage?.getAllTracks?.()||[];
+    const primaryIds=new Set(Object.keys(base.storage.getV28Tracks?.()||{}));
+    const activeId=String(base.track?.activeTrackId||'');
+    const mirror=mirrored.filter(track=>track?.id&&(primaryIds.has(String(track.id))||String(track.id)===activeId));
     const payload={
       format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt:new Date().toISOString(),
       localStorage:appStorageSnapshot(),trackMirror:mirror
@@ -1067,6 +1070,7 @@
       for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key?.startsWith('tactical_recon_'))keys.push(key);}
       keys.forEach(key=>localStorage.removeItem(key));
       Object.entries(raw.localStorage).forEach(([key,value])=>{if(key.startsWith('tactical_recon_')&&typeof value==='string')localStorage.setItem(key,value);});
+      if(root.v29Storage?.clearTracks)await root.v29Storage.clearTracks();
       if(Array.isArray(raw.trackMirror)&&root.v29Storage?.mirrorTrack){
         await Promise.all(raw.trackMirror.map(track=>root.v29Storage.mirrorTrack(track)));
       }
