@@ -54,7 +54,7 @@
     set('v28TrackStop', '기록 종료', 'STOP');
     set('v28TrackLatest', '최근', 'LATEST');
     set('v28TrackAll', '전체 궤적', 'ALL TRACKS');
-    set('navSearchBtn', '위치검색', 'POSITION SEARCH');
+    set('navSearchBtn', '위치검색', 'LOCATE');
   }
 
   function validCoords(coords) {
