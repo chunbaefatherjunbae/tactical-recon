@@ -3,9 +3,17 @@
 .v273 .v26-main-cluster {
   width:100%;
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
 }
 .v273 .v26-main-cluster .v26-primary { width:100%; min-width:0; }
+
+/* GPS / adaptive RECENTER-FOLLOW / TEMP are global field controls, never mode-specific. */
+.v273 .global-gps-controls {
+  display:flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+.v273 .global-gps-controls .global-gps-button { display:flex !important; }
 
 .v273 .language-option-grid {
   display:grid;
