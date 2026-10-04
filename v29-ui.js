@@ -15,6 +15,8 @@
   let compareB='';
   let renderTimer=null;
   let lastPlanId=null;
+  let tileErrorCount=0;
+  let tileErrorWindowAt=0;
 
   const T={
     ko:{
@@ -104,6 +106,69 @@
   function closeSheet(){
     document.getElementById('v29Sheet')?.classList.remove('open');
     document.body.classList.remove('v29-sheet-open');
+  }
+
+  function ensureMapFallbackBanner(){
+    let banner=document.getElementById('v29MapFallback');
+    if(banner)return banner;
+    banner=document.createElement('div');
+    banner.id='v29MapFallback';
+    banner.className='v29-map-fallback';
+    banner.hidden=true;
+    banner.innerHTML='<span></span><button type="button"></button>';
+    banner.querySelector('button').addEventListener('click',()=>openSheet('emergency'));
+    document.body.appendChild(banner);
+    return banner;
+  }
+
+  function syncMapFallbackCopy(reason){
+    const banner=ensureMapFallbackBanner();
+    const text=reason==='OFFLINE'
+      ? (lang()==='ko'?'오프라인 · 온라인 지도 사용 불가':'OFFLINE · ONLINE MAP UNAVAILABLE')
+      : (lang()==='ko'?'지도 타일 수신 실패':'MAP TILE FAILURE');
+    banner.querySelector('span').textContent=text;
+    banner.querySelector('button').textContent=lang()==='ko'?'비상지도':'EMERGENCY MAP';
+  }
+
+  function showMapFallback(reason='TILE'){
+    const banner=ensureMapFallbackBanner();
+    syncMapFallbackCopy(reason);
+    banner.hidden=false;
+  }
+
+  function hideMapFallback(){
+    const banner=document.getElementById('v29MapFallback');
+    if(banner)banner.hidden=true;
+  }
+
+  function bindTileFallback(layer){
+    if(!layer?.on||layer._v29FallbackBound)return;
+    const isTile=typeof layer.getTileUrl==='function'||(typeof L!=='undefined'&&L.TileLayer&&layer instanceof L.TileLayer);
+    if(!isTile)return;
+    layer._v29FallbackBound=true;
+    layer.on('tileerror',()=>{
+      const now=Date.now();
+      if(now-tileErrorWindowAt>5000){tileErrorWindowAt=now;tileErrorCount=0;}
+      tileErrorCount++;
+      if(tileErrorCount>=3)showMapFallback('TILE');
+    });
+    layer.on('load',()=>{
+      tileErrorCount=0;
+      tileErrorWindowAt=Date.now();
+      if(navigator.onLine)hideMapFallback();
+    });
+  }
+
+  function installMapFallback(){
+    const banner=ensureMapFallbackBanner();
+    if(typeof map!=='undefined'&&map?.eachLayer){
+      map.eachLayer(bindTileFallback);
+      map.on?.('layeradd',e=>bindTileFallback(e.layer));
+    }
+    window.addEventListener('offline',()=>showMapFallback('OFFLINE'));
+    window.addEventListener('online',()=>{tileErrorCount=0;hideMapFallback();});
+    if(!navigator.onLine)showMapFallback('OFFLINE');
+    else banner.hidden=true;
   }
   function openSheet(tab=activeTab){
     if(typeof closeFieldControls==='function')closeFieldControls();
@@ -437,6 +502,15 @@
     let minLon=Math.min(...pts.map(p=>p[1])),maxLon=Math.max(...pts.map(p=>p[1]));
     const latPad=Math.max(.01,(maxLat-minLat)*.15),lonPad=Math.max(.01,(maxLon-minLon)*.15);
     minLat-=latPad;maxLat+=latPad;minLon-=lonPad;maxLon+=lonPad;
+    let contextSites=[];
+    try{
+      if(typeof getWaypoints==='function'){
+        contextSites=(getWaypoints('ALL')||[])
+          .filter(site=>core.geo.validCoords(site?.coords))
+          .filter(site=>site.coords[0]>=minLat&&site.coords[0]<=maxLat&&site.coords[1]>=minLon&&site.coords[1]<=maxLon)
+          .slice(0,30);
+      }
+    }catch(e){}
     const W=600,H=360,pad=34;
     const x=lon=>pad+(lon-minLon)/(maxLon-minLon)*(W-2*pad);
     const y=lat=>H-pad-(lat-minLat)/(maxLat-minLat)*(H-2*pad);
@@ -449,6 +523,9 @@
     (plan?.routeSegments||[]).forEach(seg=>{
       const clean=seg.filter(core.geo.validCoords);if(clean.length<2)return;
       svg+='<polyline class="route" points="'+clean.map(p=>x(p[1]).toFixed(1)+','+y(p[0]).toFixed(1)).join(' ')+'"/>';
+    });
+    contextSites.forEach(site=>{
+      svg+='<circle class="site" cx="'+x(site.coords[1])+'" cy="'+y(site.coords[0])+'" r="2.8"/>';
     });
     svg+='<line class="direct" x1="'+x(current[1])+'" y1="'+y(current[0])+'" x2="'+x(target[1])+'" y2="'+y(target[0])+'"/>';
     svg+='<circle class="current" cx="'+x(current[1])+'" cy="'+y(current[0])+'" r="7"/>';
@@ -527,6 +604,7 @@
     sheet.querySelectorAll('[data-v29-tab]').forEach(btn=>btn.addEventListener('click',()=>setTab(btn.dataset.v29Tab)));
 
     installBacktrackPreference();
+    installMapFallback();
     renderOverlayAnnotations();
 
     let previousLang=document.documentElement.lang;
@@ -535,6 +613,7 @@
       previousLang=document.documentElement.lang;
       const b=document.getElementById('v29FieldKitBtn');if(b)b.textContent=t('fieldKit');
       if(sheet.classList.contains('open'))renderShell();
+      if(!document.getElementById('v29MapFallback')?.hidden)syncMapFallbackCopy(navigator.onLine?'TILE':'OFFLINE');
       renderOverlayAnnotations();
     }).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
 
