@@ -1457,7 +1457,7 @@
       : null;
 
     const modeName = document.getElementById('targetModeName');
-    if (modeName) {
+    if (modeName && !document.body?.classList.contains('v28-integrated')) {
       if (targetModeTarget?.name) {
         modeName.textContent = String(targetModeTarget.name);
       } else if (planNext) {
@@ -1487,18 +1487,20 @@
     const hasObjective = validRefCoordsV2741(targetModeTarget?.coords);
     const navReady = Boolean(targetModeActive && targetModePhase === 'PLAN' && ref?.coords && hasObjective);
 
-    if (hint) {
-      hint.textContent = navReady
-        ? textV2741('tapToStart', currentLangV2741() === 'ko' ? '탭하여 항법 시작' : 'TAP TO START')
-        : (!ref?.coords
-            ? textV2741('positionRequired', currentLangV2741() === 'ko' ? '기준위치 필요' : 'REF POS REQUIRED')
-            : textV2741('objectiveRequired', currentLangV2741() === 'ko' ? '목표 필요' : 'OBJECTIVE REQUIRED'));
-    }
+    if (!document.body?.classList.contains('v28-integrated')) {
+      if (hint) {
+        hint.textContent = navReady
+          ? textV2741('tapToStart', currentLangV2741() === 'ko' ? '탭하여 항법 시작' : 'TAP TO START')
+          : (!ref?.coords
+              ? textV2741('positionRequired', currentLangV2741() === 'ko' ? '기준위치 필요' : 'REF POS REQUIRED')
+              : textV2741('objectiveRequired', currentLangV2741() === 'ko' ? '목표 필요' : 'OBJECTIVE REQUIRED'));
+      }
 
-    if (planHead) {
-      planHead.classList.toggle('nav-unavailable', !navReady);
-      planHead.setAttribute('aria-disabled', String(!navReady));
-      planHead.tabIndex = navReady ? 0 : -1;
+      if (planHead) {
+        planHead.classList.toggle('nav-unavailable', !navReady);
+        planHead.setAttribute('aria-disabled', String(!navReady));
+        planHead.tabIndex = navReady ? 0 : -1;
+      }
     }
   }
 
