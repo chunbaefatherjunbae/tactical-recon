@@ -6,7 +6,8 @@ const STATIC_ASSETS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './v27-stable.css',
-  './v27-stable.js'
+  './v27-stable.js',
+  './v28.js'
 ];
 
 self.addEventListener('install', event => {
@@ -50,6 +51,9 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('v27-stable.js')) {
     html = html.replace('</body>', '  <script src="./v27-stable.js"></script>\n</body>');
+  }
+  if (!html.includes('v28.js')) {
+    html = html.replace('</body>', '  <script src="./v28.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
