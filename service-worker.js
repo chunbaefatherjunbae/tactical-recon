@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v28-plan-nav-cleanup-20261005';
+const CACHE_VERSION = 'v29-dev-20261005-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
@@ -9,7 +9,10 @@ const STATIC_ASSETS = [
   './v27-stable.js',
   './v28.css',
   './v28.js',
-  './v28-runtime.js'
+  './v28-runtime.js',
+  './v29.css',
+  './v29.js',
+  './v29-ui.js'
 ];
 
 self.addEventListener('install', event => {
@@ -62,6 +65,15 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('v28-runtime.js')) {
     html = html.replace('</body>', '  <script src="./v28-runtime.js"></script>\n</body>');
+  }
+  if (!html.includes('v29.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v29.css" />\n</head>');
+  }
+  if (!html.includes('v29.js')) {
+    html = html.replace('</body>', '  <script src="./v29.js"></script>\n</body>');
+  }
+  if (!html.includes('v29-ui.js')) {
+    html = html.replace('</body>', '  <script src="./v29-ui.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
