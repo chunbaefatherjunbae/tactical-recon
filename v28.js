@@ -1255,6 +1255,14 @@ window.v28 = (function() {
         return out;
       };
     }
+    const previousRenderWpDrawerListV28 = typeof renderWpDrawerList === 'function' ? renderWpDrawerList : null;
+    if (previousRenderWpDrawerListV28) {
+      renderWpDrawerList = function() {
+        const out = previousRenderWpDrawerListV28.apply(this, arguments);
+        if (objectivePickMode) syncObjectivePickerUi();
+        return out;
+      };
+    }
 
     document.getElementById('v28ObjectiveClearBtn')?.addEventListener('click', () => {
       if (!activePlanId) return;
@@ -1331,6 +1339,7 @@ window.v28 = (function() {
           if (hint) hint.textContent = tV28('목표 미지정 · [목표]에서 지정', 'NO OBJECTIVE · USE OBJECTIVE');
           trigger?.setAttribute('aria-disabled','true');
         }
+        if (objectivePickMode) syncObjectivePickerUi();
       };
     }
 
