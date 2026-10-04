@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  document.title = 'TACTICAL RECON // FIELD TERMINAL V27.3.2';
+  document.title = 'TACTICAL RECON // FIELD TERMINAL V27.3.3';
   document.body?.classList.add('v273','v2731');
 
   const LANG_KEY = 'tactical_recon_language_v1';
