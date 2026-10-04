@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v28-field-lifecycle-20261005-2';
+const CACHE_VERSION = 'v28-nav-controls-20261005';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
