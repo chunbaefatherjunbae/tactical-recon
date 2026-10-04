@@ -13,6 +13,35 @@
 .v29-sheet.open { display:flex; }
 body.v29-sheet-open .mfd-bottom-bar { opacity:.36; }
 
+.v29-map-fallback {
+  position:fixed;
+  left:50%;
+  bottom:calc(68px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:2460;
+  width:min(520px,calc(100vw - 16px));
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:6px 7px 6px 10px;
+  border:1px solid var(--field-active);
+  background:var(--field-panel-solid,var(--bg-base,#07100a));
+  color:var(--field-text);
+  font:900 8.5px var(--font-mono);
+}
+.v29-map-fallback[hidden] { display:none !important; }
+.v29-map-fallback button {
+  flex:0 0 auto;
+  min-height:32px;
+  padding:0 8px;
+  border:1px solid var(--field-line-strong);
+  background:transparent;
+  color:var(--field-active);
+  font:900 8px var(--font-mono);
+}
+
 .v29-shell {
   width:min(680px,100%);
   max-height:min(78dvh,760px);
@@ -302,6 +331,10 @@ body.v29-sheet-open .mfd-bottom-bar { opacity:.36; }
   stroke-dasharray:7 5;
   vector-effect:non-scaling-stroke;
 }
+.v29-emergency-map svg .site {
+  fill:var(--field-dim);
+  stroke:none;
+}
 .v29-emergency-map svg .direct {
   stroke:var(--field-active);
   stroke-width:1.4;
@@ -326,6 +359,10 @@ body.v29-sheet-open .mfd-bottom-bar { opacity:.36; }
 }
 
 @media (max-width:520px) {
+  .v29-map-fallback {
+    bottom:calc(64px + env(safe-area-inset-bottom));
+    font-size:8px;
+  }
   .v29-sheet {
     padding-left:5px;
     padding-right:5px;
