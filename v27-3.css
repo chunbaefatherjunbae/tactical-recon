@@ -156,6 +156,6 @@ html[lang="ko"] .v273.target-nav.nav-draw-submode .nav-hud-distance-label::after
     z-index:12;
     margin:-10px -10px 0;
     padding:10px 10px 8px;
-    background:rgba(4,10,6,.99);
+    background:var(--field-panel-solid, #07100a);
   }
 }
