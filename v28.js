@@ -1239,8 +1239,8 @@ window.v28 = (function() {
     if (createBtn) createBtn.textContent = tV28('만들기', 'CREATE');
     const cancelBtn = document.getElementById('v28CancelPlanBtn');
     if (cancelBtn) cancelBtn.textContent = tV28('취소', 'CANCEL');
-    const planObjectiveBtn = document.getElementById('v28PlanObjectiveBtn');
-    if (planObjectiveBtn) planObjectiveBtn.textContent = tV28('목표', 'OBJECTIVE');
+    const planNavBtn = document.getElementById('v28PlanNavBtn');
+    if (planNavBtn) planNavBtn.textContent = tV28('항법', 'NAV');
     const targetSet = document.getElementById('btnTargetSet');
     if (targetSet && !objectivePickMode) targetSet.textContent = tV28('[ 목표 지정 ]', '[ SET OBJECTIVE ]');
     const sitesTitle = document.querySelector('#wpDrawer .drawer-head > div');
@@ -1272,15 +1272,41 @@ window.v28 = (function() {
         String(el.getAttribute('onclick') || '').includes('exitTargetMode')
       );
       if (exitButton) exitButton.id = 'planExitBtn';
-      if (!document.getElementById('v28PlanObjectiveBtn')) {
-        const objectiveButton = document.createElement('button');
-        objectiveButton.className = 'osb-btn plan-main-only';
-        objectiveButton.id = 'v28PlanObjectiveBtn';
-        objectiveButton.type = 'button';
-        objectiveButton.addEventListener('click', openObjectiveSheet);
-        toolbar.insertBefore(objectiveButton, document.getElementById('planSearchBtn') || toolbar.firstChild);
+
+      document.getElementById('v28PlanObjectiveBtn')?.remove();
+
+      if (!document.getElementById('v28PlanNavBtn')) {
+        const navButton = document.createElement('button');
+        navButton.className = 'osb-btn plan-main-only action-primary';
+        navButton.id = 'v28PlanNavBtn';
+        navButton.type = 'button';
+        navButton.addEventListener('click', () => startTargetNavigation());
+        toolbar.insertBefore(navButton, exitButton || null);
       }
     }
+
+    const planHead = document.getElementById('planInfoTrigger');
+    if (planHead) {
+      planHead.dataset.v28TextOwner = '1';
+      planHead.removeAttribute('onclick');
+      planHead.removeAttribute('onkeydown');
+      planHead.setAttribute('role','button');
+      planHead.setAttribute('tabindex','0');
+      planHead.setAttribute('aria-disabled','false');
+      planHead.addEventListener('click', event => {
+        if (event.target.closest('#targetShareBtn')) return;
+        openObjectiveSheet();
+      });
+      planHead.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openObjectiveSheet();
+      });
+    }
+    ['targetModeName','planNavHint'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.dataset.v28TextOwner = '1';
+    });
 
     const routesSheet = document.createElement('div');
     routesSheet.id = 'v28RoutesSheet';
@@ -1543,17 +1569,46 @@ window.v28 = (function() {
         if (!activePlanId || !targetModeActive || targetModePhase !== 'PLAN') return;
         const plan = getPlanById(activePlanId);
         if (!plan) return;
+
         const kicker = document.querySelector('.target-mode-kicker');
         const name = document.getElementById('targetModeName');
         const hint = document.getElementById('planNavHint');
         const trigger = document.getElementById('planInfoTrigger');
-        if (kicker) kicker.textContent = plan.objective
-          ? tV28('계획 // 목표 설정됨', 'PLAN // OBJECTIVE SET')
-          : tV28('계획 // 목표 미지정', 'PLAN // NO OBJECTIVE');
-        if (name) name.textContent = plan.name;
-        if (!plan.objective) {
-          if (hint) hint.textContent = tV28('목표 미지정 · [목표]에서 지정', 'NO OBJECTIVE · USE OBJECTIVE');
-          trigger?.setAttribute('aria-disabled','true');
+        const navBtn = document.getElementById('v28PlanNavBtn');
+        const ref = typeof getReferencePosition === 'function' ? getReferencePosition() : null;
+        const hasObjective = Boolean(plan.objective?.coords);
+        const navReady = Boolean(hasObjective && ref?.coords);
+
+        if (kicker) kicker.textContent = tV28('계획 · ', 'PLAN · ') + plan.name;
+        if (name) {
+          name.textContent = hasObjective
+            ? plan.objective.name
+            : tV28('목표 미지정', 'OBJECTIVE NOT SET');
+          name.dataset.v28TextOwner = '1';
+        }
+        if (hint) {
+          hint.textContent = hasObjective
+            ? tV28('탭하여 목표 변경', 'TAP TO CHANGE OBJECTIVE')
+            : tV28('탭하여 목표 설정', 'TAP TO SET OBJECTIVE');
+          hint.dataset.v28TextOwner = '1';
+        }
+        if (trigger) {
+          trigger.dataset.v28TextOwner = '1';
+          trigger.classList.remove('nav-unavailable');
+          trigger.setAttribute('aria-disabled','false');
+          trigger.tabIndex = 0;
+          trigger.title = hasObjective
+            ? tV28('목표 설정 열기', 'OPEN OBJECTIVE SETTINGS')
+            : tV28('목표 지정', 'SET OBJECTIVE');
+        }
+        if (navBtn) {
+          navBtn.disabled = false;
+          navBtn.classList.toggle('nav-unavailable', !navReady);
+          navBtn.title = !hasObjective
+            ? tV28('먼저 목표를 지정하세요.', 'SET AN OBJECTIVE FIRST.')
+            : (!ref?.coords
+              ? tV28('GPS FIX 또는 임시위치가 필요합니다.', 'GPS FIX OR TEMP POSITION REQUIRED.')
+              : tV28('항법 시작', 'START NAVIGATION'));
         }
         if (objectivePickMode) syncObjectivePickerUi();
       };
@@ -1566,6 +1621,14 @@ window.v28 = (function() {
           const plan = getPlanById(activePlanId);
           if (!plan?.objective) {
             openObjectiveSheet();
+            return;
+          }
+          const ref = typeof getReferencePosition === 'function' ? getReferencePosition() : null;
+          if (!ref?.coords) {
+            alert(tV28(
+              '항법을 시작하려면 GPS FIX 또는 임시위치가 필요합니다.',
+              'GPS FIX OR TEMP POSITION IS REQUIRED TO START NAV.'
+            ));
             return;
           }
         }
