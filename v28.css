@@ -1,6 +1,6 @@
 /* Tactical Recon V28 Phase 2 — PLAN / ROUTES */
 .v28-main-cluster {
-  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
   gap:5px !important;
 }
 .v28-main-cluster .osb-btn {
@@ -224,6 +224,39 @@ body.v28-sheet-open .mfd-bottom-bar { opacity:.42; }
 }
 .v28-objective-actions .osb-btn { min-height:42px; }
 .v28-danger { border-style:dashed !important; }
+
+.v28-objective-pick-hint {
+  padding:9px 12px;
+  border-bottom:1px solid var(--field-line);
+  background:var(--field-panel-solid,var(--bg-base,#07100a));
+  color:var(--field-active);
+  font-size:9px;
+  line-height:1.5;
+  letter-spacing:.02em;
+}
+
+/* Sequential controls follow the field workflow. Termination/destructive actions stay last. */
+body.v28-integrated:not(.target-nav):not(.plan-set-submode):not(.plan-draw-submode)
+  #planUndoBtn {
+  display:none !important;
+}
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #v28PlanObjectiveBtn { order:1; }
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #planSetBtn { order:2; }
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #targetDrawBtn { order:3; }
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #planSearchBtn { order:4; }
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #v28PlanTrackBtn { order:5; }
+body.v28-integrated .target-mode-actions.v271-mode-toolbar #planExitBtn { order:6; }
+
+body.v28-integrated.target-nav:not(.nav-draw-submode)
+  .target-mode-actions.v271-mode-toolbar #navSearchBtn { order:1; }
+body.v28-integrated.target-nav:not(.nav-draw-submode)
+  .target-mode-actions.v271-mode-toolbar #navPauseBtn { order:2; }
+body.v28-integrated.target-nav:not(.nav-draw-submode)
+  .target-mode-actions.v271-mode-toolbar #targetNextLegBtn { order:3; }
+body.v28-integrated.target-nav:not(.nav-draw-submode)
+  .target-mode-actions.v271-mode-toolbar #navMoreBtn { order:4; }
+body.v28-integrated.target-nav:not(.nav-draw-submode)
+  .target-mode-actions.v271-mode-toolbar #targetNavStopBtn { order:5; }
 
 @media (max-width:520px) {
   .v28-sheet { padding-left:7px; padding-right:7px; }
