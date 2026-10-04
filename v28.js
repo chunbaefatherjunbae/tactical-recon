@@ -915,7 +915,7 @@ window.v28 = (function() {
 
     const all = Object.values(getAllPlans()).sort((a,b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
     if (!all.length) {
-      list.innerHTML = '<div class="v28-empty">' + tV28('저장된 PLAN이 없습니다.', 'NO SAVED PLANS') + '</div>';
+      list.innerHTML = '<div class="v28-empty">' + tV28('저장된 계획이 없습니다.', 'NO SAVED PLANS') + '</div>';
       return;
     }
 
@@ -954,14 +954,14 @@ window.v28 = (function() {
       row.querySelector('.v28-open').addEventListener('click', () => openPlanInEditor(plan.id));
       row.querySelector('.v28-delete').addEventListener('click', () => {
         const msg = legacy
-          ? tV28('이 PLAN과 연결된 기존 V27 경로 기록도 삭제합니다. 거점 자체는 유지됩니다. 계속할까요?', 'DELETE THIS PLAN AND ITS LEGACY V27 ROUTE DATA? THE SITE WILL REMAIN.')
-          : tV28('이 PLAN을 삭제할까요?', 'DELETE THIS PLAN?');
+          ? tV28('이 계획과 연결된 기존 V27 경로 기록도 삭제합니다. 거점 자체는 유지됩니다. 계속할까요?', 'DELETE THIS PLAN AND ITS LEGACY V27 ROUTE DATA? THE SITE WILL REMAIN.')
+          : tV28('이 계획을 삭제할까요?', 'DELETE THIS PLAN?');
         if (!confirm(msg)) return;
         if (activePlanId === plan.id && targetModeActive && typeof exitTargetMode === 'function') {
           exitTargetMode(true);
         }
         if (!deletePlan(plan.id)) {
-          alert(tV28('PLAN 삭제에 실패했습니다.', 'PLAN DELETE FAILED.'));
+          alert(tV28('계획 삭제에 실패했습니다.', 'PLAN DELETE FAILED.'));
           return;
         }
         renderPhase2Routes();
@@ -1203,7 +1203,7 @@ window.v28 = (function() {
     document.getElementById('v28NewPlanBtn')?.addEventListener('click', () => {
       newForm?.classList.add('open');
       if (nameInput) {
-        nameInput.placeholder = tV28('PLAN 이름', 'PLAN NAME');
+        nameInput.placeholder = tV28('계획 이름', 'PLAN NAME');
         nameInput.value = '';
         setTimeout(() => nameInput.focus(), 0);
       }
@@ -1219,7 +1219,7 @@ window.v28 = (function() {
       nameInput?.removeAttribute('aria-invalid');
       const plan = createPlan({ name });
       if (!plan) {
-        alert(tV28('PLAN 생성에 실패했습니다.', 'PLAN CREATE FAILED.'));
+        alert(tV28('계획 생성에 실패했습니다.', 'PLAN CREATE FAILED.'));
         return;
       }
       newForm?.classList.remove('open');
@@ -1260,7 +1260,7 @@ window.v28 = (function() {
       if (!activePlanId) return;
       const plan = getPlanById(activePlanId);
       if (!plan?.objective) return;
-      if (!confirm(tV28('이 PLAN의 목표를 해제할까요? 경로 데이터는 유지됩니다.', 'CLEAR THIS PLAN OBJECTIVE? ROUTE DATA WILL REMAIN.'))) return;
+      if (!confirm(tV28('이 계획의 목표를 해제할까요? 경로 데이터는 유지됩니다.', 'CLEAR THIS PLAN OBJECTIVE? ROUTE DATA WILL REMAIN.'))) return;
       if (targetModeActive && routeDirty && !saveActivePlanFromEditor()) return;
       const next = clearPlanObjective(activePlanId);
       if (!next) return;
