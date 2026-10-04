@@ -20,7 +20,7 @@ function test(name, fn) {
 }
 
 test('PWA cache version is V28 plan UX', () => {
-  assert(sw.includes("const CACHE_VERSION = 'v28-plan-ux-20261005-3';"));
+  assert(sw.includes("const CACHE_VERSION = 'v28-field-lifecycle-20261005';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
@@ -63,6 +63,22 @@ test('Track UI has Korean labels', () => {
   ['궤적 기록','기록 시작','일시정지','재개','기록 종료','전체 궤적'].forEach(label => {
     assert(runtime.includes(label), 'missing track label ' + label);
   });
+});
+
+test('NAV keeps position search and exposes track from HUD', () => {
+  assert(runtime.includes("set('navSearchBtn', '위치검색', 'POSITION SEARCH')"));
+  assert(runtime.includes("navTrackAccess.addEventListener('click'"));
+  assert(runtime.includes("openTrackSheet();"));
+  assert(runtime.includes("hud.setAttribute('role','button')"));
+});
+
+test('Verified local sites support edit and revert', () => {
+  assert(v28.includes('openSecuredSiteEditor'));
+  assert(v28.includes('revertSecuredSite'));
+  assert(v28.includes("status:'UNEXPLORED'"));
+  assert(v28.includes("delete next.securedAt"));
+  assert(v28.includes("preSecureOpCode"));
+  assert(v28.includes('이름과 메모는 유지됩니다.'));
 });
 
 test('active TrackV2 recovery key is exact', () => {
