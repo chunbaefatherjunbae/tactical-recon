@@ -5692,12 +5692,14 @@
       const planHead=document.getElementById('planInfoTrigger');
       const hint=document.getElementById('planNavHint');
       const navReady=Boolean(targetModeActive && targetModePhase==='PLAN' && ref?.coords);
-      if (planHead) {
-        planHead.classList.toggle('nav-unavailable',!navReady);
-        planHead.setAttribute('aria-disabled',String(!navReady));
-        planHead.tabIndex=navReady?0:-1;
+      if (!document.body.classList.contains('v28-integrated')) {
+        if (planHead) {
+          planHead.classList.toggle('nav-unavailable',!navReady);
+          planHead.setAttribute('aria-disabled',String(!navReady));
+          planHead.tabIndex=navReady?0:-1;
+        }
+        if (hint) hint.textContent=navReady?'TAP TO START':'POSITION REQUIRED';
       }
-      if (hint) hint.textContent=navReady?'TAP TO START':'POSITION REQUIRED';
 
       const shareReady=routeDraftSegments.length>0;
       const share=document.getElementById('targetShareBtn');
