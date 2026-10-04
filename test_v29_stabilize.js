@@ -18,13 +18,11 @@ test('Service worker loads stabilization after V29 UI',()=>{
   assert(sw.indexOf("html.includes('v29-stabilize.js')")>sw.indexOf("html.includes('v29-ui.js')"));
 });
 
-test('Offline vendor dependencies are explicitly precached',()=>{
-  assert(sw.includes('const VENDOR_ASSETS'));
-  assert(sw.includes('leaflet@1.9.4/dist/leaflet.css'));
-  assert(sw.includes('leaflet@1.9.4/dist/leaflet.js'));
-  assert(sw.includes('mgrs@1.0.0/dist/mgrs.min.js'));
-  assert(sw.includes('cacheVendorAssets()'));
-  assert(sw.includes('VENDOR_ASSETS.includes(url.href)'));
+test('Offline vendor dependencies are local static assets',()=>{
+  assert(sw.includes("'./vendor/leaflet-1.9.4.css'"));
+  assert(sw.includes("'./vendor/leaflet-1.9.4.js'"));
+  assert(sw.includes("'./vendor/mgrs-1.0.0.js'"));
+  assert.strictEqual(sw.includes('VENDOR_ASSETS'),false);
 });
 
 test('TRACK storage has IndexedDB safety mirror and failure event',()=>{
