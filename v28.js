@@ -686,6 +686,7 @@ window.v28 = (function() {
   let phase2AutosaveTimer = null;
   let phase2ObjectiveRefreshTimer = null;
   let objectivePickMode = false;
+  let securedSiteEditId = null;
 
   function langV28() {
     return typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'ko';
@@ -772,6 +773,136 @@ window.v28 = (function() {
     }
     clearObjectivePickerMode();
     openPlanInEditor(next.id);
+  }
+
+  function currentLocalSite() {
+    if (typeof getLocalIntel !== 'function' || !currentActiveTarget?.id) return null;
+    const list = getLocalIntel();
+    return Array.isArray(list)
+      ? list.find(item => String(item?.id) === String(currentActiveTarget.id)) || null
+      : null;
+  }
+
+  function ensureSecuredSiteActions() {
+    if (typeof document === 'undefined') return null;
+    const actions = document.querySelector('#sitrepPanel .sitrep-actions');
+    if (!actions) return null;
+    let wrap = document.getElementById('v28SecuredSiteActions');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = 'v28SecuredSiteActions';
+      wrap.className = 'v28-site-manage-actions';
+      wrap.hidden = true;
+      wrap.innerHTML =
+        '<button class="osb-btn" id="v28EditSecuredSiteBtn" type="button"></button>' +
+        '<button class="osb-btn v28-danger" id="v28RevertSecuredSiteBtn" type="button"></button>';
+      const address = document.getElementById('sitrepAddress');
+      actions.insertBefore(wrap, address || null);
+      document.getElementById('v28EditSecuredSiteBtn')?.addEventListener('click', openSecuredSiteEditor);
+      document.getElementById('v28RevertSecuredSiteBtn')?.addEventListener('click', revertSecuredSite);
+    }
+    return wrap;
+  }
+
+  function syncSecuredSiteActions() {
+    const wrap = ensureSecuredSiteActions();
+    if (!wrap) return;
+    const site = currentLocalSite();
+    const visible = Boolean(!objectivePickMode && site?.status === 'SECURED');
+    wrap.hidden = !visible;
+    const edit = document.getElementById('v28EditSecuredSiteBtn');
+    const revert = document.getElementById('v28RevertSecuredSiteBtn');
+    if (edit) edit.textContent = tV28('내용 수정', 'EDIT DETAILS');
+    if (revert) revert.textContent = tV28('미확인으로 되돌리기', 'MARK UNVERIFIED');
+  }
+
+  function promotionModalParts() {
+    const modal = document.getElementById('promoModalBackdrop');
+    if (!modal) return {};
+    const title = modal.querySelector('.promo-title');
+    const description = title?.nextElementSibling || null;
+    const buttons = modal.querySelectorAll('.promo-actions .osb-btn');
+    return {
+      modal,
+      title,
+      description,
+      cancel: buttons[0] || null,
+      confirm: buttons[1] || null
+    };
+  }
+
+  function syncPromotionModalCopy(editing = Boolean(securedSiteEditId)) {
+    const parts = promotionModalParts();
+    if (!parts.modal) return;
+    if (editing) {
+      if (parts.title) parts.title.textContent = tV28('확인완료 거점 수정', 'EDIT VERIFIED SITE');
+      if (parts.description) parts.description.textContent = tV28(
+        '거점 이름과 현장 메모를 수정합니다. 확인완료 상태와 확인시각은 유지됩니다.',
+        'EDIT THE SITE NAME AND FIELD NOTES. VERIFIED STATUS AND TIME ARE PRESERVED.'
+      );
+      if (parts.cancel) parts.cancel.textContent = tV28('취소', 'CANCEL');
+      if (parts.confirm) parts.confirm.textContent = tV28('수정 저장', 'SAVE CHANGES');
+    } else {
+      if (parts.title) parts.title.textContent = tV28('현장 확인 및 개척 등록', 'FIELD VERIFICATION');
+      if (parts.description) parts.description.textContent = tV28(
+        '확인된 지형 정보를 입력하여 확인완료 거점으로 등록합니다.',
+        'SAVE VERIFIED FIELD INFORMATION FOR THIS SITE.'
+      );
+      if (parts.cancel) parts.cancel.textContent = tV28('취소', 'CANCEL');
+      if (parts.confirm) parts.confirm.textContent = tV28('확인 완료', 'VERIFY');
+    }
+  }
+
+  function openSecuredSiteEditor() {
+    const site = currentLocalSite();
+    if (!site || site.status !== 'SECURED') return;
+    securedSiteEditId = String(site.id);
+    if (typeof closeWpDrawer === 'function') closeWpDrawer();
+    const name = document.getElementById('promoNameInput');
+    const memo = document.getElementById('promoMemoInput');
+    if (name) name.value = site.name || '';
+    if (memo) memo.value = site.desc || '';
+    syncPromotionModalCopy(true);
+    const modal = document.getElementById('promoModalBackdrop');
+    if (modal) modal.style.display = 'flex';
+    setTimeout(() => name?.focus(), 0);
+  }
+
+  function revertSecuredSite() {
+    const site = currentLocalSite();
+    if (!site || site.status !== 'SECURED') return;
+    const ok = confirm(tV28(
+      '이 거점을 미확인 상태로 되돌릴까요? 이름과 메모는 유지됩니다.',
+      'MARK THIS SITE UNVERIFIED? NAME AND NOTES WILL BE KEPT.'
+    ));
+    if (!ok) return;
+
+    const list = getLocalIntel();
+    const idx = list.findIndex(item => String(item?.id) === String(site.id));
+    if (idx < 0) return;
+    const next = { ...list[idx], status:'UNEXPLORED' };
+    if (next.preSecureOpCode) {
+      next.opCode = next.preSecureOpCode;
+      delete next.preSecureOpCode;
+    } else if (typeof next.opCode === 'string' && /^SECURED-SEC-/.test(next.opCode)) {
+      next.opCode = next.opCode.replace(/^SECURED-SEC-/, 'WILD-SEC-');
+    }
+    delete next.securedAt;
+    list[idx] = next;
+
+    try {
+      saveLocalIntel(list);
+    } catch (e) {
+      console.warn('V28 site revert failed:', e);
+      alert(tV28('미확인 상태로 되돌리지 못했습니다.', 'FAILED TO MARK SITE UNVERIFIED.'));
+      return;
+    }
+
+    if (targetModeActive && targetModeTarget && String(targetModeTarget.id) === String(next.id)) {
+      targetModeTarget = next;
+      if (typeof updateTargetModePanel === 'function') updateTargetModePanel();
+    }
+    openSitrep(next, 'UNEXPLORED');
   }
 
   function closePhase2Sheets() {
@@ -1114,6 +1245,10 @@ window.v28 = (function() {
     if (targetSet && !objectivePickMode) targetSet.textContent = tV28('[ 목표 지정 ]', '[ SET OBJECTIVE ]');
     const sitesTitle = document.querySelector('#wpDrawer .drawer-head > div');
     if (sitesTitle && !objectivePickMode) sitesTitle.textContent = tV28('거점', 'SITES');
+    syncSecuredSiteActions();
+    if (document.getElementById('promoModalBackdrop')?.style.display === 'flex') {
+      syncPromotionModalCopy(Boolean(securedSiteEditId));
+    }
     renderPhase2Routes();
     renderPhase2Objective();
     syncObjectivePickerUi();
@@ -1243,6 +1378,7 @@ window.v28 = (function() {
       openSitrep = function() {
         const out = previousOpenSitrepV28.apply(this, arguments);
         if (objectivePickMode) syncObjectivePickerUi();
+        syncSecuredSiteActions();
         return out;
       };
     }
@@ -1252,6 +1388,8 @@ window.v28 = (function() {
         const wasPicking = objectivePickMode;
         const out = previousCloseSitrepV28.apply(this, arguments);
         if (wasPicking) clearObjectivePickerMode();
+        const manage = document.getElementById('v28SecuredSiteActions');
+        if (manage) manage.hidden = true;
         return out;
       };
     }
@@ -1261,6 +1399,84 @@ window.v28 = (function() {
         const out = previousRenderWpDrawerListV28.apply(this, arguments);
         if (objectivePickMode) syncObjectivePickerUi();
         return out;
+      };
+    }
+
+    ensureSecuredSiteActions();
+
+    const previousOpenPromotionModalV28 = typeof openPromotionModal === 'function' ? openPromotionModal : null;
+    if (previousOpenPromotionModalV28) {
+      openPromotionModal = function() {
+        securedSiteEditId = null;
+        const out = previousOpenPromotionModalV28.apply(this, arguments);
+        syncPromotionModalCopy(false);
+        return out;
+      };
+    }
+
+    const previousClosePromotionModalV28 = typeof closePromotionModal === 'function' ? closePromotionModal : null;
+    if (previousClosePromotionModalV28) {
+      closePromotionModal = function() {
+        securedSiteEditId = null;
+        const out = previousClosePromotionModalV28.apply(this, arguments);
+        syncPromotionModalCopy(false);
+        return out;
+      };
+    }
+
+    const previousConfirmPromotionV28 = typeof confirmPromotion === 'function' ? confirmPromotion : null;
+    if (previousConfirmPromotionV28) {
+      confirmPromotion = function() {
+        if (!securedSiteEditId) {
+          const before = currentLocalSite();
+          const beforeId = before?.id ? String(before.id) : null;
+          const beforeOpCode = before?.opCode;
+          const out = previousConfirmPromotionV28.apply(this, arguments);
+          if (beforeId && beforeOpCode) {
+            const list = getLocalIntel();
+            const idx = list.findIndex(item => String(item?.id) === beforeId);
+            if (idx >= 0 && list[idx]?.status === 'SECURED' &&
+                list[idx].opCode !== beforeOpCode && !list[idx].preSecureOpCode) {
+              list[idx] = { ...list[idx], preSecureOpCode:beforeOpCode };
+              try { saveLocalIntel(list); } catch (e) {
+                console.warn('V28 pre-secure opcode save failed:', e);
+              }
+            }
+          }
+          return out;
+        }
+
+        const list = getLocalIntel();
+        const idx = list.findIndex(item => String(item?.id) === String(securedSiteEditId));
+        if (idx < 0 || list[idx]?.status !== 'SECURED') {
+          securedSiteEditId = null;
+          previousClosePromotionModalV28?.();
+          return;
+        }
+        const nameInput = document.getElementById('promoNameInput');
+        const memoInput = document.getElementById('promoMemoInput');
+        const next = {
+          ...list[idx],
+          name:String(nameInput?.value || '').trim() || list[idx].name,
+          desc:String(memoInput?.value || '').trim() || list[idx].desc || ''
+        };
+        list[idx] = next;
+        try {
+          saveLocalIntel(list);
+        } catch (e) {
+          console.warn('V28 secured site edit failed:', e);
+          alert(tV28('거점 수정 내용을 저장하지 못했습니다.', 'FAILED TO SAVE SITE CHANGES.'));
+          return;
+        }
+
+        const editId = securedSiteEditId;
+        securedSiteEditId = null;
+        previousClosePromotionModalV28?.();
+        if (targetModeActive && targetModeTarget && String(targetModeTarget.id) === String(editId)) {
+          targetModeTarget = next;
+          if (typeof updateTargetModePanel === 'function') updateTargetModePanel();
+        }
+        openSitrep(next, 'SECURED');
       };
     }
 
