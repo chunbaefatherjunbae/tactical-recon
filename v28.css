@@ -230,3 +230,120 @@ body.v28-sheet-open .mfd-bottom-bar { opacity:.42; }
   .v28-objective-actions { grid-template-columns:1fr 1fr; }
   .v28-objective-actions #v28ObjectiveClearBtn { grid-column:1 / -1; }
 }
+
+
+/* ===== V28 integrated TRACK runtime ===== */
+body.v28-integrated:not(.target-nav):not(.plan-set-submode):not(.plan-draw-submode)
+  .target-mode-actions.v271-mode-toolbar {
+  grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+}
+
+.v28-track-shell {
+  max-height:min(76dvh,720px);
+}
+.v28-track-status {
+  display:grid;
+  grid-template-columns:.7fr 1.3fr;
+  border-bottom:1px solid var(--field-line);
+}
+.v28-track-status > div {
+  min-width:0;
+  min-height:58px;
+  padding:9px 11px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:4px;
+  border-right:1px solid var(--field-line);
+}
+.v28-track-status > div:last-child { border-right:0; }
+.v28-track-status span {
+  font-size:8px;
+  letter-spacing:.09em;
+  color:var(--field-dim);
+}
+.v28-track-status strong {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:11px;
+  color:var(--field-text);
+}
+.v28-track-controls {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:5px;
+  padding:8px;
+  border-bottom:1px solid var(--field-line);
+}
+.v28-track-controls .osb-btn,
+.v28-track-display .osb-btn {
+  min-height:42px;
+}
+.v28-track-display {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:5px;
+  padding:8px;
+  border-bottom:1px solid var(--field-line);
+}
+.v28-track-list {
+  overflow:auto;
+  overscroll-behavior:contain;
+  padding:8px;
+}
+.v28-track-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+  min-height:64px;
+  margin-bottom:6px;
+  padding:8px 8px 8px 11px;
+  border:1px solid var(--field-line);
+}
+.v28-track-row.active { border-left-width:3px; }
+.v28-track-copy {
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+.v28-track-copy strong,
+.v28-track-copy span {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.v28-track-copy strong {
+  font-size:10px;
+  color:var(--field-text);
+}
+.v28-track-copy span {
+  font-size:8px;
+  color:var(--field-dim);
+}
+.v28-track-row .v28-mini:disabled {
+  opacity:.35;
+  pointer-events:none;
+}
+
+@media (max-width:520px) {
+  body.v28-integrated:not(.target-nav):not(.plan-set-submode):not(.plan-draw-submode)
+    .target-mode-actions.v271-mode-toolbar .osb-btn {
+    font-size:7px;
+    letter-spacing:0;
+    padding-left:1px;
+    padding-right:1px;
+  }
+  .v28-track-status { grid-template-columns:1fr; }
+  .v28-track-status > div {
+    min-height:48px;
+    border-right:0;
+    border-bottom:1px solid var(--field-line);
+  }
+  .v28-track-status > div:last-child { border-bottom:0; }
+  .v28-track-controls { grid-template-columns:1fr 1fr; }
+  .v28-track-row { grid-template-columns:1fr; }
+  .v28-track-row .v28-mini { min-height:42px; width:100%; }
+}
