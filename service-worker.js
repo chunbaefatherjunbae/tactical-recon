@@ -1,11 +1,6 @@
 const CACHE_VERSION = 'v29-stabilized-20261005-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
-const VENDOR_ASSETS = [
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://cdn.jsdelivr.net/npm/mgrs@1.0.0/dist/mgrs.min.js'
-];
 const STATIC_ASSETS = [
   './manifest.json',
   './icons/icon-192.png',
@@ -26,22 +21,10 @@ const STATIC_ASSETS = [
   './v29-stabilize.js'
 ];
 
-async function cacheVendorAssets() {
-  const cache = await caches.open(STATIC_CACHE);
-  await Promise.allSettled(VENDOR_ASSETS.map(async url => {
-    try {
-      const request = new Request(url, { mode:'no-cors', cache:'reload' });
-      const response = await fetch(request);
-      if (response) await cache.put(request, response.clone());
-    } catch (e) {}
-  }));
-}
-
 self.addEventListener('install', event => {
   event.waitUntil(Promise.all([
     caches.open(STATIC_CACHE).then(cache => cache.addAll(STATIC_ASSETS)),
-    caches.open(PAGE_CACHE).then(cache => cache.add('./index.html')),
-    cacheVendorAssets()
+    caches.open(PAGE_CACHE).then(cache => cache.add('./index.html'))
   ]));
   self.skipWaiting();
 });
