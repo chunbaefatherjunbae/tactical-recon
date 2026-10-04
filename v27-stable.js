@@ -527,7 +527,9 @@
       deleteSite:'삭제', clearAllSites:'거점 전체삭제', addVia:'경유점 추가',
       startPoint:'출발점', viaPoint:'경유점', endPoint:'도착점', homePoint:'복귀점',
       targetSet:'목표 지정', reconComplete:'확인완료', show:'펼치기',
-      setSiteHere:'현재 위치에 거점 지정', verifySite:'현장 확인'
+      setSiteHere:'현재 위치에 거점 지정', verifySite:'현장 확인',
+      tapToStart:'탭하여 항법 시작', objectiveRequired:'목표 필요',
+      routeStatus:'경로', nextPoint:'다음', noRoute:'경로 없음'
     },
     en: {
       language:'LANGUAGE', languageTitle:'LANGUAGE', korean:'한국어', english:'ENGLISH',
@@ -560,7 +562,9 @@
       deleteSite:'DELETE', clearAllSites:'DELETE ALL SITES', addVia:'ADD VIA',
       startPoint:'START PT', viaPoint:'VIA PT', endPoint:'END PT', homePoint:'RETURN PT',
       targetSet:'SET OBJECTIVE', reconComplete:'VERIFY SITE', show:'SHOW',
-      setSiteHere:'SET SITE AT RETICLE', verifySite:'FIELD VERIFICATION'
+      setSiteHere:'SET SITE AT RETICLE', verifySite:'FIELD VERIFICATION',
+      tapToStart:'TAP TO START', objectiveRequired:'OBJECTIVE REQUIRED',
+      routeStatus:'ROUTE', nextPoint:'NEXT', noRoute:'NO ROUTE'
     }
   };
 
@@ -1366,4 +1370,158 @@
   restoreDisplayPreferences();
   applyLanguage();
   syncSiteCounter();
+})();
+
+
+/* ===== V27.4.1 // TEMP reference + dynamic route status ===== */
+(() => {
+  'use strict';
+
+  document.title = 'TACTICAL RECON // FIELD TERMINAL V27.4.1';
+  document.body?.classList.add('v2741');
+
+  const validRefCoordsV2741 = coords =>
+    Array.isArray(coords) && coords.length >= 2 &&
+    Number.isFinite(Number(coords[0])) && Number.isFinite(Number(coords[1])) &&
+    Math.abs(Number(coords[0])) <= 90 && Math.abs(Number(coords[1])) <= 180;
+
+  const baseGetReferencePositionV2741 = getReferencePosition;
+  getReferencePosition = function() {
+    // Explicit GPS OFF is a valid field-operating state. If TEMP exists, it is
+    // the active reference rather than stale LAST FIX.
+    if (!gpsPowerEnabled && validRefCoordsV2741(tempMarkPoint?.coords)) {
+      return { type:'TEMP', coords:[Number(tempMarkPoint.coords[0]), Number(tempMarkPoint.coords[1])] };
+    }
+
+    const ref = baseGetReferencePositionV2741();
+    if (validRefCoordsV2741(ref?.coords)) return ref;
+
+    // Defensive fallback: a valid TEMP must never degrade to "position required".
+    if (validRefCoordsV2741(tempMarkPoint?.coords)) {
+      return { type:'TEMP', coords:[Number(tempMarkPoint.coords[0]), Number(tempMarkPoint.coords[1])] };
+    }
+    return null;
+  };
+
+  function textV2741(key, fallback) {
+    try {
+      const value = window.reconT?.(key);
+      return value && value !== key ? value : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function currentLangV2741() {
+    return document.documentElement.lang === 'en' ? 'en' : 'ko';
+  }
+
+  function routeSequenceV2741() {
+    const seq = [];
+    (routeViaPoints || []).forEach(v => {
+      if (validRefCoordsV2741(v?.coords)) seq.push({ ...v, __navRole:'VIA' });
+    });
+    if (validRefCoordsV2741(targetModeTarget?.coords)) seq.push({ ...targetModeTarget, __navRole:'TARGET' });
+    if (validRefCoordsV2741(routeEndPoint?.coords)) seq.push({ ...routeEndPoint, __navRole:'END' });
+    return seq;
+  }
+
+  function roleTextV2741(role) {
+    if (role === 'VIA') return textV2741('via', currentLangV2741() === 'ko' ? '경유점' : 'VIA');
+    if (role === 'END') return textV2741('end', currentLangV2741() === 'ko' ? '도착점' : 'END');
+    return textV2741('target', currentLangV2741() === 'ko' ? '목표' : 'OBJECTIVE');
+  }
+
+  function refTextV2741(ref) {
+    if (!ref?.type) return textV2741('refShort', 'REF --');
+    if (ref.type === 'TEMP') return textV2741('temp', currentLangV2741() === 'ko' ? '임시위치' : 'TEMP POS');
+    if (ref.type === 'LAST_GPS') return textV2741('lastGps', currentLangV2741() === 'ko' ? '최종수신점' : 'LAST FIX');
+    return 'GPS';
+  }
+
+  function clearDynamicI18nBindingsV2741() {
+    ['planNavHint','targetModeName','navHudTarget'].forEach(id => {
+      document.getElementById(id)?.removeAttribute('data-recon-i18n');
+    });
+  }
+
+  function syncRouteAndReferenceStatusV2741() {
+    clearDynamicI18nBindingsV2741();
+
+    const ref = getReferencePosition();
+    const seq = routeSequenceV2741();
+    const planNext = seq[0] || null;
+    const navDest = targetModeActive && targetModePhase === 'NAV'
+      ? (getCurrentNavDestination?.() || seq[Math.min(navLegIndex || 0, Math.max(0, seq.length - 1))] || null)
+      : null;
+
+    const modeName = document.getElementById('targetModeName');
+    if (modeName) {
+      if (targetModeTarget?.name) {
+        modeName.textContent = String(targetModeTarget.name);
+      } else if (planNext) {
+        const nextName = String(planNext.name || roleTextV2741(planNext.__navRole)).trim();
+        modeName.textContent = `${textV2741('routeStatus', 'ROUTE')} · ${textV2741('nextPoint', 'NEXT')} ${nextName}`;
+      } else {
+        modeName.textContent = textV2741('noRoute', currentLangV2741() === 'ko' ? '경로 없음' : 'NO ROUTE');
+      }
+    }
+
+    const navTarget = document.getElementById('navHudTarget');
+    if (navTarget) {
+      if (navDest) navTarget.textContent = String(navDest.name || roleTextV2741(navDest.__navRole));
+      else if (planNext) navTarget.textContent = String(planNext.name || roleTextV2741(planNext.__navRole));
+      else navTarget.textContent = textV2741('noRoute', currentLangV2741() === 'ko' ? '경로 없음' : 'NO ROUTE');
+    }
+
+    const navRef = document.getElementById('navHudRef');
+    if (navRef) {
+      navRef.textContent = ref?.coords
+        ? (currentLangV2741() === 'ko' ? `기준 ${refTextV2741(ref)}` : `REF ${refTextV2741(ref)}`)
+        : textV2741('refShort', 'REF --');
+    }
+
+    const hint = document.getElementById('planNavHint');
+    const planHead = document.getElementById('planInfoTrigger');
+    const hasObjective = validRefCoordsV2741(targetModeTarget?.coords);
+    const navReady = Boolean(targetModeActive && targetModePhase === 'PLAN' && ref?.coords && hasObjective);
+
+    if (hint) {
+      hint.textContent = navReady
+        ? textV2741('tapToStart', currentLangV2741() === 'ko' ? '탭하여 항법 시작' : 'TAP TO START')
+        : (!ref?.coords
+            ? textV2741('positionRequired', currentLangV2741() === 'ko' ? '기준위치 필요' : 'REF POS REQUIRED')
+            : textV2741('objectiveRequired', currentLangV2741() === 'ko' ? '목표 필요' : 'OBJECTIVE REQUIRED'));
+    }
+
+    if (planHead) {
+      planHead.classList.toggle('nav-unavailable', !navReady);
+      planHead.setAttribute('aria-disabled', String(!navReady));
+      planHead.tabIndex = navReady ? 0 : -1;
+    }
+  }
+
+  const baseSyncKnownActionAvailabilityV2741 = syncKnownActionAvailability;
+  syncKnownActionAvailability = function() {
+    const out = baseSyncKnownActionAvailabilityV2741();
+    syncRouteAndReferenceStatusV2741();
+    return out;
+  };
+
+  const baseUpdateTargetModePanelV2741 = updateTargetModePanel;
+  updateTargetModePanel = function() {
+    const out = baseUpdateTargetModePanelV2741();
+    syncRouteAndReferenceStatusV2741();
+    return out;
+  };
+
+  const baseRefreshPositionStateV2741 = refreshPositionState;
+  refreshPositionState = function() {
+    const out = baseRefreshPositionStateV2741();
+    syncRouteAndReferenceStatusV2741();
+    return out;
+  };
+
+  clearDynamicI18nBindingsV2741();
+  syncRouteAndReferenceStatusV2741();
 })();

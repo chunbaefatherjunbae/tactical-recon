@@ -163,3 +163,42 @@ V28은 기존 키를 읽을 수 있는 마이그레이션 계층을 먼저 둔 �
 ## 검증 수준
 
 이 문서와 안정화 패치는 정적 코드/로드순서/문법 기준 검증이다. 실제 iPhone Safari/PWA 및 실제 GPS 센서 동작은 실기기 검증이 별도로 필요하다.
+
+
+## V27.4.1 상태표시 수정
+
+- `planNavHint`, `targetModeName`, `navHudTarget`은 동적 상태/사용자 데이터이므로 정적 i18n binding 대상에서 제외한다.
+- GPS가 명시적으로 OFF일 때 유효 TEMP가 있으면 TEMP가 활성 기준위치다.
+- GPS ON + FIX는 항상 GPS가 우선이다.
+- NAV에서 GPS 신호만 손실된 경우 기존 정책대로 explicit TEMP override가 없으면 LAST FIX를 우선한다.
+- TARGET 이름은 번역하지 않는다.
+- TARGET이 없지만 VIA/END가 존재하는 비정상/미래 호환 상태에서는 `경로 · 다음 <지점>` / `ROUTE · NEXT <point>`를 표시한다.
+- 현재 V27 NAV 시작은 여전히 TARGET을 요구한다. TARGET 없는 PLAN의 저장/NAV 정책 자체는 V28의 PLAN ID 분리 전까지 변경하지 않는다.
+
+
+### V27.4.1 로직 회귀 매트릭스
+
+정적/로직 수준 검증 결과:
+
+| 상태 | 기준위치 결과 | 비고 |
+|---|---|---|
+| GPS OFF + TEMP | TEMP | 정상 |
+| GPS OFF + TEMP + LAST FIX + NAV | TEMP | 명시적 GPS OFF에서는 TEMP 우선 |
+| GPS OFF + LAST FIX only + NAV | LAST FIX | NAV fallback 유지 |
+| GPS ON + NO FIX + TEMP, PLAN | TEMP | 정상 |
+| GPS ON + NO FIX + LAST FIX + TEMP, NAV | LAST FIX | 기존 signal-loss 정책 유지 |
+| GPS ON + NO FIX + 새 TEMP, NAV | TEMP | explicit TEMP override 유지 |
+| GPS ON + FIX + TEMP | GPS | live GPS 최우선 |
+| GPS/TEMP 모두 없음 | 없음 | 기준위치 필요 표시 |
+
+FOLLOW는 기존 `setGpsFollow()` 조건인 `gpsPowerEnabled && hasGpsFix`를 변경하지 않았다.
+
+동적 UI 검증:
+- 한글 + TARGET + TEMP → 실제 TARGET 이름 / `탭하여 항법 시작`
+- 영어 + TARGET + GPS → 실제 TARGET 이름 / `TAP TO START`
+- 한글 + TARGET 없음 + VIA/END → `경로 · 다음 <지점>`
+- 영어 + TARGET 없음 + END → `ROUTE · NEXT <point>`
+- TARGET 있음 + 기준위치 없음 → `기준위치 필요 / REF POS REQUIRED`
+- NAV에서는 현재 `navLegIndex`의 VIA/TARGET/END 이름을 HUD 목적지로 표시
+
+실제 iPhone 센서/PWA 테스트는 별도 실기기 검증 항목이다.
