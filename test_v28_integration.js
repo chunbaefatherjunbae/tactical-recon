@@ -4,6 +4,7 @@ const assert = require('assert');
 const sw = fs.readFileSync('service-worker.js','utf8');
 const v28 = fs.readFileSync('v28.js','utf8');
 const runtime = fs.readFileSync('v28-runtime.js','utf8');
+const stable = fs.readFileSync('v27-stable.js','utf8');
 const css = fs.readFileSync('v28.css','utf8');
 
 let passed = 0;
@@ -19,8 +20,8 @@ function test(name, fn) {
   }
 }
 
-test('PWA cache version is V28 plan UX', () => {
-  assert(sw.includes("const CACHE_VERSION = 'v28-field-lifecycle-20261005-2';"));
+test('PWA cache version is V28 NAV controls', () => {
+  assert(sw.includes("const CACHE_VERSION = 'v28-nav-controls-20261005';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
@@ -65,11 +66,29 @@ test('Track UI has Korean labels', () => {
   });
 });
 
-test('NAV keeps position search and exposes track from HUD', () => {
+test('NAV keeps position search and HUD track is direct toggle', () => {
   assert(runtime.includes("set('navSearchBtn', '위치검색', 'LOCATE')"));
-  assert(runtime.includes("navTrackAccess.addEventListener('click'"));
-  assert(runtime.includes("openTrackSheet();"));
-  assert(runtime.includes("hud.setAttribute('role','button')"));
+  assert(runtime.includes("set('targetTrackRecBtn', '궤적 관리', 'TRACK MANAGE')"));
+  assert(runtime.includes('function toggleHudTrack()'));
+  assert(runtime.includes("if (session.state === 'OFF') startBrowserTrack();"));
+  assert(runtime.includes("else if (session.state === 'PAUSED') resumeBrowserTrack();"));
+  assert(runtime.includes('else stopTrack();'));
+  assert(runtime.includes('toggleHudTrack();'));
+  assert(runtime.includes("hud.setAttribute('aria-pressed', String(isOn))"));
+});
+
+test('V27 language layer cannot rewrite V28-owned NAV text', () => {
+  assert(stable.includes("if (el.dataset.v28TextOwner === '1') return;"));
+  assert(stable.includes("search && !document.body?.classList.contains('v28-integrated')"));
+  assert(stable.includes("trackButton && !document.body?.classList.contains('v28-integrated')"));
+  assert(stable.includes("navTrack && !document.body?.classList.contains('v28-integrated')"));
+  assert(runtime.includes("['navSearchBtn','targetTrackRecBtn','navHudTrack']"));
+});
+
+test('Mobile toolbar typography stays readable', () => {
+  assert(css.includes('font-size:8.5px;'));
+  assert(css.includes('font-size:9px;'));
+  assert(css.includes('font-size:10px;'));
 });
 
 test('Verified local sites support edit and revert', () => {
