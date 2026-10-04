@@ -69,6 +69,10 @@ FOLLOW는 live GPS FIX가 있을 때만 가능하다. GPS OFF는 정상 배터�
 - BACKTRACK: TRACK 기반
 - 둘은 저장/표시/거리 의미를 합치지 않는다.
 
+현재 ROUTE PLAN 저장 객체는 `segments`, `markSegments`, `viaPoints`, `startPoint`, `endPoint`, `distanceKm`, `updatedAt`를 가진다. 현재 `saveTargetRoute()`는 `targetModeTarget`이 있어야 저장 가능하므로 PLAN이 TARGET에 결합되어 있다.
+
+현재 TRACK LOG는 `points: [[lat, lon, timestamp], ...]` 형태이며 `persistTrackLog()` 역시 `targetModeTarget`을 요구한다. GPX는 이 좌표를 전부 실제 TRACK으로 내보낸다. V28의 다중 PLAN/TRACK 및 TEMP 추정구간을 위해서는 PLAN/TRACK의 ID와 TARGET 결합을 분리하고, TRACK point/segment에 source/quality 정보를 추가하는 마이그레이션이 필요하다.
+
 ## 보존해야 할 저장 호환성
 
 - `tactical_recon_intel_v2`
@@ -85,7 +89,7 @@ V28은 기존 키를 읽을 수 있는 마이그레이션 계층을 먼저 둔 �
 ## 남아 있는 위험요소 (이번 단계에서는 수정하지 않음)
 
 - TEMP/LAST FIX/목표 상태를 읽는 함수가 여러 래퍼에 분산되어 있어 특정 상태 조합에서 UI 표시와 실제 기준위치가 어긋날 수 있다.
-- TARGET 없이 START/VIA/END만 존재하는 PLAN의 상태 문구 정책이 기존 TARGET 중심 코드와 완전히 일치하지 않는다.
+- TARGET 없이 START/VIA/END만 존재하는 PLAN의 상태 문구 정책이 기존 TARGET 중심 코드와 완전히 일치하지 않는다. 더 근본적으로 현재 ROUTE 저장과 TRACK 저장이 모두 `targetModeTarget`에 결합되어 있어 targetless PLAN은 V28에서 별도 PLAN ID 구조로 분리할 필요가 있다.
 - TRACK은 현재 GPS 실측점 중심 형식이라 향후 TEMP 기반 추정 구간을 넣으려면 V28에서 point/segment source 모델이 필요하다.
 - 동적 UI 문자열 일부는 레거시 함수가 직접 문자열을 쓰고, stable i18n 레이어가 다시 보정하는 방식이다.
 - `index.html`의 CSS는 동일 선택자를 여러 구간에서 덮어쓰므로 새 UI 수정은 specificity와 실제 로드 순서를 함께 검증해야 한다.
