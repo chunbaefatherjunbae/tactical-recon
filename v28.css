@@ -225,6 +225,19 @@ body.v28-sheet-open .mfd-bottom-bar { opacity:.42; }
 .v28-objective-actions .osb-btn { min-height:42px; }
 .v28-danger { border-style:dashed !important; }
 
+.v28-site-manage-actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+}
+.v28-site-manage-actions[hidden] { display:none !important; }
+.v28-site-manage-actions .osb-btn {
+  min-height:40px;
+  font-size:8px;
+  line-height:1.2;
+  white-space:normal;
+}
+
 .v28-objective-pick-hint {
   padding:9px 12px;
   border-bottom:1px solid var(--field-line);
@@ -366,6 +379,30 @@ body.v28-integrated:not(.target-nav):not(.plan-set-submode):not(.plan-draw-submo
 .v28-track-row .v28-mini:disabled {
   opacity:.35;
   pointer-events:none;
+}
+
+#navHudTrack.v28-track-access {
+  min-height:34px;
+  max-width:min(48vw,260px);
+  padding:6px 7px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  border:1px dashed color-mix(in srgb, var(--field-line-strong) 78%, transparent);
+  background:color-mix(in srgb, var(--field-panel-solid,var(--bg-base,#07100a)) 88%, transparent);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+#navHudTrack.v28-track-access:focus-visible {
+  outline:1px solid var(--field-active);
+  outline-offset:2px;
+}
+#navHudTrack.v28-track-access.track-recording {
+  border-style:solid;
+  border-color:var(--field-active);
 }
 
 @media (max-width:520px) {
