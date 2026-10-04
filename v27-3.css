@@ -1,11 +1,15 @@
 /* Tactical Recon V27.3 UI / navigation workflow */
 
-.v273 .v26-main-cluster {
+.v273 .mfd-bottom-bar .osb-cluster.v26-main-cluster {
   width:100%;
+  flex:1 1 100%;
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
 }
-.v273 .v26-main-cluster .v26-primary { width:100%; min-width:0; }
+.v273 .mfd-bottom-bar .v26-main-cluster .v26-primary {
+  width:100%;
+  min-width:0;
+}
 
 /* GPS / adaptive RECENTER-FOLLOW / TEMP are global field controls, never mode-specific. */
 .v273 .global-gps-controls {
@@ -18,9 +22,9 @@
 /* Only the unavailable adaptive position/follow control gets a visible neutral disabled state. */
 .v273 #gpsCenterBtn:disabled {
   opacity:1 !important;
-  color:rgba(150,155,151,.78) !important;
-  border-color:rgba(132,137,133,.72) !important;
-  background:rgba(105,110,107,.28) !important;
+  color:rgba(188,192,189,.90) !important;
+  border-color:rgba(145,150,146,.88) !important;
+  background:rgba(72,76,74,.82) !important;
   box-shadow:none !important;
   filter:none !important;
 }
