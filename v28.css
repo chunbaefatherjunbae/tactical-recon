@@ -1,0 +1,232 @@
+/* Tactical Recon V28 Phase 2 — PLAN / ROUTES */
+.v28-main-cluster {
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:5px !important;
+}
+.v28-main-cluster .osb-btn {
+  min-width:0;
+  padding-left:5px;
+  padding-right:5px;
+  letter-spacing:.035em;
+}
+body.v28-sheet-open .mfd-bottom-bar { opacity:.42; }
+
+.v28-sheet {
+  position:fixed;
+  inset:0;
+  z-index:2400;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  background:rgba(0,0,0,.48);
+  padding:14px 10px calc(10px + env(safe-area-inset-bottom));
+}
+.v28-sheet.open { display:flex; }
+.v28-sheet-shell {
+  width:min(620px,100%);
+  max-height:min(72dvh,680px);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  border:1px solid var(--field-line);
+  background:var(--field-bg);
+  box-shadow:0 -12px 32px rgba(0,0,0,.38);
+}
+.v28-sheet-head {
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:9px 10px 9px 12px;
+  border-bottom:1px solid var(--field-line);
+  background:var(--field-bg);
+}
+.v28-sheet-head > div { min-width:0; display:flex; flex-direction:column; gap:2px; }
+.v28-sheet-head small {
+  font-size:8px;
+  letter-spacing:.13em;
+  color:var(--field-dim);
+}
+.v28-sheet-head strong {
+  font-size:13px;
+  letter-spacing:.07em;
+  color:var(--field-text);
+}
+.v28-sheet-close {
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border:1px solid var(--field-line);
+  background:transparent;
+  color:var(--field-text);
+  font:inherit;
+  font-size:20px;
+}
+.v28-new-plan {
+  padding:10px;
+  border-bottom:1px solid var(--field-line);
+}
+.v28-new-plan > .osb-btn { width:100%; min-height:42px; }
+.v28-new-plan-form {
+  display:none;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  gap:6px;
+  margin-top:7px;
+}
+.v28-new-plan-form.open { display:grid; }
+.v28-new-plan-form input {
+  min-width:0;
+  min-height:42px;
+  border:1px solid var(--field-line);
+  background:transparent;
+  color:var(--field-text);
+  padding:0 10px;
+  font:inherit;
+  font-size:12px;
+  outline:none;
+}
+.v28-new-plan-form input:focus { border-color:var(--field-text); }
+.v28-new-plan-form input[aria-invalid="true"] { border-style:dashed; }
+.v28-new-plan-form .osb-btn { min-height:42px; padding:0 10px; }
+
+.v28-plan-list {
+  overflow:auto;
+  overscroll-behavior:contain;
+  padding:8px;
+}
+.v28-plan-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  min-height:70px;
+  padding:9px 8px 9px 11px;
+  border:1px solid var(--field-line);
+  margin-bottom:7px;
+  background:color-mix(in srgb,var(--field-bg) 92%,var(--field-text) 8%);
+}
+.v28-plan-row.active {
+  border-left-width:3px;
+  background:color-mix(in srgb,var(--field-bg) 86%,var(--field-text) 14%);
+}
+.v28-plan-main { min-width:0; }
+.v28-plan-title {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.035em;
+  color:var(--field-text);
+}
+.v28-plan-meta {
+  margin-top:5px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:8px;
+  letter-spacing:.045em;
+  color:var(--field-dim);
+}
+.v28-plan-actions { display:flex; gap:5px; }
+.v28-mini {
+  min-height:38px;
+  min-width:54px;
+  border:1px solid var(--field-line);
+  background:transparent;
+  color:var(--field-text);
+  font:inherit;
+  font-size:9px;
+  letter-spacing:.045em;
+}
+.v28-empty {
+  padding:28px 12px;
+  text-align:center;
+  color:var(--field-dim);
+  font-size:10px;
+  letter-spacing:.06em;
+}
+
+.v28-objective-shell { max-height:min(58dvh,520px); }
+#v28ObjectiveBody { padding:10px; overflow:auto; }
+.v28-objective-card { border:1px solid var(--field-line); padding:12px; }
+.v28-objective-name {
+  font-size:14px;
+  font-weight:700;
+  line-height:1.3;
+  color:var(--field-text);
+}
+.v28-objective-coords {
+  margin-top:5px;
+  font-size:9px;
+  letter-spacing:.06em;
+  color:var(--field-dim);
+}
+.v28-objective-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  margin-top:12px;
+  border-top:1px solid var(--field-line);
+  border-left:1px solid var(--field-line);
+}
+.v28-objective-grid > div {
+  min-width:0;
+  min-height:58px;
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:4px;
+  border-right:1px solid var(--field-line);
+  border-bottom:1px solid var(--field-line);
+}
+.v28-objective-grid span {
+  font-size:8px;
+  letter-spacing:.08em;
+  color:var(--field-dim);
+}
+.v28-objective-grid strong {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:12px;
+  color:var(--field-text);
+}
+.v28-objective-empty {
+  min-height:150px;
+  border:1px solid var(--field-line);
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:8px;
+  padding:18px;
+}
+.v28-objective-empty strong { font-size:14px; color:var(--field-text); }
+.v28-objective-empty span,
+.v28-objective-empty small {
+  font-size:9px;
+  line-height:1.5;
+  color:var(--field-dim);
+}
+.v28-objective-actions {
+  display:grid;
+  grid-template-columns:1.2fr 1fr .8fr;
+  gap:6px;
+  padding:0 10px 10px;
+}
+.v28-objective-actions .osb-btn { min-height:42px; }
+.v28-danger { border-style:dashed !important; }
+
+@media (max-width:520px) {
+  .v28-sheet { padding-left:7px; padding-right:7px; }
+  .v28-sheet-shell { max-height:76dvh; }
+  .v28-new-plan-form { grid-template-columns:minmax(0,1fr) auto; }
+  .v28-new-plan-form #v28CancelPlanBtn { grid-column:1 / -1; }
+  .v28-plan-row { grid-template-columns:1fr; gap:7px; }
+  .v28-plan-actions { display:grid; grid-template-columns:1fr 1fr; }
+  .v28-mini { min-height:42px; }
+  .v28-objective-actions { grid-template-columns:1fr 1fr; }
+  .v28-objective-actions #v28ObjectiveClearBtn { grid-column:1 / -1; }
+}
