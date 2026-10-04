@@ -210,6 +210,10 @@ body.v29-stabilized #targetShareBtn {
 .v29-picker-actions .osb-btn { min-height:48px; font-size:11px; }
 body.v29-picking-location .mfd-bottom-bar,
 body.v29-picking-location .field-control-tray { display:none !important; }
+body.v29-picking-location #addressTempButton,
+body.v29-picking-location #addressSaveButton {
+  display:none !important;
+}
 body.v29-picking-location .bracket.bl,
 body.v29-picking-location .bracket.br {
   bottom:calc(78px + env(safe-area-inset-bottom));
