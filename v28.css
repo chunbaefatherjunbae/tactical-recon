@@ -7,7 +7,8 @@
   min-width:0;
   padding-left:5px;
   padding-right:5px;
-  letter-spacing:.035em;
+  font-size:10px;
+  letter-spacing:.025em;
 }
 body.v28-sheet-open .mfd-bottom-bar { opacity:.42; }
 
@@ -403,12 +404,28 @@ body.v28-integrated:not(.target-nav):not(.plan-set-submode):not(.plan-draw-submo
 #navHudTrack.v28-track-access.track-recording {
   border-style:solid;
   border-color:var(--field-active);
+  background:color-mix(in srgb, var(--field-active) 9%, var(--field-panel-solid,var(--bg-base,#07100a)));
+}
+#navHudTrack.v28-track-access.track-paused {
+  border-color:var(--field-active);
+  opacity:.82;
+}
+
+@media (max-width:768px) {
+  body.v28-integrated.target-nav:not(.nav-draw-submode)
+    .target-mode-actions.v271-mode-toolbar .osb-btn {
+    font-size:9px;
+    letter-spacing:0;
+    padding-left:2px;
+    padding-right:2px;
+  }
+  .v28-sheet .osb-btn { font-size:9px; }
 }
 
 @media (max-width:520px) {
   body.v28-integrated:not(.target-nav):not(.plan-set-submode):not(.plan-draw-submode)
     .target-mode-actions.v271-mode-toolbar .osb-btn {
-    font-size:7px;
+    font-size:8.5px;
     letter-spacing:0;
     padding-left:1px;
     padding-right:1px;
