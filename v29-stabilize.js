@@ -439,7 +439,10 @@
       '</div>';
     document.body.appendChild(el);
     el.querySelector('#v29PickerSearch').addEventListener('click',()=>{
-      if(typeof openAddressSearch==='function')openAddressSearch();
+      if(typeof openAddressSearch==='function'){
+        openAddressSearch();
+        syncAddressSearchPickerMode();
+      }
     });
     el.querySelector('#v29PickerConfirm').addEventListener('click',confirmPicker);
     el.querySelector('#v29PickerCancel').addEventListener('click',closePicker);
@@ -476,12 +479,29 @@
     el._update?.();
   }
 
+  function syncAddressSearchPickerMode(){
+    const save=document.getElementById('addressSaveButton');
+    const temp=document.getElementById('addressTempButton');
+    const move=document.getElementById('addressMoveButton');
+    const active=Boolean(pickerMode);
+    if(save)save.hidden=active;
+    if(temp)temp.hidden=active;
+    if(move){
+      move.hidden=false;
+      move.textContent=active?(lang()==='ko'?'이 위치로 이동':'MOVE MAP HERE'):(lang()==='ko'?'지도에서 보기':'SHOW ON MAP');
+    }
+  }
+
   function closePicker(){
     const el=document.getElementById('v29LocationPicker');
     if(el)el.hidden=true;
     document.body.classList.remove('v29-picking-location');
     pickerMode=null;
     pickerReturn=null;
+    const save=document.getElementById('addressSaveButton');
+    const temp=document.getElementById('addressTempButton');
+    if(save)save.hidden=false;
+    if(temp)temp.hidden=false;
   }
 
   function confirmPicker(){
@@ -891,15 +911,28 @@
   function installNavRecoveryHooks(){
     if(navRecoveryInstalled)return;
     navRecoveryInstalled=true;
-    ['returnToTargetPlan','stopTargetNavigation','exitTargetMode'].forEach(name=>{
-      try{
-        const fn=eval(name);
-        if(typeof fn!=='function'||fn.__v29Recovery)return;
-        const wrapped=function(){const out=fn.apply(this,arguments);clearNavRecovery();return out;};
-        wrapped.__v29Recovery=true;
-        eval(name+'=wrapped');
-      }catch(e){}
-    });
+    if(typeof returnToTargetPlan==='function'&&!returnToTargetPlan.__v29Recovery){
+      const previous=returnToTargetPlan;
+      const wrapped=function(){const out=previous.apply(this,arguments);clearNavRecovery();return out;};
+      wrapped.__v29Recovery=true;
+      returnToTargetPlan=wrapped;
+    }
+    if(typeof stopTargetNavigation==='function'&&!stopTargetNavigation.__v29Recovery){
+      const previous=stopTargetNavigation;
+      const wrapped=function(){const out=previous.apply(this,arguments);clearNavRecovery();return out;};
+      wrapped.__v29Recovery=true;
+      stopTargetNavigation=wrapped;
+    }
+    if(typeof exitTargetMode==='function'&&!exitTargetMode.__v29Recovery){
+      const previous=exitTargetMode;
+      const wrapped=function(){
+        const out=previous.apply(this,arguments);
+        if(typeof targetModeActive==='undefined'||!targetModeActive)clearNavRecovery();
+        return out;
+      };
+      wrapped.__v29Recovery=true;
+      exitTargetMode=wrapped;
+    }
     const saved=readJson(NAV_RECOVERY_KEY,null);
     if(saved&&saved.phase==='NAV'&&Date.now()-Number(saved.savedAt||0)<24*3600000&&base.plans.get(saved.planId)){
       showNavRecovery(saved);
@@ -1048,9 +1081,24 @@
 
   function install(){
     if(installed)return;installed=true;
+    document.title='TACTICAL RECON // FIELD TERMINAL V29';
     document.body.classList.add('v29-stabilized');
     installLastFix();
     installUnifiedSearch();
+    if(typeof openAddressSearch==='function'&&!openAddressSearch.__v29PickerAware){
+      const previous=openAddressSearch;
+      const wrapped=function(){
+        const out=previous.apply(this,arguments);
+        const save=document.getElementById('addressSaveButton');
+        const temp=document.getElementById('addressTempButton');
+        if(save)save.hidden=false;
+        if(temp)temp.hidden=false;
+        syncAddressSearchPickerMode();
+        return out;
+      };
+      wrapped.__v29PickerAware=true;
+      openAddressSearch=wrapped;
+    }
     installSiteFilterData();
     installPlanHeader();
     wrapFinalPanelSync();
