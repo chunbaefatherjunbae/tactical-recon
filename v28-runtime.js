@@ -885,6 +885,11 @@
     browserReady = true;
     document.body.classList.add('v28-integrated');
 
+    ['navSearchBtn','targetTrackRecBtn','navHudTrack'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.dataset.v28TextOwner = '1';
+    });
+
     const navTrackAccess = document.getElementById('navHudTrack');
     if (navTrackAccess && navTrackAccess.dataset.v28TrackAccess !== '1') {
       navTrackAccess.dataset.v28TrackAccess = '1';
