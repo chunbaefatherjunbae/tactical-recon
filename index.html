@@ -4545,7 +4545,7 @@
         renderWpDrawerList();
         return;
       }
-      if (!confirm(`저장된 POINTS ${localList.length}개를 모두 삭제하시겠습니까?\n등록 거점(REGISTERED)은 기본 데이터이므로 유지됩니다.`)) return;
+      if (!confirm(`저장된 POINTS ${localList.length}개를 모두 삭제하시겠습니까?\n등록 거점(REGISTERED)은 유지됩니다.\n삭제 전 DATA > 전체 백업을 권장합니다.`)) return;
 
       // Removing local points must not discard edits to an unrelated registered PLAN.
       if (targetModeActive && isRegisteredTarget(targetModeTarget) && !preserveActivePlan()) return;
