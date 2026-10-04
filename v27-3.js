@@ -33,7 +33,10 @@
       gpsNoFix:'GPS 미수신', trackOff:'이동기록 꺼짐', refShort:'기준 --', hide:'접기',
       paused:'일시정지', stale:'이전수신', referenceTag:'기준위치', address:'주소',
       move:'이동', save:'저장', find:'찾기', northUp:'NORTH UP',
-      currentPosition:'현위치', nav:'항법'
+      currentPosition:'현위치', nav:'항법', targetModeTitle:'목표지 // 경로계획',
+      reticleTelemetry:'조준점 제원', followLabel:'자동추적', all:'전체',
+      gpsFieldPosition:'GPS 상태 / 기준위치', loadRoute:'경로 불러오기', exportGpx:'GPX 내보내기',
+      mapMove:'지도이동', secure:'개척완료'
     },
     en: {
       language:'LANGUAGE', languageTitle:'LANGUAGE', korean:'한국어', english:'ENGLISH',
@@ -57,7 +60,10 @@
       gpsNoFix:'GPS NO FIX', trackOff:'TRACK OFF', refShort:'REF --', hide:'HIDE',
       paused:'PAUSED', stale:'STALE', referenceTag:'REFERENCE', address:'ADDRESS',
       move:'MOVE', save:'SAVE', find:'FIND', northUp:'NORTH UP',
-      currentPosition:'CURRENT POSITION', nav:'NAV'
+      currentPosition:'CURRENT POSITION', nav:'NAV', targetModeTitle:'TARGET MODE // ROUTE PLAN',
+      reticleTelemetry:'RETICLE TELEMETRY', followLabel:'FOLLOW', all:'ALL',
+      gpsFieldPosition:'GPS STATUS / FIELD POSITION', loadRoute:'LOAD ROUTE', exportGpx:'EXPORT GPX',
+      mapMove:'MOVE MAP', secure:'SECURED'
     }
   };
 
@@ -151,6 +157,16 @@
     'CLOSE':'close',
     'ADDRESS':'address',
     'NORTH UP':'northUp',
+    'TARGET MODE // ROUTE PLAN':'targetModeTitle',
+    'RETICLE TELEMETRY':'reticleTelemetry',
+    'FOLLOW':'followLabel',
+    'ALL':'all',
+    'GPS STATUS / FIELD POSITION':'gpsFieldPosition',
+    'ROUTE 불러오기':'loadRoute',
+    'GPX 내보내기':'exportGpx',
+    '지도에서 보기':'mapMove',
+    '거점 저장':'savePoint',
+    '개척 완료':'secure',
     '거점 탐색':'targetSearch',
     '미개척 정찰':'wildRecon',
     '거점 지정':'setPoint',
@@ -165,7 +181,8 @@
   const UI_ROOTS = [
     '.mfd-bottom-bar', '#fieldControlTray', '#targetModePanel', '#planSearchSheet',
     '#planPointSheet', '#navMoreSheet', '#gpsDetailBackdrop', '#navOpticBackdrop',
-    '#pointPlacementBackdrop', '#addressSearchBackdrop'
+    '#pointPlacementBackdrop', '#addressSearchBackdrop', '.telemetry-osd', '#gpsStatusOsd',
+    '#wpDrawer', '.sitrep-panel'
   ];
 
   function bindKnownTexts(root = document) {
@@ -221,6 +238,30 @@
       if (el.id === 'navPauseBtn') return;
       el.textContent = window.reconT(gpsFollowEnabled ? 'followOn' : 'followOff');
     });
+
+    const navDistanceLabel = document.getElementById('navHudDistanceLabel');
+    if (navDistanceLabel && currentLanguage === 'ko') {
+      const m = navDistanceLabel.textContent.match(/^DIRECT TO\s+(.+)$/);
+      if (m) {
+        const role = ({TARGET:'target',VIA:'via',END:'end',START:'start'})[m[1]] || null;
+        navDistanceLabel.textContent = role ? `직행 · ${window.reconT(role)}` : navDistanceLabel.textContent;
+      }
+    }
+    const navLeg = document.getElementById('navHudLeg');
+    if (navLeg && currentLanguage === 'ko') {
+      const m = navLeg.textContent.match(/^LEG\s+([^·]+)·\s*(.+)$/);
+      if (m) {
+        const rawRole = m[2].trim();
+        const role = ({TARGET:'target',VIA:'via',END:'end',START:'start'})[rawRole];
+        navLeg.textContent = `구간 ${m[1].trim()} · ${role ? window.reconT(role) : rawRole}`;
+      }
+    }
+    const navRef = document.getElementById('navHudRef');
+    if (navRef && currentLanguage === 'ko' && /^REF\s+/.test(navRef.textContent)) {
+      const raw = navRef.textContent.replace(/^REF\s+/, '').trim();
+      const key = raw === 'TEMP POS' ? 'temp' : raw === 'LAST GPS' ? 'lastGps' : null;
+      navRef.textContent = `기준 ${key ? window.reconT(key) : raw}`;
+    }
 
     const navDrawKind = document.getElementById('navDrawKindBtn');
     if (navDrawKind) navDrawKind.textContent = window.reconT(routeDrawKind === 'MARK' ? 'overlay' : 'route');
