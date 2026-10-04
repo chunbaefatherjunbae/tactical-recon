@@ -34,7 +34,7 @@ window.v28 = (function() {
     if (!isValidString(point.id)) return false;
     if (!['OBJECTIVE', 'START', 'VIA', 'END'].includes(point.role)) return false;
     if (!isValidCoords(point.coords)) return false;
-    const sources = ['SITE', 'GPS', 'TEMP', 'LAST_FIX', 'HOME', 'RETICLE', 'INPUT', 'IMPORT', 'MAP_CLICK', 'CURRENT_POS', 'REGISTERED', 'LOCAL_SITE', 'REGISTERED_SITE', 'ROUTE_IMPORT'];
+    const sources = ['SITE', 'GPS', 'TEMP', 'LAST_FIX', 'HOME', 'RETICLE', 'INPUT', 'IMPORT'];
     if (!sources.includes(point.source)) return false;
     return true;
   }
@@ -46,16 +46,27 @@ window.v28 = (function() {
       if (!Array.isArray(seg.points)) return false;
       for (const p of seg.points) {
         if (!p || typeof p !== 'object') return false;
-        if (typeof p.lat !== 'number' || typeof p.lon !== 'number' || !isFinite(p.lat) || !isFinite(p.lon)) return false;
+        if (typeof p.lat !== 'number' || typeof p.lon !== 'number' || !isFinite(p.lat) || !isFinite(p.lon) || p.lat < -90 || p.lat > 90 || p.lon < -180 || p.lon > 180) return false;
         if (!isValidTimestamp(p.timestamp)) return false;
+        if (p.accuracyM !== undefined) {
+           if (typeof p.accuracyM !== 'number' || !isFinite(p.accuracyM) || p.accuracyM < 0) return false;
+        }
       }
       return true;
     } else if (seg.kind === 'ESTIMATED') {
       if (!['TEMP_BRIDGE', 'GPS_REACQUIRE'].includes(seg.reason)) return false;
       if (!seg.from || typeof seg.from !== 'object' || !seg.to || typeof seg.to !== 'object') return false;
-      if (typeof seg.from.lat !== 'number' || typeof seg.from.lon !== 'number' || !isFinite(seg.from.lat) || !isFinite(seg.from.lon)) return false;
-      if (typeof seg.to.lat !== 'number' || typeof seg.to.lon !== 'number' || !isFinite(seg.to.lat) || !isFinite(seg.to.lon)) return false;
-      if (!isValidTimestamp(seg.from.timestamp) || !isValidTimestamp(seg.to.timestamp)) return false;
+      
+      const checkPt = (pt, allowedSources) => {
+         if (typeof pt.lat !== 'number' || typeof pt.lon !== 'number' || !isFinite(pt.lat) || !isFinite(pt.lon) || pt.lat < -90 || pt.lat > 90 || pt.lon < -180 || pt.lon > 180) return false;
+         if (!isValidTimestamp(pt.timestamp)) return false;
+         if (!allowedSources.includes(pt.source)) return false;
+         return true;
+      };
+      
+      if (!checkPt(seg.from, ['GPS', 'TEMP', 'LAST_FIX'])) return false;
+      if (!checkPt(seg.to, ['GPS', 'TEMP'])) return false;
+      
       return true;
     }
     return false;
@@ -65,14 +76,32 @@ window.v28 = (function() {
     if (!plan || typeof plan !== 'object' || Array.isArray(plan)) return false;
     if (plan.schemaVersion !== 1) return false;
     if (!isValidString(plan.id)) return false;
+    if (!isValidString(plan.name)) return false;
     if (!isValidTimestamp(plan.createdAt) || !isValidTimestamp(plan.updatedAt)) return false;
-    if (plan.objective !== undefined && !isValidPlanPoint(plan.objective)) return false;
-    if (plan.startPoint !== undefined && !isValidPlanPoint(plan.startPoint)) return false;
-    if (plan.endPoint !== undefined && !isValidPlanPoint(plan.endPoint)) return false;
+    
+    if (plan.objective !== undefined) {
+      if (!isValidPlanPoint(plan.objective)) return false;
+      if (plan.objective.role !== 'OBJECTIVE') return false;
+    }
+    if (plan.startPoint !== undefined) {
+      if (!isValidPlanPoint(plan.startPoint)) return false;
+      if (plan.startPoint.role !== 'START') return false;
+    }
+    if (plan.endPoint !== undefined) {
+      if (!isValidPlanPoint(plan.endPoint)) return false;
+      if (plan.endPoint.role !== 'END') return false;
+    }
     if (Array.isArray(plan.viaPoints)) {
-      if (!plan.viaPoints.every(isValidPlanPoint)) return false;
+      if (!plan.viaPoints.every(p => isValidPlanPoint(p) && p.role === 'VIA')) return false;
     } else return false;
-    if (!Array.isArray(plan.routeSegments) || !Array.isArray(plan.overlaySegments)) return false;
+    if (!Array.isArray(plan.routeSegments) || !plan.routeSegments.every(seg => Array.isArray(seg) && seg.every(isValidCoords))) return false;
+    if (!Array.isArray(plan.overlaySegments) || !plan.overlaySegments.every(seg => Array.isArray(seg) && seg.every(isValidCoords))) return false;
+    if (!Array.isArray(plan.trackIds) || !plan.trackIds.every(isValidString)) return false;
+    if (plan.legacy !== undefined) {
+      if (!plan.legacy || typeof plan.legacy !== 'object') return false;
+      if (!['LOCAL_SITE', 'REGISTERED_SITE', 'ROUTE_IMPORT'].includes(plan.legacy.source)) return false;
+      if (plan.legacy.sourceId !== undefined && !isValidString(plan.legacy.sourceId)) return false;
+    }
     return true;
   }
 
@@ -86,6 +115,14 @@ window.v28 = (function() {
     if (!track.distance || typeof track.distance !== 'object') return false;
     if (typeof track.distance.measuredKm !== 'number' || !isFinite(track.distance.measuredKm) || track.distance.measuredKm < 0) return false;
     if (typeof track.distance.estimatedKm !== 'number' || !isFinite(track.distance.estimatedKm) || track.distance.estimatedKm < 0) return false;
+    
+    if (track.planId !== undefined && !isValidString(track.planId)) return false;
+    if (track.objectiveSnapshot !== undefined) {
+       if (!isValidPlanPoint(track.objectiveSnapshot)) return false;
+       if (track.objectiveSnapshot.role !== 'OBJECTIVE') return false;
+    }
+    if (track.interrupted !== undefined && typeof track.interrupted !== 'boolean') return false;
+
     return true;
   }
 
@@ -93,7 +130,7 @@ window.v28 = (function() {
   function sanitizeCoords(coords) {
     if (!Array.isArray(coords) || coords.length < 2) return null;
     const lat = Number(coords[0]), lon = Number(coords[1]);
-    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+    if (isNaN(lat) || isNaN(lon) || !isFinite(lat) || !isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
     return [lat, lon];
   }
   function sanitizeString(str, maxLength = 255) {
@@ -109,12 +146,15 @@ window.v28 = (function() {
     if (!point || typeof point !== 'object') return null;
     const coords = sanitizeCoords(point.coords);
     if (!coords) return null;
+    let src = sanitizeString(point.source) || 'INPUT';
+    const validSources = ['SITE', 'GPS', 'TEMP', 'LAST_FIX', 'HOME', 'RETICLE', 'INPUT', 'IMPORT'];
+    if (!validSources.includes(src)) src = 'IMPORT';
     return {
       id: sanitizeString(point.id) || generateId(),
       role: sanitizeString(point.role) || 'VIA',
       name: sanitizeString(point.name) || 'POINT',
       coords: coords,
-      source: sanitizeString(point.source) || 'INPUT',
+      source: src,
       siteId: point.siteId ? sanitizeString(point.siteId) : undefined,
       address: point.address ? sanitizeString(point.address) : undefined
     };
@@ -162,14 +202,18 @@ window.v28 = (function() {
             timestamp: sanitizeTimestamp(p.timestamp),
             accuracyM: p.accuracyM !== undefined && p.accuracyM !== null ? Number(p.accuracyM) : undefined
           };
-        }).filter(p => !isNaN(p.lat) && !isNaN(p.lon) && isFinite(p.lat) && isFinite(p.lon)) : []
+        }).filter(p => !isNaN(p.lat) && !isNaN(p.lon) && isFinite(p.lat) && isFinite(p.lon) && p.lat >= -90 && p.lat <= 90 && p.lon >= -180 && p.lon <= 180) : []
       };
     } else if (seg.kind === 'ESTIMATED') {
+      let fromSrc = sanitizeString(seg.from?.source) || 'GPS';
+      if (!['GPS', 'TEMP', 'LAST_FIX'].includes(fromSrc)) fromSrc = 'GPS';
+      let toSrc = sanitizeString(seg.to?.source) || 'GPS';
+      if (!['GPS', 'TEMP'].includes(toSrc)) toSrc = 'GPS';
       return {
         kind: 'ESTIMATED',
         reason: sanitizeString(seg.reason) || 'TEMP_BRIDGE',
-        from: seg.from ? { lat: Number(seg.from.lat), lon: Number(seg.from.lon), timestamp: sanitizeTimestamp(seg.from.timestamp), source: sanitizeString(seg.from.source) || 'GPS' } : undefined,
-        to: seg.to ? { lat: Number(seg.to.lat), lon: Number(seg.to.lon), timestamp: sanitizeTimestamp(seg.to.timestamp), source: sanitizeString(seg.to.source) || 'GPS' } : undefined
+        from: seg.from ? { lat: Number(seg.from.lat), lon: Number(seg.from.lon), timestamp: sanitizeTimestamp(seg.from.timestamp), source: fromSrc } : undefined,
+        to: seg.to ? { lat: Number(seg.to.lat), lon: Number(seg.to.lon), timestamp: sanitizeTimestamp(seg.to.timestamp), source: toSrc } : undefined
       };
     }
     return null;
@@ -212,10 +256,17 @@ window.v28 = (function() {
   function saveV28Plan(plan) {
     const sanitized = sanitizePlanV1(plan);
     if (!sanitized) return false;
+    if (!validatePlanV1(sanitized)) return false;
+    
     try {
-      const plans = getV28Plans();
-      plans[sanitized.id] = sanitized;
-      localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(plans));
+      const raw = localStorage.getItem(PLAN_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+         console.warn('V28 Plan Save Error: Storage is not a valid object, aborting save to prevent data loss.');
+         return false;
+      }
+      parsed[sanitized.id] = sanitized;
+      localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(parsed));
       return true;
     } catch (e) {
       console.warn('V28 Plan Save Error:', e);
@@ -223,14 +274,24 @@ window.v28 = (function() {
     }
   }
 
-  function resolveTarget(targetId) {
+  function resolveRegisteredTarget(targetId) {
+    if (typeof window !== 'undefined' && Array.isArray(window.RECON_TARGETS)) {
+       const found = window.RECON_TARGETS.find(t => t && String(t.id) === String(targetId));
+       if (found && Array.isArray(found.coords) && found.coords.length === 2 && isFinite(found.coords[0]) && isFinite(found.coords[1])) {
+          return { id: String(found.id), name: found.name || 'Target ' + targetId, coords: [found.coords[0], found.coords[1]], source: 'SITE' };
+       }
+    }
+    return null;
+  }
+
+  function resolveLocalTarget(targetId) {
     try {
       const raw = localStorage.getItem(INTEL_V2_STORAGE_KEY);
       const arr = raw ? JSON.parse(raw) : [];
       if (Array.isArray(arr)) {
         const found = arr.find(t => t && String(t.id) === String(targetId));
         if (found && Array.isArray(found.coords) && found.coords.length === 2 && isFinite(found.coords[0]) && isFinite(found.coords[1])) {
-          return { id: String(found.id), name: found.name || 'Target ' + targetId, coords: [found.coords[0], found.coords[1]], source: 'LOCAL_SITE' };
+          return { id: String(found.id), name: found.name || 'Target ' + targetId, coords: [found.coords[0], found.coords[1]], source: 'SITE' };
         }
       }
     } catch(e) {}
@@ -239,18 +300,24 @@ window.v28 = (function() {
 
   function getV27PlansAsV28() {
     const migrated = {};
+    const validSources = ['SITE', 'GPS', 'TEMP', 'LAST_FIX', 'HOME', 'RETICLE', 'INPUT', 'IMPORT'];
     
     function mapPoint(pt, role) {
       if (!pt || !pt.coords) return undefined;
       const c = sanitizeCoords(pt.coords);
       if (!c) return undefined;
       const ptId = pt.id || `${role}-${c[0].toFixed(5)}-${c[1].toFixed(5)}`;
+      let src = pt.source || 'IMPORT';
+      if (!validSources.includes(src)) {
+         if (['LOCAL_SITE', 'REGISTERED_SITE'].includes(src)) src = 'SITE';
+         else src = 'IMPORT';
+      }
       return {
         id: ptId,
         role: role,
         name: pt.name || role,
         coords: c,
-        source: pt.source || 'IMPORT',
+        source: src,
         address: pt.address || undefined
       };
     }
@@ -262,8 +329,9 @@ window.v28 = (function() {
         for (const [targetId, v27Plan] of Object.entries(v27Plans)) {
           if (!v27Plan) continue;
           
-          const tgt = resolveTarget(targetId);
+          const tgt = resolveRegisteredTarget(targetId);
           let objective = undefined;
+          let planName = `V27 Route for ${targetId}`;
           if (tgt) {
             objective = {
               id: tgt.id,
@@ -272,13 +340,14 @@ window.v28 = (function() {
               coords: tgt.coords,
               source: tgt.source
             };
+            planName = tgt.name;
           }
 
           const updatedAt = v27Plan.updatedAt ? new Date(v27Plan.updatedAt).getTime() : 1;
           const mappedPlan = {
             schemaVersion: 1,
             id: `v27-reg-${targetId}`,
-            name: `V27 Route for ${targetId}`,
+            name: planName,
             createdAt: updatedAt,
             updatedAt: updatedAt,
             objective: objective,
@@ -302,11 +371,9 @@ window.v28 = (function() {
         for (const item of localIntel) {
           if (item && item.id && item.routePlan) {
             const v27Plan = item.routePlan;
-            const tgt = (Array.isArray(item.coords) && item.coords.length === 2 && isFinite(item.coords[0]) && isFinite(item.coords[1])) 
-              ? { id: String(item.id), name: item.name || 'Target ' + item.id, coords: [item.coords[0], item.coords[1]], source: 'LOCAL_SITE' } 
-              : null;
-            
+            const tgt = resolveLocalTarget(item.id);
             let objective = undefined;
+            let planName = `V27 Route for ${item.id}`;
             if (tgt) {
               objective = {
                 id: tgt.id,
@@ -315,13 +382,14 @@ window.v28 = (function() {
                 coords: tgt.coords,
                 source: tgt.source
               };
+              planName = tgt.name;
             }
 
             const updatedAt = v27Plan.updatedAt ? new Date(v27Plan.updatedAt).getTime() : 1;
             const mappedPlan = {
               schemaVersion: 1,
               id: `v27-loc-${item.id}`,
-              name: `V27 Route for ${item.id}`,
+              name: planName,
               createdAt: updatedAt,
               updatedAt: updatedAt,
               objective: objective,
@@ -365,10 +433,17 @@ window.v28 = (function() {
   function saveV28Track(track) {
     const sanitized = sanitizeTrackV2(track);
     if (!sanitized) return false;
+    if (!validateTrackV2(sanitized)) return false;
+    
     try {
-      const tracks = getV28Tracks();
-      tracks[sanitized.id] = sanitized;
-      localStorage.setItem(TRACK_V2_STORAGE_KEY, JSON.stringify(tracks));
+      const raw = localStorage.getItem(TRACK_V2_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+         console.warn('V28 Track Save Error: Storage is not a valid object, aborting save to prevent data loss.');
+         return false;
+      }
+      parsed[sanitized.id] = sanitized;
+      localStorage.setItem(TRACK_V2_STORAGE_KEY, JSON.stringify(parsed));
       return true;
     } catch (e) {
       console.warn('V28 Track Save Error:', e);
@@ -406,7 +481,7 @@ window.v28 = (function() {
              if (!ts) ts = startedAt;
              if (!ts) return null;
              return { lat: Number(p[0]), lon: Number(p[1]), timestamp: ts };
-          }).filter(p => p !== null && !isNaN(p.lat) && !isNaN(p.lon) && isFinite(p.lat) && isFinite(p.lon));
+          }).filter(p => p !== null && !isNaN(p.lat) && !isNaN(p.lon) && isFinite(p.lat) && isFinite(p.lon) && p.lat >= -90 && p.lat <= 90 && p.lon >= -180 && p.lon <= 180);
         }
 
         const stableId = t.id ? `v27-${t.id}` : null;

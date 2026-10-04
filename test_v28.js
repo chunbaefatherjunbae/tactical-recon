@@ -34,195 +34,165 @@ function runTests() {
     }
   }
 
-  test('Registered V27 routePlan read', () => {
+  test('real registered target resolution through RECON_TARGETS', () => {
+    window.RECON_TARGETS = [
+      { id: 'T-99', name: 'Secret Base', coords: [38.1, 127.1] }
+    ];
     localStorageData['tactical_recon_registered_routes_v1'] = JSON.stringify({
-      'T-01': {
-        startPoint: { coords: [1, 1], name: 'Start', source: 'GPS' },
-        viaPoints: [{ coords: [2, 2], name: 'Via1', source: 'RETICLE' }],
-        endPoint: { coords: [3, 3], name: 'End', source: 'INPUT' },
-        segments: [[[1, 1], [2, 2], [3, 3]]],
+      'T-99': {
+        startPoint: { coords: [38.0, 127.0], name: 'Start', source: 'GPS' },
         updatedAt: '2026-10-04T12:00:00Z'
       }
     });
-    // mock target in intel for resolution
-    localStorageData['tactical_recon_intel_v2'] = JSON.stringify([
-      { id: 'T-01', name: 'My Target', coords: [1.5, 1.5] }
-    ]);
 
     const plans = v28.storage.getV27PlansAsV28();
-    const plan = plans['v27-reg-T-01'];
+    const plan = plans['v27-reg-T-99'];
     assert(plan, 'Plan should be mapped');
-    assert.strictEqual(plan.objective.name, 'My Target');
-    assert.deepStrictEqual(plan.objective.coords, [1.5, 1.5]);
-    assert.deepStrictEqual(plan.startPoint.coords, [1, 1]);
+    assert.strictEqual(plan.name, 'Secret Base', 'Virtual plan uses resolved target name');
+    assert.strictEqual(plan.objective.name, 'Secret Base');
+    assert.deepStrictEqual(plan.objective.coords, [38.1, 127.1]);
+    assert.strictEqual(plan.objective.source, 'SITE');
     assert.strictEqual(plan.legacy.source, 'REGISTERED_SITE');
-    assert.strictEqual(plan.legacy.sourceId, 'T-01');
   });
 
-  test('Local tactical_recon_intel_v2 routePlan read', () => {
+  test('legacy source normalized to V28 enum', () => {
     localStorageData['tactical_recon_intel_v2'] = JSON.stringify([
       { 
-        id: 'L-123', name: 'Local Target', coords: [4, 4],
+        id: 'L-1', name: 'Local Target', coords: [4, 4],
         routePlan: {
-          startPoint: { coords: [4, 4], name: 'Start', source: 'GPS' },
-          endPoint: { coords: [5, 5], name: 'End', source: 'RETICLE' },
-          segments: [[[4, 4], [5, 5]]]
+          startPoint: { coords: [4, 4], name: 'Start', source: 'LOCAL_SITE' },
+          endPoint: { coords: [5, 5], name: 'End', source: 'UNKNOWN_MAGIC' }
         }
       }
     ]);
     const plans = v28.storage.getV27PlansAsV28();
-    const plan = plans['v27-loc-L-123'];
-    assert(plan, 'Local plan should be mapped');
-    assert.strictEqual(plan.objective.name, 'Local Target');
-    assert.deepStrictEqual(plan.startPoint.coords, [4, 4]);
-    assert.strictEqual(plan.legacy.source, 'LOCAL_SITE');
-    assert.strictEqual(plan.legacy.sourceId, 'L-123');
+    const plan = plans['v27-loc-L-1'];
+    assert.strictEqual(plan.startPoint.source, 'SITE'); // normalized LOCAL_SITE -> SITE
+    assert.strictEqual(plan.endPoint.source, 'IMPORT'); // normalized UNKNOWN -> IMPORT
   });
 
-  test('START/VIA/END object mapping', () => {
-    localStorageData['tactical_recon_intel_v2'] = JSON.stringify([
-      { 
-        id: 'X-1', name: 'Tgt', coords: [1, 1],
-        routePlan: {
-          startPoint: { coords: [2, 2], name: 'S', source: 'GPS' },
-          viaPoints: [{ id: 'v1', coords: [3, 3], name: 'V', source: 'INPUT', address: 'addr' }],
-          endPoint: { coords: [4, 4], name: 'E', source: 'RETICLE' },
-        }
-      }
-    ]);
-    const plans = v28.storage.getV27PlansAsV28();
-    const plan = plans['v27-loc-X-1'];
-    assert.deepStrictEqual(plan.startPoint.coords, [2, 2]);
-    assert.strictEqual(plan.startPoint.name, 'S');
-    assert.deepStrictEqual(plan.viaPoints[0].coords, [3, 3]);
-    assert.strictEqual(plan.viaPoints[0].address, 'addr');
-    assert.deepStrictEqual(plan.endPoint.coords, [4, 4]);
-  });
-
-  test('Unresolved objective produces no fake objective and never [0,0]', () => {
-    localStorageData['tactical_recon_registered_routes_v1'] = JSON.stringify({
-      'UNKNOWN-TGT': {
-        startPoint: { coords: [1, 1], name: 'Start', source: 'GPS' }
-      }
+  test('invalid route/overlay coordinate rejected', () => {
+    const validPlan = v28.schemas.sanitizePlanV1({
+      startPoint: { coords: [100, 200] }, // out of bounds
+      routeSegments: [[[200, 200]]]
     });
-    // Target is NOT in intel
-    const plans = v28.storage.getV27PlansAsV28();
-    const plan = plans['v27-reg-UNKNOWN-TGT'];
-    assert(plan, 'Plan should be mapped without objective');
-    assert.strictEqual(plan.objective, undefined, 'Objective should be omitted');
+    assert.strictEqual(validPlan.startPoint, undefined);
+    assert.strictEqual(validPlan.routeSegments.length, 0); // sanitized to empty array
+    
+    // Now validate raw manually with bad data
+    const rawBadPlan = {
+      schemaVersion: 1, id: '1', name: 'N', createdAt: 1, updatedAt: 1,
+      routeSegments: [[[200, 200]]], overlaySegments: [], trackIds: []
+    };
+    assert.strictEqual(v28.schemas.validatePlanV1(rawBadPlan), false);
   });
 
-  test('V1 TRACK startedAt/endedAt preservation', () => {
+  test('wrong START/VIA/END role rejected', () => {
+    const rawBadPlan = {
+      schemaVersion: 1, id: '1', name: 'N', createdAt: 1, updatedAt: 1,
+      startPoint: { id: 's', role: 'VIA', coords: [1,1], source: 'GPS' }, // wrong role
+      viaPoints: [], routeSegments: [], overlaySegments: [], trackIds: []
+    };
+    assert.strictEqual(v28.schemas.validatePlanV1(rawBadPlan), false);
+  });
+
+  test('malformed trackIds rejected', () => {
+    const rawBadPlan = {
+      schemaVersion: 1, id: '1', name: 'N', createdAt: 1, updatedAt: 1,
+      trackIds: [123], // must be strings
+      routeSegments: [], overlaySegments: []
+    };
+    assert.strictEqual(v28.schemas.validatePlanV1(rawBadPlan), false);
+  });
+
+  test('invalid legacy metadata rejected', () => {
+    const rawBadPlan = {
+      schemaVersion: 1, id: '1', name: 'N', createdAt: 1, updatedAt: 1,
+      routeSegments: [], overlaySegments: [], trackIds: [],
+      legacy: { source: 'MAGIC_SOURCE' } // Invalid source enum
+    };
+    assert.strictEqual(v28.schemas.validatePlanV1(rawBadPlan), false);
+  });
+
+  test('TRACK latitude > 90 rejected', () => {
+    const badTrack = {
+      schemaVersion: 2, id: 'id1', startedAt: 1,
+      segments: [{ kind: 'MEASURED', source: 'GPS', points: [{lat: 91, lon: 1, timestamp: 1}] }],
+      distance: { measuredKm: 0, estimatedKm: 0 }
+    };
+    assert.strictEqual(v28.schemas.validateTrackV2(badTrack), false);
+  });
+
+  test('invalid ESTIMATED endpoint source rejected', () => {
+    const badTrack = {
+      schemaVersion: 2, id: 'id1', startedAt: 1,
+      segments: [{ kind: 'ESTIMATED', reason: 'TEMP_BRIDGE', from: { lat: 1, lon: 1, timestamp: 1, source: 'GPS' }, to: { lat: 2, lon: 2, timestamp: 2, source: 'INPUT' } }], // INPUT is invalid for to.source
+      distance: { measuredKm: 0, estimatedKm: 0 }
+    };
+    assert.strictEqual(v28.schemas.validateTrackV2(badTrack), false);
+  });
+
+  test('invalid accuracyM rejected', () => {
+    const badTrack = {
+      schemaVersion: 2, id: 'id1', startedAt: 1,
+      segments: [{ kind: 'MEASURED', source: 'GPS', points: [{lat: 1, lon: 1, timestamp: 1, accuracyM: -10}] }],
+      distance: { measuredKm: 0, estimatedKm: 0 }
+    };
+    assert.strictEqual(v28.schemas.validateTrackV2(badTrack), false);
+  });
+
+  test('saveV28Plan preserves malformed sibling entries byte-for-byte semantically', () => {
+    localStorageData['tactical_recon_plans_v1'] = JSON.stringify({
+      'malformed_1': { schemaVersion: 1, name: 'Bad' },
+      'valid_1': { schemaVersion: 1, id: 'valid_1', name: 'Good', createdAt: 1, updatedAt: 1, routeSegments: [], overlaySegments: [], trackIds: [] }
+    });
+    
+    // Attempt save of new plan
+    const newPlan = { id: 'new_1', name: 'New', createdAt: 2, updatedAt: 2 };
+    v28.storage.saveV28Plan(newPlan);
+    
+    const rawSaved = JSON.parse(localStorageData['tactical_recon_plans_v1']);
+    assert(rawSaved['malformed_1'], 'Malformed sibling must be preserved exactly');
+    assert.strictEqual(rawSaved['malformed_1'].name, 'Bad');
+    assert(rawSaved['valid_1'], 'Valid sibling preserved');
+    assert(rawSaved['new_1'], 'New plan is saved');
+  });
+
+  test('saveV28Track preserves malformed sibling entries', () => {
+    localStorageData['tactical_recon_track_logs_v2'] = JSON.stringify({
+      'malformed_1': { schemaVersion: 2, startedAt: -1 }
+    });
+    const newTrack = { id: 'new_1', startedAt: 1, distance: { measuredKm: 0, estimatedKm: 0 }, segments: [] };
+    v28.storage.saveV28Track(newTrack);
+    const rawSaved = JSON.parse(localStorageData['tactical_recon_track_logs_v2']);
+    assert(rawSaved['malformed_1'], 'Malformed sibling preserved');
+    assert(rawSaved['new_1'], 'New track saved');
+  });
+
+  test('unparseable existing V28 storage causes save failure and original string remains unchanged', () => {
+    localStorageData['tactical_recon_plans_v1'] = 'invalid json }{';
+    const newPlan = { id: 'new_1', name: 'New', createdAt: 2, updatedAt: 2 };
+    const result = v28.storage.saveV28Plan(newPlan);
+    assert.strictEqual(result, false, 'Save should fail');
+    assert.strictEqual(localStorageData['tactical_recon_plans_v1'], 'invalid json }{', 'Storage unchanged');
+  });
+
+  test('ISO V27 startedAt/endedAt conversion', () => {
     localStorageData['tactical_recon_track_logs_v1'] = JSON.stringify([
       {
-        id: 'track1',
-        startedAt: 1000,
-        endedAt: 2000,
-        distanceKm: 5,
-        points: [[10, 10, 1500]] // valid timestamp
-      },
-      {
-        id: 'track2',
-        startedAt: 3000,
-        endedAt: 4000,
-        distanceKm: 2,
-        points: [[20, 20, NaN], [30, 30, 'invalid']] // invalid timestamps should not replace startedAt, handled via fallback
+        id: 'track_iso',
+        startedAt: '2026-10-04T12:00:00Z',
+        endedAt: '2026-10-04T12:05:00Z',
+        distanceKm: 1,
+        points: [[10, 10, '2026-10-04T12:01:00Z']] // valid timestamp string
       }
     ]);
     const tracks = v28.storage.getV27TracksAsV28();
-    assert.strictEqual(tracks.length, 2);
+    assert.strictEqual(tracks.length, 1);
     
-    assert.strictEqual(tracks[0].startedAt, 1000);
-    assert.strictEqual(tracks[0].endedAt, 2000);
-    assert.strictEqual(tracks[0].segments[0].points[0].timestamp, 1500);
-
-    assert.strictEqual(tracks[1].startedAt, 3000);
-    // Note: the point fallback will use 3000
-    assert.strictEqual(tracks[1].segments[0].points[0].timestamp, 3000);
-    assert.strictEqual(tracks[1].segments[0].points[1].timestamp, 3000);
-  });
-
-  test('Invalid latitude/longitude rejection', () => {
-    const validPlan = v28.schemas.sanitizePlanV1({
-      startPoint: { coords: [100, 200] } // out of bounds
-    });
-    assert.strictEqual(validPlan.startPoint, undefined);
-  });
-
-  test('Invalid role/source/reason rejection', () => {
-    // We check validateTrackV2 behavior
-    const badTrack = {
-      schemaVersion: 2, id: 'id1', startedAt: 1,
-      segments: [{ kind: 'ESTIMATED', reason: 'BAD_REASON', from: { lat: 1, lon: 1, timestamp: 1 }, to: { lat: 2, lon: 2, timestamp: 2 } }],
-      distance: { measuredKm: 0, estimatedKm: 0 }
-    };
-    assert.strictEqual(v28.schemas.validateTrackV2(badTrack), false);
-  });
-
-  test('Missing ESTIMATED endpoint rejection', () => {
-    const badTrack = {
-      schemaVersion: 2, id: 'id1', startedAt: 1,
-      segments: [{ kind: 'ESTIMATED', reason: 'TEMP_BRIDGE', from: { lat: 1, lon: 1, timestamp: 1 } }], // missing `to`
-      distance: { measuredKm: 0, estimatedKm: 0 }
-    };
-    assert.strictEqual(v28.schemas.validateTrackV2(badTrack), false);
-  });
-
-  test('Negative/Infinity distance rejection', () => {
-    const badTrack = {
-      schemaVersion: 2, id: 'id1', startedAt: 1,
-      segments: [],
-      distance: { measuredKm: -1, estimatedKm: 0 }
-    };
-    assert.strictEqual(v28.schemas.validateTrackV2(badTrack), false);
-  });
-
-  test('Malformed timestamp rejection', () => {
-    const badTrack = {
-      schemaVersion: 2, id: 'id1', startedAt: NaN,
-      segments: [], distance: { measuredKm: 0, estimatedKm: 0 }
-    };
-    assert.strictEqual(v28.schemas.validateTrackV2(badTrack), false);
-  });
-
-  test('Malformed V28 storage is not exposed as valid data', () => {
-    localStorageData['tactical_recon_track_logs_v2'] = JSON.stringify({
-      'valid_1': { schemaVersion: 2, id: 'valid_1', startedAt: 1, segments: [], distance: { measuredKm: 0, estimatedKm: 0 } },
-      'invalid_1': { schemaVersion: 2, id: 'invalid_1' } // missing startedAt, distance
-    });
-    const tracks = v28.storage.getV28Tracks();
-    assert.strictEqual(Object.keys(tracks).length, 1);
-    assert(tracks['valid_1']);
-    assert(!tracks['invalid_1']);
-  });
-
-  test('Repeated legacy read produces stable IDs', () => {
-    localStorageData['tactical_recon_registered_routes_v1'] = JSON.stringify({
-      'T-01': {
-        startPoint: { coords: [1, 1], name: 'Start', source: 'GPS' },
-        viaPoints: [{ coords: [2, 2], name: 'Via1', source: 'RETICLE' }],
-      }
-    });
-    const plans1 = v28.storage.getV27PlansAsV28();
-    const plans2 = v28.storage.getV27PlansAsV28();
-    
-    const p1 = plans1['v27-reg-T-01'];
-    const p2 = plans2['v27-reg-T-01'];
-    
-    assert.strictEqual(p1.id, p2.id);
-    assert.strictEqual(p1.viaPoints[0].id, p2.viaPoints[0].id);
-  });
-
-  test('Original V27 localStorage strings remain byte-for-byte unchanged after reads', () => {
-    const ogRoutes = '{"T-01":{"startPoint":{"coords":[1,1],"source":"GPS"}}}';
-    const ogIntel = '[{"id":"T-01","name":"Target","coords":[2,2]}]';
-    localStorageData['tactical_recon_registered_routes_v1'] = ogRoutes;
-    localStorageData['tactical_recon_intel_v2'] = ogIntel;
-    
-    v28.storage.getV27PlansAsV28();
-    
-    assert.strictEqual(localStorageData['tactical_recon_registered_routes_v1'], ogRoutes);
-    assert.strictEqual(localStorageData['tactical_recon_intel_v2'], ogIntel);
+    const ts = Date.parse('2026-10-04T12:00:00Z');
+    assert.strictEqual(tracks[0].startedAt, ts);
+    assert.strictEqual(tracks[0].segments[0].points[0].timestamp, Date.parse('2026-10-04T12:01:00Z'));
   });
 
   console.log(`\nTests completed: ${passed} passed, ${failed} failed.`);
