@@ -122,23 +122,6 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (VENDOR_ASSETS.includes(url.href)) {
-    event.respondWith((async () => {
-      const cached = await caches.match(request) || await caches.match(url.href);
-      if (cached) return cached;
-      try {
-        const response = await fetch(new Request(url.href, { mode:'no-cors' }));
-        if (response) {
-          const cache = await caches.open(STATIC_CACHE);
-          await cache.put(new Request(url.href, { mode:'no-cors' }), response.clone());
-          return response;
-        }
-      } catch (e) {}
-      return Response.error();
-    })());
-    return;
-  }
-
   if (url.origin === self.location.origin) {
     event.respondWith((async () => {
       const cached = await caches.match(request);
