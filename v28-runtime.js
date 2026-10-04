@@ -180,6 +180,9 @@
   }
 
   function dropTrackRaw(trackId) {
+    if (window.v29Storage?.deleteTrack) {
+      return window.v29Storage.deleteTrack(trackId);
+    }
     try {
       const raw = localStorage.getItem(TRACK_STORE_KEY);
       const parsed = raw ? JSON.parse(raw) : {};
