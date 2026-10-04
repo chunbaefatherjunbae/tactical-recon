@@ -3,7 +3,7 @@
 .v273 .v26-main-cluster {
   width:100%;
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(3,minmax(0,1fr));
 }
 .v273 .v26-main-cluster .v26-primary { width:100%; min-width:0; }
 
@@ -14,6 +14,16 @@
   opacity:1 !important;
 }
 .v273 .global-gps-controls .global-gps-button { display:flex !important; }
+
+/* Only the unavailable adaptive position/follow control gets a visible neutral disabled state. */
+.v273 #gpsCenterBtn:disabled {
+  opacity:1 !important;
+  color:rgba(150,155,151,.78) !important;
+  border-color:rgba(132,137,133,.72) !important;
+  background:rgba(105,110,107,.28) !important;
+  box-shadow:none !important;
+  filter:none !important;
+}
 
 .v273 .language-option-grid {
   display:grid;
