@@ -107,6 +107,20 @@
     });
   }
 
+  async function clearMirroredTracks(){
+    const db=await openDb();
+    if(!db)return false;
+    return new Promise(resolve=>{
+      try{
+        const tx=db.transaction(TRACK_STORE,'readwrite');
+        tx.objectStore(TRACK_STORE).clear();
+        tx.oncomplete=()=>resolve(true);
+        tx.onerror=()=>resolve(false);
+        tx.onabort=()=>resolve(false);
+      }catch(e){resolve(false);}
+    });
+  }
+
   function emitStorageError(kind,error){
     const now=Date.now();
     if(now-storageErrorAt<1500)return;
