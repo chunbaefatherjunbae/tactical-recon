@@ -20,8 +20,8 @@ function test(name, fn) {
   }
 }
 
-test('PWA cache version is V28 PLAN NAV cleanup', () => {
-  assert(sw.includes("const CACHE_VERSION = 'v28-plan-nav-cleanup-20261005';"));
+test('PWA cache version is current V29 development cache', () => {
+  assert(sw.includes("const CACHE_VERSION = 'v29-dev-20261005-1';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
