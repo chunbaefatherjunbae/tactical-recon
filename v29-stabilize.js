@@ -312,6 +312,31 @@
     };
   }
 
+  function formatReferenceAge(ms){
+    if(!Number.isFinite(Number(ms)))return '';
+    const total=Math.max(0,Number(ms));
+    const min=Math.round(total/60000);
+    if(min<1)return lang()==='ko'?'방금':'NOW';
+    if(min<60)return min+(lang()==='ko'?'분 전':' MIN AGO');
+    const hour=Math.round(min/60);
+    return hour+(lang()==='ko'?'시간 전':' H AGO');
+  }
+
+  function syncPersistentReferenceUi(){
+    const ref=currentReference();
+    if(ref?.type!=='LAST_FIX')return;
+    const age=ref.ageMs!==undefined?ref.ageMs:(Number(ref.capturedAt)?Date.now()-Number(ref.capturedAt):undefined);
+    const label=t('lastFix')+(Number.isFinite(Number(age))?' · '+formatReferenceAge(age):'');
+    const accuracy=Number(ref.accuracyM);
+    const full=label+(Number.isFinite(accuracy)?' · ±'+Math.round(accuracy)+' M':'');
+    const detailRef=document.getElementById('gpsDetailRef');
+    const detailAcc=document.getElementById('gpsDetailAcc');
+    const navRef=document.getElementById('navHudRef');
+    if(detailRef)detailRef.textContent=full;
+    if(detailAcc&&Number.isFinite(accuracy))detailAcc.textContent='±'+Math.round(accuracy)+' M';
+    if(navRef)navRef.textContent='REF '+full;
+  }
+
   function installLastFix(){
     if(typeof applyGpsPosition==='function'&&!applyGpsPosition.__v29LastFix){
       const previous=applyGpsPosition;
@@ -332,6 +357,16 @@
       };
       wrapped.__v29LastFix=true;
       getReferencePosition=wrapped;
+    }
+    if(typeof updateGpsDetail==='function'&&!updateGpsDetail.__v29LastFix){
+      const previous=updateGpsDetail;
+      const wrapped=function(){
+        const out=previous.apply(this,arguments);
+        syncPersistentReferenceUi();
+        return out;
+      };
+      wrapped.__v29LastFix=true;
+      updateGpsDetail=wrapped;
     }
   }
 
@@ -408,6 +443,7 @@
       syncPlanHeader();
       persistNavRecovery();
       refreshBearingPanel();
+      syncPersistentReferenceUi();
       return out;
     };
     wrapped.__v29Final=true;
