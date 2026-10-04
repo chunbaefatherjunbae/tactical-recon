@@ -44,20 +44,25 @@ test('V28 main navigation is PLAN / SITES / MENU', () => {
   assert.strictEqual(v28.includes('id="v28ObjectiveBtn"'), false);
 });
 
-test('PLAN toolbar exposes objective and keeps termination last', () => {
-  assert(v28.includes("objectiveButton.id = 'v28PlanObjectiveBtn'"));
+test('PLAN toolbar uses explicit NAV and keeps termination last', () => {
+  assert.strictEqual(v28.includes("objectiveButton.id = 'v28PlanObjectiveBtn'"), false);
+  assert(v28.includes("navButton.id = 'v28PlanNavBtn'"));
   assert(v28.includes("exitButton.id = 'planExitBtn'"));
   assert(runtime.includes("document.getElementById('planExitBtn')"));
   assert.strictEqual(runtime.includes("textContent.trim() === 'EXIT'"), false);
-  assert(css.includes('#v28PlanObjectiveBtn { order:1; }'));
-  assert(css.includes('#v28PlanTrackBtn { order:5; }'));
+  assert(css.includes('#planSetBtn { order:1; }'));
+  assert(css.includes('#v28PlanTrackBtn { order:4; }'));
+  assert(css.includes('#v28PlanNavBtn { order:5; }'));
   assert(css.includes('#planExitBtn { order:6; }'));
 });
 
-test('Objective flow is explicit from plan editor', () => {
+test('Objective flow is explicit from plan header', () => {
   assert(v28.includes('거점에서 선택'));
   assert(v28.includes('조준점 지정'));
-  assert(v28.includes('목표 미지정 · [목표]에서 지정'));
+  assert(v28.includes("planHead.removeAttribute('onclick')"));
+  assert(v28.includes('openObjectiveSheet();'));
+  assert(v28.includes("tV28('탭하여 목표 변경', 'TAP TO CHANGE OBJECTIVE')"));
+  assert(v28.includes("tV28('탭하여 목표 설정', 'TAP TO SET OBJECTIVE')"));
 });
 
 test('Track UI has Korean labels', () => {
@@ -75,6 +80,15 @@ test('NAV keeps position search and HUD track is direct toggle', () => {
   assert(runtime.includes('else stopTrack();'));
   assert(runtime.includes('toggleHudTrack();'));
   assert(runtime.includes("hud.setAttribute('aria-pressed', String(isOn))"));
+});
+
+test('V28 owns plan header name and availability', () => {
+  assert(v28.includes("['targetModeName','planNavHint']"));
+  assert(v28.includes("trigger.dataset.v28TextOwner = '1'"));
+  assert(v28.includes("kicker.textContent = tV28('계획 · ', 'PLAN · ') + plan.name"));
+  assert(v28.includes("name.textContent = hasObjective"));
+  assert(stable.includes("modeName && !document.body?.classList.contains('v28-integrated')"));
+  assert(stable.includes("if (!document.body?.classList.contains('v28-integrated'))"));
 });
 
 test('V27 language layer cannot rewrite V28-owned NAV text', () => {
