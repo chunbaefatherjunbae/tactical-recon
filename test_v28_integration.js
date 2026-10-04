@@ -92,7 +92,7 @@ test('V28 owns plan header name and availability', () => {
 });
 
 test('V27 language layer cannot rewrite V28-owned NAV text', () => {
-  assert(stable.includes("if (el.dataset.v28TextOwner === '1') return;"));
+  assert(stable.includes("el.dataset.v28TextOwner === '1' || el.dataset.v29TextOwner === '1'"));
   assert(stable.includes("search && !document.body?.classList.contains('v28-integrated')"));
   assert(stable.includes("trackButton && !document.body?.classList.contains('v28-integrated')"));
   assert(stable.includes("navTrack && !document.body?.classList.contains('v28-integrated')"));
