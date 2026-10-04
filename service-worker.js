@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v27-2-1-20261004';
+const CACHE_VERSION = 'v27-3-20261004';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
@@ -8,7 +8,9 @@ const STATIC_ASSETS = [
   './v27-2.css',
   './v27-2.js',
   './v27-2-1.css',
-  './v27-2-1.js'
+  './v27-2-1.js',
+  './v27-3.css',
+  './v27-3.js'
 ];
 
 self.addEventListener('install', event => {
@@ -43,11 +45,17 @@ async function injectV272(response) {
   if (!html.includes('v27-2-1.css')) {
     html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-2-1.css" />\n</head>');
   }
+  if (!html.includes('v27-3.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-3.css" />\n</head>');
+  }
   if (!html.includes('v27-2.js')) {
     html = html.replace('</body>', '  <script src="./v27-2.js"></script>\n</body>');
   }
   if (!html.includes('v27-2-1.js')) {
     html = html.replace('</body>', '  <script src="./v27-2-1.js"></script>\n</body>');
+  }
+  if (!html.includes('v27-3.js')) {
+    html = html.replace('</body>', '  <script src="./v27-3.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
