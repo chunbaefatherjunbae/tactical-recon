@@ -2,9 +2,12 @@ const fs=require('fs');
 const assert=require('assert');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
+const index=fs.readFileSync('index.html','utf8');
+const runtime=fs.readFileSync('v28-runtime.js','utf8');
 const storage=fs.readFileSync('v29-storage.js','utf8');
 const stabilize=fs.readFileSync('v29-stabilize.js','utf8');
 const css=fs.readFileSync('v29-stabilize.css','utf8');
+const mgrsSource=fs.readFileSync('vendor/mgrs-1.0.0.js','utf8');
 
 let passed=0,failed=0;
 function test(name,fn){
@@ -25,12 +28,40 @@ test('Offline vendor dependencies are local static assets',()=>{
   assert.strictEqual(sw.includes('VENDOR_ASSETS'),false);
 });
 
+test('Index starts without Leaflet or MGRS CDN dependencies',()=>{
+  assert(index.includes('./vendor/leaflet-1.9.4.css'));
+  assert(index.includes('./vendor/leaflet-1.9.4.js'));
+  assert(index.includes('./vendor/mgrs-1.0.0.js'));
+  assert.strictEqual(index.includes('unpkg.com/leaflet@1.9.4'),false);
+  assert.strictEqual(index.includes('cdn.jsdelivr.net/npm/mgrs@1.0.0'),false);
+});
+
+test('Vendored MGRS performs WGS84 round trip',()=>{
+  const holder={};
+  const mgrs=new Function(mgrsSource+'\\nreturn this.mgrs;').call(holder);
+  assert(mgrs&&typeof mgrs.forward==='function'&&typeof mgrs.toPoint==='function');
+  const encoded=mgrs.forward([127,37.5],5);
+  const point=mgrs.toPoint(encoded);
+  assert(/^52S/.test(encoded));
+  assert(Math.abs(point[1]-37.5)<0.00002);
+  assert(Math.abs(point[0]-127)<0.00002);
+});
+
 test('TRACK storage has IndexedDB safety mirror and failure event',()=>{
   assert(storage.includes("const DB_NAME='tactical_recon_v29'"));
   assert(storage.includes("createObjectStore(TRACK_STORE"));
   assert(storage.includes('mirrorTrack(track)'));
   assert(storage.includes("new CustomEvent('recon-storage-error'"));
   assert(storage.includes('getAllTracks:getAllMirroredTracks'));
+});
+
+test('TRACK persistence batches localStorage checkpoints',()=>{
+  assert(storage.includes('const FLUSH_DELAY_MS=2500'));
+  assert(storage.includes('MAX_DIRTY_BEFORE_FLUSH'));
+  assert(storage.includes("setTimeout(()=>flushLocalTracks('TIMER'),FLUSH_DELAY_MS)"));
+  assert(storage.includes("if(isNew||sanitized.endedAt)"));
+  assert(storage.includes("root.addEventListener('pagehide'"));
+  assert(runtime.includes('window.v29Storage?.deleteTrack'));
 });
 
 test('PLAN header splits objective and NAV actions and removes extra NAV button',()=>{
@@ -48,6 +79,13 @@ test('Objective reticle and site creation share map location picker',()=>{
   assert(stabilize.includes("id='v29LocationPicker'"));
   assert(stabilize.includes("base.plans.setObjective(plan.id"));
   assert(stabilize.includes("if(typeof openPointPlacement==='function')openPointPlacement()"));
+});
+
+test('Picker search only moves the map before final confirmation',()=>{
+  assert(stabilize.includes('function syncAddressSearchPickerMode()'));
+  assert(stabilize.includes('if(save)save.hidden=active'));
+  assert(stabilize.includes('if(temp)temp.hidden=active'));
+  assert(stabilize.includes("active?(lang()==='ko'?'이 위치로 이동':'MOVE MAP HERE')"));
 });
 
 test('Address WGS84 and MGRS searches share one location service',()=>{
@@ -96,6 +134,15 @@ test('LAST FIX persists and is fallback only when normal reference is absent',()
   assert(stabilize.includes('return persistentLastFix();'));
 });
 
+test('LAST FIX exposes age accuracy and requires NAV confirmation',()=>{
+  assert(stabilize.includes('function syncPersistentReferenceUi()'));
+  assert(stabilize.includes('function installNavReferenceGuard()'));
+  assert(stabilize.includes("ref?.type==='LAST_FIX'"));
+  assert(stabilize.includes('if(!confirm(message))return'));
+  assert(stabilize.includes("if(ref.type==='TEMP')"));
+  assert(stabilize.includes('return undefined;'));
+});
+
 test('NAV recovery never explicitly starts GPS or bearing sensor',()=>{
   const start=stabilize.indexOf('function showNavRecovery');
   const end=stabilize.indexOf('/* ---------- backup / restore ---------- */');
@@ -122,6 +169,11 @@ test('Full backup covers app localStorage and IndexedDB mirror',()=>{
   assert(stabilize.includes('trackMirror:mirror'));
   assert(stabilize.includes('root.v29Storage?.getAllTracks?.()'));
   assert(stabilize.includes('root.v29Storage.mirrorTrack(track)'));
+});
+
+test('Destructive site deletion recommends full backup',()=>{
+  assert(index.includes('삭제 전 DATA > 전체 백업을 권장합니다.'));
+  assert(stabilize.includes("backup.id='v29SiteBackupBtn'"));
 });
 
 test('Free track flow can start without opening PLAN editor',()=>{
