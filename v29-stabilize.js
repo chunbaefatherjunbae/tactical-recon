@@ -392,6 +392,18 @@
       drawer.querySelector('.drawer-head')?.after(bar);
       bar.querySelector('button').addEventListener('click',()=>openPicker('SITE','SITES'));
     }
+    const footer=drawer.lastElementChild;
+    if(footer&&!document.getElementById('v29SiteBackupBtn')){
+      const backup=document.createElement('button');
+      backup.className='osb-btn';
+      backup.id='v29SiteBackupBtn';
+      backup.type='button';
+      backup.addEventListener('click',exportFullBackup);
+      const destructive=Array.from(footer.querySelectorAll('button')).find(btn=>String(btn.getAttribute('onclick')||'').includes('clearAllWP'));
+      footer.insertBefore(backup,destructive||null);
+      const note=footer.querySelector('div');
+      if(note)note.dataset.v29BackupNote='1';
+    }
     syncSiteControlsText();
   }
 
@@ -409,6 +421,11 @@
       Object.entries(map).forEach(([sel,label])=>{const el=bar.querySelector(sel);if(el)el.textContent=label;});
     }
     const add=document.getElementById('v29SiteAddBtn');if(add)add.textContent=t('siteAdd');
+    const backup=document.getElementById('v29SiteBackupBtn');if(backup)backup.textContent=t('backup');
+    const note=document.querySelector('#wpDrawer [data-v29-backup-note="1"]');
+    if(note)note.textContent=(lang()==='ko'
+      ? 'REGISTERED 기본 DB는 삭제되지 않습니다. 로컬 거점 전체 삭제 전에는 전체 백업을 권장합니다.'
+      : 'BUILT-IN REGISTERED SITES ARE KEPT. A FULL BACKUP IS RECOMMENDED BEFORE DELETING LOCAL SITES.');
   }
 
   function installSiteFilterData(){
