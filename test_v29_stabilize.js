@@ -52,6 +52,21 @@ test('Objective reticle and site creation share map location picker',()=>{
   assert(stabilize.includes("if(typeof openPointPlacement==='function')openPointPlacement()"));
 });
 
+test('Address WGS84 and MGRS searches share one location service',()=>{
+  assert(stabilize.includes('function parseLocation(query)'));
+  assert(stabilize.includes('async function searchLocations(query)'));
+  assert(stabilize.includes('root.v29Location={parse:parseLocation,search:searchLocations}'));
+  assert(stabilize.includes('searchKoreanAddress=wrapped'));
+  assert(stabilize.includes('searchRouteLocate=wrapped'));
+  assert(stabilize.includes('searchPlanLocation=wrapped'));
+  assert(stabilize.includes("if(!navigator.onLine)"));
+});
+
+test('Sites screen exposes backup beside local deletion',()=>{
+  assert(stabilize.includes("backup.id='v29SiteBackupBtn'"));
+  assert(stabilize.includes("backup.addEventListener('click',exportFullBackup)"));
+});
+
 test('Site filters separate status from source',()=>{
   assert(stabilize.includes("siteStatusFilter='ALL'"));
   assert(stabilize.includes("siteSourceFilter='ALL'"));
