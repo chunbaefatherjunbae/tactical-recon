@@ -422,6 +422,86 @@ function runTests() {
     assert.strictEqual(v28.schemas.validateTrackV2(track), false);
   });
 
+
+  test('Phase 2 creates targetless PLAN', () => {
+    const plan = v28.plans.create({ name: 'Targetless' });
+    assert(plan);
+    assert.strictEqual(plan.name, 'Targetless');
+    assert.strictEqual(plan.objective, undefined);
+    assert.deepStrictEqual(plan.viaPoints, []);
+    assert.deepStrictEqual(plan.routeSegments, []);
+    assert.strictEqual(v28.state.activePlanId, plan.id);
+  });
+
+  test('Phase 2 assigns and clears OBJECTIVE snapshot', () => {
+    const plan = v28.plans.create({ name: 'Objective Test' });
+    const assigned = v28.plans.setObjective(plan.id, {
+      id: 'SITE-1', name: 'Site One', coords: [37.5, 127.0]
+    });
+    assert(assigned?.objective);
+    assert.strictEqual(assigned.objective.role, 'OBJECTIVE');
+    assert.strictEqual(assigned.objective.source, 'SITE');
+    assert.strictEqual(assigned.objective.siteId, 'SITE-1');
+    const cleared = v28.plans.clearObjective(plan.id);
+    assert.strictEqual(cleared.objective, undefined);
+  });
+
+  test('Phase 2 delete removes only V28 PLAN and keeps unrelated siblings', () => {
+    const a = v28.plans.create({ name: 'A' });
+    const b = v28.plans.create({ name: 'B' });
+    localStorageData['tactical_recon_plans_v1'] = JSON.stringify({
+      ...JSON.parse(localStorageData['tactical_recon_plans_v1']),
+      malformed: { schemaVersion: 99, payload: 'keep-me' }
+    });
+    assert.strictEqual(v28.plans.delete(a.id), true);
+    const raw = JSON.parse(localStorageData['tactical_recon_plans_v1']);
+    assert(!raw[a.id]);
+    assert(raw[b.id]);
+    assert.strictEqual(raw.malformed.payload, 'keep-me');
+  });
+
+  test('Phase 2 explicit legacy registered PLAN delete removes route backing but preserves other routes', () => {
+    localStorageData['tactical_recon_registered_routes_v1'] = JSON.stringify({
+      'T-01': { startPoint: { coords:[1,1], source:'GPS' } },
+      'T-02': { startPoint: { coords:[2,2], source:'GPS' } }
+    });
+    const plan = v28.storage.getV27PlansAsV28()['v27-reg-T-01'];
+    assert(plan);
+    assert.strictEqual(v28.plans.delete(plan.id), true);
+    const raw = JSON.parse(localStorageData['tactical_recon_registered_routes_v1']);
+    assert.strictEqual(raw['T-01'], undefined);
+    assert(raw['T-02']);
+  });
+
+  test('Phase 2 explicit legacy local PLAN delete removes routePlan only, not site', () => {
+    localStorageData['tactical_recon_intel_v2'] = JSON.stringify([
+      { id:'L-1', name:'Local', coords:[3,3], memo:'keep', routePlan:{ startPoint:{coords:[3,3],source:'GPS'} } },
+      { id:'L-2', name:'Other', coords:[4,4] }
+    ]);
+    const plan = v28.storage.getV27PlansAsV28()['v27-loc-L-1'];
+    assert(plan);
+    assert.strictEqual(v28.plans.delete(plan.id), true);
+    const raw = JSON.parse(localStorageData['tactical_recon_intel_v2']);
+    const local = raw.find(x => x.id === 'L-1');
+    assert(local);
+    assert.strictEqual(local.name, 'Local');
+    assert.strictEqual(local.memo, 'keep');
+    assert.strictEqual(local.routePlan, undefined);
+    assert(raw.find(x => x.id === 'L-2'));
+  });
+
+  test('Phase 2 delete aborts before legacy mutation when V28 PLAN storage is malformed', () => {
+    localStorageData['tactical_recon_registered_routes_v1'] = JSON.stringify({
+      'T-01': { startPoint:{coords:[1,1],source:'GPS'} }
+    });
+    const plan = v28.storage.getV27PlansAsV28()['v27-reg-T-01'];
+    assert(plan);
+    localStorageData['tactical_recon_plans_v1'] = 'malformed {';
+    assert.strictEqual(v28.plans.delete(plan.id), false);
+    const legacy = JSON.parse(localStorageData['tactical_recon_registered_routes_v1']);
+    assert(legacy['T-01']);
+  });
+
   console.log(`\nTests completed: ${passed} passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);
 }
