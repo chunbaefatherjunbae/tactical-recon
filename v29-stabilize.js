@@ -25,7 +25,7 @@
   let lastBearingBundle=null;
   let siteStatusFilter='ALL';
   let siteSourceFilter='ALL';
-  let navRecoveryTimer=null;
+  let navRecoveryInstalled=false;
 
   const text={
     ko:{
@@ -889,8 +889,8 @@
   function clearNavRecovery(){localStorage.removeItem(NAV_RECOVERY_KEY);}
 
   function installNavRecoveryHooks(){
-    if(navRecoveryTimer)return;
-    navRecoveryTimer=setInterval(persistNavRecovery,2500);
+    if(navRecoveryInstalled)return;
+    navRecoveryInstalled=true;
     ['returnToTargetPlan','stopTargetNavigation','exitTargetMode'].forEach(name=>{
       try{
         const fn=eval(name);
@@ -1078,10 +1078,6 @@
     document.addEventListener('visibilitychange',()=>{if(document.hidden){stopBearingSensor();persistNavRecovery();}});
     window.addEventListener('pagehide',()=>{stopBearingSensor();persistNavRecovery();});
 
-    // Keep final ownership stable after older layers refresh their DOM.
-    setInterval(()=>{
-      installPlanHeader();bindObjectiveReticle();installSiteControls();installSaferTrackHud();syncFreeTrackButton();
-    },1200);
     syncAllText();
   }
 
