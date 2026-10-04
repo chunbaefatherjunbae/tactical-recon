@@ -116,6 +116,178 @@
     return plan?.objective?.coords&&validCoords(plan.objective.coords)?plan.objective:null;
   }
 
+  /* ---------- unified location service ---------- */
+  const locationTokens={address:0,route:0,plan:0};
+
+  function parseLocation(query){
+    const raw=String(query||'').trim();
+    if(!raw)return null;
+    try{
+      if(typeof parseDirectRouteLocation==='function'){
+        const direct=parseDirectRouteLocation(raw);
+        if(direct&&validCoords([Number(direct.lat),Number(direct.lon)])){
+          return {lat:Number(direct.lat),lon:Number(direct.lon),name:(direct.source||'COORDINATE')+' POSITION',address:'',source:String(direct.source||'INPUT')};
+        }
+      }
+    }catch(e){}
+    const m=raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if(m&&validCoords([Number(m[1]),Number(m[2])])){
+      return {lat:Number(m[1]),lon:Number(m[2]),name:'WGS84 POSITION',address:'',source:'WGS84'};
+    }
+    try{
+      if(root.mgrs?.toPoint){
+        const p=root.mgrs.toPoint(raw.replace(/\s+/g,''));
+        const coords=[Number(p?.[1]),Number(p?.[0])];
+        if(validCoords(coords))return {lat:coords[0],lon:coords[1],name:'MGRS POSITION',address:'',source:'MGRS'};
+      }
+    }catch(e){}
+    return null;
+  }
+
+  async function searchLocations(query){
+    const direct=parseLocation(query);
+    if(direct)return [direct];
+    if(!navigator.onLine){
+      const error=new Error('OFFLINE_ADDRESS_UNAVAILABLE');
+      error.code='OFFLINE';
+      throw error;
+    }
+    const url='https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=6&addressdetails=1&accept-language=ko&q='+encodeURIComponent(String(query||'').trim());
+    const response=await fetch(url,{headers:{Accept:'application/json'}});
+    if(!response.ok)throw new Error('LOCATION_SEARCH_FAILED');
+    const rows=await response.json();
+    if(!Array.isArray(rows))return [];
+    return rows.map(row=>{
+      const lat=Number(row.lat),lon=Number(row.lon);
+      if(!validCoords([lat,lon]))return null;
+      let address=String(row.display_name||query||'').trim();
+      try{
+        if(typeof normalizeKoreanAddress==='function')address=normalizeKoreanAddress(row,address)||address;
+      }catch(e){}
+      return {lat,lon,name:String(row.name||address||query||'POSITION'),address,source:'ADDRESS',raw:row};
+    }).filter(Boolean);
+  }
+
+  function coordsSubtitle(item,digits=5){
+    const mgrsText=typeof calcMGRS==='function'?calcMGRS(item.lat,item.lon):'';
+    return item.lat.toFixed(digits)+', '+item.lon.toFixed(digits)+(mgrsText?' · '+mgrsText:'');
+  }
+
+  function installUnifiedSearch(){
+    root.v29Location={parse:parseLocation,search:searchLocations};
+
+    if(typeof searchKoreanAddress==='function'&&!searchKoreanAddress.__v29Unified){
+      const wrapped=async function(){
+        const input=document.getElementById('addressSearchInput');
+        const results=document.getElementById('addressSearchResults');
+        const button=document.getElementById('addressSearchButton');
+        const query=input?.value.trim();
+        if(!query||!results){input?.focus();return;}
+        const token=++locationTokens.address;
+        selectedAddressResult=null;
+        if(typeof setAddressSearchActionsEnabled==='function')setAddressSearchActionsEnabled(false);
+        results.innerHTML='<div class="address-search-empty">SEARCHING...</div>';
+        if(button)button.disabled=true;
+        try{
+          const found=await searchLocations(query);
+          if(token!==locationTokens.address)return;
+          results.textContent='';
+          if(!found.length){results.innerHTML='<div class="address-search-empty">'+(lang()==='ko'?'검색 결과가 없습니다.':'NO RESULTS')+'</div>';return;}
+          found.forEach((item,index)=>{
+            const row=document.createElement('button');row.type='button';row.className='address-search-item';
+            const title=document.createElement('span');title.className='address-search-name';title.textContent=item.address||item.name;
+            const sub=document.createElement('span');sub.className='address-search-coords';sub.textContent=coordsSubtitle(item,item.source==='ADDRESS'?5:6);
+            row.append(title,sub);
+            row.onclick=()=>selectAddressResult(item,row);
+            results.appendChild(row);
+            if(found.length===1&&item.source!=='ADDRESS')selectAddressResult(item,row);
+          });
+        }catch(e){
+          if(token!==locationTokens.address)return;
+          results.innerHTML='<div class="address-search-empty">'+(e?.code==='OFFLINE'
+            ? (lang()==='ko'?'OFFLINE · 주소 검색은 사용할 수 없습니다. WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ADDRESS SEARCH UNAVAILABLE. ENTER WGS84 OR MGRS.')
+            : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
+        }finally{if(button&&token===locationTokens.address)button.disabled=false;}
+      };
+      wrapped.__v29Unified=true;
+      searchKoreanAddress=wrapped;
+    }
+
+    if(typeof searchRouteLocate==='function'&&!searchRouteLocate.__v29Unified){
+      const wrapped=async function(){
+        if(!targetModeActive||targetModePhase!=='PLAN')return;
+        const input=document.getElementById('routeLocateInput');
+        const results=document.getElementById('routeLocateResults');
+        const button=document.getElementById('routeLocateSearchBtn');
+        const query=input?.value.trim();
+        if(!query||!results){input?.focus();return;}
+        const token=++locationTokens.route;
+        routeLocateSelected=null;
+        if(typeof setRouteLocateActionsEnabled==='function')setRouteLocateActionsEnabled(false);
+        if(typeof updateRouteLocateReadout==='function')updateRouteLocateReadout(null);
+        results.innerHTML='<div class="address-search-empty">SEARCHING...</div>';
+        if(button)button.disabled=true;
+        try{
+          const found=await searchLocations(query);
+          if(token!==locationTokens.route)return;
+          results.textContent='';
+          if(!found.length){results.innerHTML='<div class="address-search-empty">'+(lang()==='ko'?'검색 결과가 없습니다.':'NO RESULTS')+'</div>';return;}
+          found.forEach(item=>{
+            const row=document.createElement('button');row.type='button';row.className='address-search-item';
+            const title=document.createElement('span');title.className='address-search-name';title.textContent=item.address||item.name;
+            const sub=document.createElement('span');sub.className='address-search-coords';sub.textContent=coordsSubtitle(item,item.source==='ADDRESS'?5:6);
+            row.append(title,sub);
+            row.onclick=()=>selectRouteLocateResult(item,row);
+            results.appendChild(row);
+            if(found.length===1&&item.source!=='ADDRESS'){
+              selectRouteLocateResult(item,row);
+              try{resolveRouteLocateAddress(item,routeLocateSearchToken);}catch(e){}
+            }
+          });
+        }catch(e){
+          if(token!==locationTokens.route)return;
+          results.innerHTML='<div class="address-search-empty">'+(e?.code==='OFFLINE'
+            ? (lang()==='ko'?'OFFLINE · WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ENTER WGS84 OR MGRS.')
+            : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
+        }finally{if(button&&token===locationTokens.route)button.disabled=false;}
+      };
+      wrapped.__v29Unified=true;
+      searchRouteLocate=wrapped;
+    }
+
+    if(typeof searchPlanLocation==='function'&&!searchPlanLocation.__v29Unified){
+      const wrapped=async function(){
+        if(!targetModeActive||!['PLAN','NAV'].includes(targetModePhase))return;
+        const input=document.getElementById('planSearchInput');
+        const results=document.getElementById('planSearchResults');
+        const button=document.getElementById('planSearchGoBtn');
+        const query=input?.value.trim();
+        if(!query||!results){input?.focus();return;}
+        const token=++locationTokens.plan;
+        results.innerHTML='<div class="address-search-empty">SEARCHING...</div>';
+        if(button)button.disabled=true;
+        try{
+          const found=await searchLocations(query);
+          if(token!==locationTokens.plan)return;
+          results.textContent='';
+          if(!found.length){results.innerHTML='<div class="address-search-empty">'+(lang()==='ko'?'검색 결과가 없습니다.':'NO RESULTS')+'</div>';return;}
+          found.forEach(item=>{
+            if(typeof appendPlanSearchResult==='function'){
+              appendPlanSearchResult(item,item.address||item.name,coordsSubtitle(item,item.source==='ADDRESS'?5:6));
+            }
+          });
+        }catch(e){
+          if(token!==locationTokens.plan)return;
+          results.innerHTML='<div class="address-search-empty">'+(e?.code==='OFFLINE'
+            ? (lang()==='ko'?'OFFLINE · WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ENTER WGS84 OR MGRS.')
+            : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
+        }finally{if(button&&token===locationTokens.plan)button.disabled=false;}
+      };
+      wrapped.__v29Unified=true;
+      searchPlanLocation=wrapped;
+    }
+  }
+
   /* ---------- persistent LAST FIX ---------- */
   function persistLastFix(pos){
     const lat=Number(pos?.coords?.latitude),lon=Number(pos?.coords?.longitude);
@@ -878,6 +1050,7 @@
     if(installed)return;installed=true;
     document.body.classList.add('v29-stabilized');
     installLastFix();
+    installUnifiedSearch();
     installSiteFilterData();
     installPlanHeader();
     wrapFinalPanelSync();
