@@ -30,6 +30,32 @@
   let gapTimer = null;
   let planRenderTimer = null;
 
+  function runtimeLang() {
+    return typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'ko';
+  }
+
+  function tRuntime(ko, en) {
+    return runtimeLang() === 'en' ? en : ko;
+  }
+
+  function syncTrackStaticLabels() {
+    if (typeof document === 'undefined') return;
+    const set = (id, ko, en) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = tRuntime(ko, en);
+    };
+    set('v28PlanTrackBtn', '궤적', 'TRACK');
+    set('v28TrackTitle', '궤적 기록', 'TRACK LOG');
+    set('v28TrackSessionLabel', '상태', 'SESSION');
+    set('v28TrackDistanceLabel', '거리', 'DISTANCE');
+    set('v28TrackRecord', '기록 시작', 'RECORD');
+    set('v28TrackPause', '일시정지', 'PAUSE');
+    set('v28TrackResume', '재개', 'RESUME');
+    set('v28TrackStop', '기록 종료', 'STOP');
+    set('v28TrackLatest', '최근', 'LATEST');
+    set('v28TrackAll', '전체 궤적', 'ALL TRACKS');
+  }
+
   function validCoords(coords) {
     return Array.isArray(coords) && coords.length === 2 &&
       typeof coords[0] === 'number' && typeof coords[1] === 'number' &&
@@ -680,12 +706,15 @@
     if (typeof document === 'undefined') return;
     syncLegacyTrackFlags();
     document.body.classList.toggle('track-recording', session.state === 'RECORDING');
+    syncTrackStaticLabels();
 
     const button = document.getElementById('targetTrackRecBtn');
     if (button) {
       button.textContent = session.state === 'OFF'
-        ? 'TRACK'
-        : (session.state === 'PAUSED' ? 'TRACK · PAUSED' : 'TRACK · REC');
+        ? tRuntime('궤적', 'TRACK')
+        : (session.state === 'PAUSED'
+          ? tRuntime('궤적 · 일시정지', 'TRACK · PAUSED')
+          : tRuntime('궤적 · 기록중', 'TRACK · REC'));
       button.classList.toggle('active', session.state !== 'OFF');
     }
 
@@ -693,14 +722,18 @@
     const track = currentTrack();
     if (hud) {
       if (!track) {
-        hud.textContent = 'TRACK OFF';
+        hud.textContent = tRuntime('궤적 꺼짐', 'TRACK OFF');
         hud.classList.remove('track-recording');
       } else {
         const m = Number(track.distance?.measuredKm || 0).toFixed(1);
         const e = Number(track.distance?.estimatedKm || 0).toFixed(1);
-        const prefix = session.state === 'PAUSED' ? 'TRACK PAUSED' :
-          (session.state === 'RECORDING' ? 'TRACK REC' : 'TRACK SAVED');
-        hud.textContent = prefix + ' · ' + m + ' KM / EST ' + e + ' KM';
+        const prefix = session.state === 'PAUSED'
+          ? tRuntime('궤적 일시정지', 'TRACK PAUSED')
+          : (session.state === 'RECORDING'
+            ? tRuntime('궤적 기록중', 'TRACK REC')
+            : tRuntime('궤적 저장됨', 'TRACK SAVED'));
+        const estimate = tRuntime('추정 ', 'EST ');
+        hud.textContent = prefix + ' · ' + m + ' KM / ' + estimate + e + ' KM';
         hud.classList.toggle('track-recording', session.state === 'RECORDING');
       }
     }
@@ -708,6 +741,7 @@
 
   function renderTrackSheet() {
     if (typeof document === 'undefined') return;
+    syncTrackStaticLabels();
     const stateEl = document.getElementById('v28TrackState');
     const statsEl = document.getElementById('v28TrackStats');
     const listEl = document.getElementById('v28TrackList');
@@ -720,13 +754,18 @@
     if (!stateEl || !statsEl || !listEl) return;
 
     const track = currentTrack();
+    const stateLabel = session.state === 'RECORDING'
+      ? tRuntime('기록 중', 'RECORDING')
+      : session.state === 'PAUSED'
+        ? tRuntime('일시정지', 'PAUSED')
+        : tRuntime('대기', 'OFF');
     stateEl.textContent = session.recovered && session.state === 'PAUSED'
-      ? 'RECOVERED · PAUSED'
-      : session.state;
+      ? tRuntime('복원됨 · 일시정지', 'RECOVERED · PAUSED')
+      : stateLabel;
     statsEl.textContent = track
-      ? 'MEASURED ' + Number(track.distance?.measuredKm || 0).toFixed(2) +
-        ' KM · EST ' + Number(track.distance?.estimatedKm || 0).toFixed(2) + ' KM'
-      : 'MEASURED 0.00 KM · EST 0.00 KM';
+      ? tRuntime('실측 ', 'MEASURED ') + Number(track.distance?.measuredKm || 0).toFixed(2) +
+        ' KM · ' + tRuntime('추정 ', 'EST ') + Number(track.distance?.estimatedKm || 0).toFixed(2) + ' KM'
+      : tRuntime('실측 0.00 KM · 추정 0.00 KM', 'MEASURED 0.00 KM · EST 0.00 KM');
 
     if (rec) rec.disabled = session.state !== 'OFF' || !base.state.activePlanId;
     if (pause) pause.disabled = session.state !== 'RECORDING';
@@ -738,28 +777,30 @@
     const tracks = base.state.activePlanId ? getPlanTracks(base.state.activePlanId) : [];
     listEl.textContent = '';
     if (!tracks.length) {
-      listEl.innerHTML = '<div class="v28-empty">NO TRACKS</div>';
+      listEl.innerHTML = '<div class="v28-empty">' +
+        tRuntime('저장된 궤적이 없습니다.', 'NO TRACKS') + '</div>';
       return;
     }
 
     tracks.forEach(item => {
       const row = document.createElement('div');
       row.className = 'v28-track-row' + (item.id === session.activeTrackId ? ' active' : '');
-      const date = new Date(item.startedAt).toLocaleString();
+      const date = new Date(item.startedAt).toLocaleString(runtimeLang() === 'ko' ? 'ko-KR' : undefined);
       const durationMin = Math.round(trackDurationMs(item) / 60000);
       row.innerHTML =
         '<div class="v28-track-copy"><strong></strong><span></span></div>' +
-        '<button class="v28-mini v28-track-delete" type="button">DELETE</button>';
+        '<button class="v28-mini v28-track-delete" type="button"></button>';
       row.querySelector('strong').textContent =
-        (item.endedAt ? 'TRACK' : 'ACTIVE') + ' · ' + date;
+        (item.endedAt ? tRuntime('궤적', 'TRACK') : tRuntime('기록 중', 'ACTIVE')) + ' · ' + date;
       row.querySelector('span').textContent =
-        Number(item.distance?.measuredKm || 0).toFixed(2) + ' KM · EST ' +
-        Number(item.distance?.estimatedKm || 0).toFixed(2) + ' KM · ' +
-        durationMin + ' MIN';
+        tRuntime('실측 ', '') + Number(item.distance?.measuredKm || 0).toFixed(2) + ' KM · ' +
+        tRuntime('추정 ', 'EST ') + Number(item.distance?.estimatedKm || 0).toFixed(2) + ' KM · ' +
+        durationMin + tRuntime('분', ' MIN');
       const del = row.querySelector('.v28-track-delete');
+      del.textContent = tRuntime('삭제', 'DELETE');
       del.disabled = item.id === session.activeTrackId && session.state !== 'OFF';
       del.addEventListener('click', () => {
-        if (!confirm('DELETE THIS TRACK?')) return;
+        if (!confirm(tRuntime('이 궤적을 삭제할까요?', 'DELETE THIS TRACK?'))) return;
         deleteTrack(item.id);
       });
       listEl.appendChild(row);
@@ -795,7 +836,7 @@
     const legacy = typeof getTrackLogs === 'function' ? getTrackLogs() : [];
     const v2 = Object.values(base.storage.getV28Tracks());
     if (!waypoints.length && !legacy.length && !v2.length) {
-      alert('내보낼 POINTS 또는 TRACK LOG가 없습니다.');
+      alert(tRuntime('내보낼 거점 또는 궤적 기록이 없습니다.', 'NO SITES OR TRACK LOGS TO EXPORT.'));
       return;
     }
     const gpx = buildGpx(waypoints, legacy, v2);
@@ -832,9 +873,13 @@
       button.className = 'osb-btn plan-main-only';
       button.id = 'v28PlanTrackBtn';
       button.type = 'button';
-      button.textContent = 'TRACK';
+      button.textContent = tRuntime('궤적', 'TRACK');
       button.addEventListener('click', openTrackSheet);
-      const exitButton = Array.from(toolbar.querySelectorAll('.plan-main-only')).find(el => el.textContent.trim() === 'EXIT');
+      const exitButton = document.getElementById('planExitBtn') ||
+        Array.from(toolbar.querySelectorAll('.plan-main-only')).find(el =>
+          String(el.getAttribute('onclick') || '').includes('exitTargetMode')
+        );
+      if (exitButton) exitButton.id = 'planExitBtn';
       toolbar.insertBefore(button, exitButton || null);
     }
 
@@ -843,18 +888,19 @@
     sheet.className = 'v28-sheet';
     sheet.innerHTML =
       '<div class="v28-sheet-shell v28-track-shell">' +
-        '<div class="v28-sheet-head"><div><small>TACTICAL RECON // V28</small><strong>TRACK CONTROL</strong></div><button class="v28-sheet-close" id="v28TrackClose" type="button">×</button></div>' +
-        '<div class="v28-track-status"><div><span>SESSION</span><strong id="v28TrackState">OFF</strong></div><div><span>DISTANCE</span><strong id="v28TrackStats">MEASURED 0.00 KM · EST 0.00 KM</strong></div></div>' +
+        '<div class="v28-sheet-head"><div><small>TACTICAL RECON // V28</small><strong id="v28TrackTitle"></strong></div><button class="v28-sheet-close" id="v28TrackClose" type="button">×</button></div>' +
+        '<div class="v28-track-status"><div><span id="v28TrackSessionLabel"></span><strong id="v28TrackState"></strong></div><div><span id="v28TrackDistanceLabel"></span><strong id="v28TrackStats"></strong></div></div>' +
         '<div class="v28-track-controls">' +
-          '<button class="osb-btn active" id="v28TrackRecord" type="button">RECORD</button>' +
-          '<button class="osb-btn" id="v28TrackPause" type="button">PAUSE</button>' +
-          '<button class="osb-btn" id="v28TrackResume" type="button">RESUME</button>' +
-          '<button class="osb-btn v28-danger" id="v28TrackStop" type="button">STOP</button>' +
+          '<button class="osb-btn active" id="v28TrackRecord" type="button"></button>' +
+          '<button class="osb-btn" id="v28TrackPause" type="button"></button>' +
+          '<button class="osb-btn" id="v28TrackResume" type="button"></button>' +
+          '<button class="osb-btn v28-danger" id="v28TrackStop" type="button"></button>' +
         '</div>' +
-        '<div class="v28-track-display"><button class="osb-btn active" id="v28TrackLatest" type="button">LATEST</button><button class="osb-btn" id="v28TrackAll" type="button">ALL TRACKS</button></div>' +
+        '<div class="v28-track-display"><button class="osb-btn active" id="v28TrackLatest" type="button"></button><button class="osb-btn" id="v28TrackAll" type="button"></button></div>' +
         '<div class="v28-track-list" id="v28TrackList"></div>' +
       '</div>';
     document.body.appendChild(sheet);
+    syncTrackStaticLabels();
 
     document.getElementById('v28TrackClose')?.addEventListener('click', closeTrackSheet);
     sheet.addEventListener('click', event => {
@@ -959,7 +1005,7 @@
       if (!backtrackActive) {
         const track = selectedBacktrackTrack();
         if (!track || buildBacktrackNodes(track).length < 2) {
-          alert('BACKTRACK에 사용할 V28 TRACK 기록이 없습니다.');
+          alert(tRuntime('역추적에 사용할 궤적 기록이 없습니다.', 'NO TRACK AVAILABLE FOR BACKTRACK.'));
           return;
         }
       }
@@ -994,6 +1040,12 @@
         }
       };
     }
+
+    new MutationObserver(() => {
+      syncTrackStaticLabels();
+      syncBrowserTrackState();
+      if (document.getElementById('v28TrackSheet')?.classList.contains('open')) renderTrackSheet();
+    }).observe(document.documentElement, { attributes:true, attributeFilter:['lang'] });
 
     recoverActiveTrack();
     syncBrowserTrackState();
