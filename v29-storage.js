@@ -184,11 +184,19 @@
   async function mergeMirrorIntoCache(){
     const mirrored=await getAllMirroredTracks();
     if(!mirrored.length)return;
+    let activeRecoveryId='';
+    try{
+      const recovery=JSON.parse(localStorage.getItem('tactical_recon_active_track_v2')||'null');
+      activeRecoveryId=String(recovery?.trackId||'');
+    }catch(e){}
     let changed=false;
     mirrored.forEach(track=>{
       const sanitized=base.schemas.sanitizeTrackV2(track);
       if(!sanitized||!base.schemas.validateTrackV2(sanitized))return;
       const local=trackCache[sanitized.id];
+      // Never resurrect a track that the user explicitly deleted. Mirror-only
+      // recovery is allowed only for the currently active recovery session.
+      if(!local&&String(sanitized.id)!==activeRecoveryId)return;
       const localStamp=Math.max(Number(local?.endedAt)||0,Number(local?.startedAt)||0);
       const mirrorStamp=Math.max(Number(sanitized.endedAt)||0,Number(sanitized.startedAt)||0);
       const localPoints=Array.isArray(local?.segments)?JSON.stringify(local.segments).length:0;
@@ -228,6 +236,7 @@
     getAllTracks:getAllMirroredTracks,
     getTrack:getMirroredTrack,
     deleteTrack,
+    clearTracks:clearMirroredTracks,
     flush:()=>flushLocalTracks('FORCE'),
     estimate,
     dbName:DB_NAME
