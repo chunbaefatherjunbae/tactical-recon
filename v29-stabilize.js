@@ -286,7 +286,8 @@
     const el=ensurePicker();
     pickerMode=mode;
     pickerReturn=returnContext;
-    try{base.ui.openObjective&&document.getElementById('v28ObjectiveSheet')?.classList.remove('open');}catch(e){}
+    document.querySelectorAll('.v28-sheet.open,.v29-sheet.open').forEach(sheet=>sheet.classList.remove('open'));
+    document.body.classList.remove('v28-sheet-open','v29-sheet-open');
     if(typeof closeFieldControls==='function')closeFieldControls();
     if(typeof closeWpDrawer==='function')closeWpDrawer();
     if(typeof closeSitrep==='function')closeSitrep();
