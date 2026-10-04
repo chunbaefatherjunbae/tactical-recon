@@ -378,3 +378,375 @@ body.v29-sheet-open .mfd-bottom-bar { opacity:.36; }
   .v29-overlay-head { grid-column:1; }
   .v29-metric-grid strong { font-size:9px; }
 }
+
+
+/* ===== V29 stabilization / mobile field UX ===== */
+body.v29-stabilized {
+  --v29-readable-dim:color-mix(in srgb,var(--field-text) 78%,var(--field-panel-solid,var(--bg-base,#07100a)));
+}
+
+/* Readability: operational text is never decorative microcopy. */
+body.v29-stabilized .osb-btn,
+body.v29-stabilized .field-control-grid .osb-btn,
+body.v29-stabilized .v26-menu-grid .osb-btn,
+body.v29-stabilized .target-mode-actions.v271-mode-toolbar .osb-btn,
+body.v29-stabilized .v28-sheet .osb-btn,
+body.v29-stabilized .v29-sheet .osb-btn {
+  min-height:44px;
+  font-size:11px;
+  line-height:1.15;
+  letter-spacing:0;
+}
+body.v29-stabilized .v28-mini,
+body.v29-stabilized .wp-filter-btn,
+body.v29-stabilized .wp-group-head,
+body.v29-stabilized .wp-item-delete {
+  min-height:44px;
+  font-size:10.5px;
+}
+body.v29-stabilized .wp-item-name { font-size:13px; }
+body.v29-stabilized .wp-item-meta,
+body.v29-stabilized .wp-item-coords,
+body.v29-stabilized .v29-note,
+body.v29-stabilized .v29-section label,
+body.v29-stabilized .v29-result,
+body.v29-stabilized .gps-status-row {
+  font-size:11px;
+  color:var(--v29-readable-dim);
+}
+body.v29-stabilized .gps-status-head,
+body.v29-stabilized .target-mode-stats,
+body.v29-stabilized .plan-nav-hint,
+body.v29-stabilized .v29-section-title,
+body.v29-stabilized .v29-tabs button {
+  font-size:10.5px;
+}
+body.v29-stabilized .target-mode-name { font-size:13px !important; }
+body.v29-stabilized .plan-share-inline {
+  min-width:44px;
+  min-height:44px;
+  font-size:10px;
+}
+body.v29-stabilized .wp-item-delete {
+  min-width:44px;
+  padding:0 8px;
+}
+
+/* PLAN header is explicitly two tap zones. */
+body.v29-stabilized:not(.target-nav) #planInfoTrigger {
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  padding:0;
+  cursor:default;
+}
+body.v29-stabilized #planInfoTrigger .v29-objective-area {
+  width:100%;
+  min-height:48px;
+  padding:5px 4px 8px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+body.v29-stabilized #planInfoTrigger .v29-objective-area:active {
+  background:rgba(255,255,255,.035);
+}
+body.v29-stabilized #planInfoTrigger .v29-plan-nav-area {
+  width:100%;
+  min-height:52px;
+  padding:8px 4px 2px;
+  border-top:1px solid var(--field-line);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:5px 10px;
+  align-items:center;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+body.v29-stabilized #planInfoTrigger .v29-plan-nav-area.ready {
+  border-top-color:var(--field-line-strong);
+}
+body.v29-stabilized #planInfoTrigger .v29-plan-nav-area:active {
+  background:rgba(255,255,255,.035);
+}
+body.v29-stabilized #planInfoTrigger .v29-plan-nav-area .target-mode-stats {
+  justify-self:start;
+  text-align:left;
+  font-size:10.5px;
+  color:var(--v29-readable-dim);
+}
+body.v29-stabilized #planInfoTrigger .v29-plan-nav-area .plan-nav-hint {
+  grid-column:auto;
+  margin:0;
+  padding:0;
+  border:0;
+  min-width:0;
+  font-size:10.5px;
+  color:var(--field-active);
+}
+body.v29-stabilized #planInfoTrigger .v29-plan-nav-area #planNavHint {
+  flex:1 1 auto;
+}
+body.v29-stabilized #targetModeName {
+  text-decoration:none !important;
+}
+
+/* SITE drawer: action first, filters become status x source instead of five mixed concepts. */
+.v29-site-add-bar {
+  padding:7px 9px;
+  border-bottom:1px solid var(--field-line);
+  background:var(--field-panel-solid,var(--bg-base,#07100a));
+}
+.v29-site-add-bar .osb-btn {
+  width:100%;
+  min-height:46px !important;
+}
+.v29-site-filter-shell {
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:5px !important;
+  padding:7px 9px !important;
+}
+.v29-status-filters,
+.v29-source-filters {
+  display:grid;
+  gap:5px;
+}
+.v29-status-filters { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.v29-source-filters { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.v29-site-filter-shell .wp-filter-btn {
+  min-width:0;
+  min-height:40px;
+  padding:0 4px;
+  font-size:10px !important;
+}
+
+/* Shared map picker. */
+.v29-location-picker {
+  position:fixed;
+  left:50%;
+  bottom:calc(8px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:2875;
+  width:min(680px,calc(100vw - 12px));
+  padding:8px;
+  border:1px solid var(--field-line-strong);
+  background:var(--field-panel-solid,var(--bg-base,#07100a));
+  box-shadow:0 -10px 26px rgba(0,0,0,.4);
+}
+.v29-location-picker[hidden] { display:none !important; }
+.v29-picker-readout {
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:0 3px 7px;
+  color:var(--v29-readable-dim);
+  font:900 10px var(--font-mono);
+}
+.v29-picker-readout strong {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--field-text);
+  font-size:11px;
+}
+.v29-picker-actions {
+  display:grid;
+  grid-template-columns:1fr 1.25fr .72fr;
+  gap:5px;
+}
+.v29-picker-actions .osb-btn { min-height:46px !important; }
+body.v29-picking-location .mfd-bottom-bar,
+body.v29-picking-location #fieldControlTray,
+body.v29-picking-location #wpDrawer {
+  pointer-events:none;
+  opacity:.2;
+}
+body.v29-picking-location .reticle-container {
+  opacity:1 !important;
+}
+
+/* Reorganized field menu. */
+.v29-two-col { grid-template-columns:1fr 1fr !important; }
+.v29-control-label {
+  margin-bottom:7px;
+  color:var(--v29-readable-dim);
+  font:900 10px var(--font-mono);
+  letter-spacing:.04em;
+}
+body.v29-stabilized #control-menu .v26-menu-grid {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+}
+body.v29-stabilized #control-menu .v26-menu-grid [data-v29-menu="bearing"] {
+  border-color:var(--field-line-strong);
+  color:var(--field-active);
+}
+.v29-storage-meter {
+  margin-top:8px;
+  color:var(--v29-readable-dim);
+  font:900 10px var(--font-mono);
+}
+.v29-storage-meter.warn { color:var(--field-active); }
+
+/* Bearing calculator, sensor stays optional. */
+.v29-bearing-primary {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  border:1px solid var(--field-line);
+  margin-bottom:7px;
+}
+.v29-bearing-primary > div,
+.v29-bearing-meta > div {
+  min-width:0;
+  padding:9px 7px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  border-right:1px solid var(--field-line);
+}
+.v29-bearing-primary > div:last-child,
+.v29-bearing-meta > div:last-child { border-right:0; }
+.v29-bearing-primary span,
+.v29-bearing-meta span,
+.v29-bearing-sensor span {
+  color:var(--v29-readable-dim);
+  font:900 10px var(--font-mono);
+}
+.v29-bearing-primary strong {
+  color:var(--field-active);
+  font:900 20px var(--font-mono);
+}
+.v29-bearing-meta {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  border:1px solid var(--field-line);
+  margin-bottom:7px;
+}
+.v29-bearing-meta strong {
+  color:var(--field-text);
+  font:900 11px var(--font-mono);
+}
+.v29-bearing-sensor {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+  padding:8px;
+  border:1px solid var(--field-line);
+  margin-bottom:7px;
+}
+.v29-bearing-sensor > div {
+  min-width:0;
+  display:grid;
+  grid-template-columns:auto auto;
+  align-items:baseline;
+  gap:3px 9px;
+}
+.v29-bearing-sensor strong {
+  color:var(--field-active);
+  font:900 18px var(--font-mono);
+}
+.v29-bearing-sensor small {
+  grid-column:1/-1;
+  color:var(--v29-readable-dim);
+  font:900 10px var(--font-mono);
+}
+.v29-bearing-sensor .osb-btn { min-height:44px; }
+
+/* Recovery, storage failure, toast. */
+.v29-recovery-banner,
+.v29-storage-error {
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:2990;
+  width:min(680px,calc(100vw - 12px));
+  border:1px solid var(--field-line-strong);
+  background:var(--field-panel-solid,var(--bg-base,#07100a));
+  color:var(--field-text);
+}
+.v29-recovery-banner {
+  top:calc(8px + env(safe-area-inset-top));
+  min-height:58px;
+  padding:7px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  gap:6px;
+  align-items:center;
+}
+.v29-recovery-banner > div {
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.v29-recovery-banner strong { font-size:11px; color:var(--field-active); }
+.v29-recovery-banner span { font-size:10px; color:var(--v29-readable-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.v29-storage-error {
+  bottom:calc(70px + env(safe-area-inset-bottom));
+  padding:9px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:5px 8px;
+}
+.v29-storage-error[hidden] { display:none !important; }
+.v29-storage-error strong { color:var(--field-active); font-size:11px; }
+.v29-storage-error span { grid-column:1; color:var(--v29-readable-dim); font-size:10px; line-height:1.4; }
+.v29-storage-error button { grid-column:2; grid-row:1/3; min-height:44px; }
+.v29-toast {
+  position:fixed;
+  left:50%;
+  bottom:calc(74px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);
+  z-index:3000;
+  max-width:calc(100vw - 24px);
+  padding:8px 11px;
+  border:1px solid var(--field-line-strong);
+  background:var(--field-panel-solid,var(--bg-base,#07100a));
+  color:var(--field-text);
+  font:900 11px var(--font-mono);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .14s ease,transform .14s ease;
+}
+.v29-toast.show { opacity:1; transform:translate(-50%,0); }
+.v29-toast[data-kind="danger"],
+.v29-toast[data-kind="warn"] { color:var(--field-active); }
+
+/* Operational status text gets readable contrast. */
+body.v29-stabilized .wp-group-count,
+body.v29-stabilized .wp-item-coords,
+body.v29-stabilized .gps-status-head,
+body.v29-stabilized .gps-status-row,
+body.v29-stabilized .target-mode-stats,
+body.v29-stabilized .v29-section label,
+body.v29-stabilized .v29-note {
+  color:var(--v29-readable-dim) !important;
+}
+
+/* Remove the 7-9px mobile squeeze from legacy layers. */
+@media (max-width:768px) {
+  body.v29-stabilized .global-gps-button { min-height:44px; font-size:10px; }
+  body.v29-stabilized .target-mode-actions.v271-mode-toolbar .osb-btn {
+    font-size:10.5px !important;
+    padding:0 3px !important;
+  }
+  body.v29-stabilized .target-mode-stats,
+  body.v29-stabilized .plan-nav-hint { font-size:10px !important; }
+  body.v29-stabilized .v29-tabs button { font-size:10px; }
+}
+@media (max-width:520px) {
+  .v29-picker-actions { grid-template-columns:1fr 1fr; }
+  .v29-picker-actions #v29PickerCancel { grid-column:1/-1; }
+  .v29-bearing-primary strong { font-size:18px; }
+  .v29-recovery-banner {
+    grid-template-columns:1fr 1fr;
+  }
+  .v29-recovery-banner > div { grid-column:1/-1; }
+}
