@@ -19,6 +19,9 @@ const STATIC_ASSETS = [
   './v29.css',
   './v29.js',
   './v29-ui.js',
+  './vendor/mgrs-1.0.0.js',
+  './vendor/leaflet-1.9.4.js',
+  './vendor/leaflet-1.9.4.css',
   './v29-stabilize.css',
   './v29-stabilize.js'
 ];
