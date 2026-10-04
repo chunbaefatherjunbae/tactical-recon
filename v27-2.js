@@ -136,7 +136,7 @@
   }
   function centerIcon(following) {
     return following
-      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" class="gps-center-core"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><path d="M7 7c1.4-1.4 3-2 5-2 3.9 0 7 3.1 7 7"/><path d="M17 5v4h-4"/></svg>'
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M4 16v4h4M20 16v4h-4"/><circle cx="12" cy="12" r="2.5" class="gps-center-core"/><path d="M12 7v2M12 15v2M7 12h2M15 12h2"/></svg>'
       : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5" class="gps-center-core"/></svg>';
   }
   function syncCenterControl() {
@@ -200,9 +200,9 @@
   const captureHud=()=>({distance:document.getElementById('navHudDistance')?.textContent||'--.-',unit:document.getElementById('navHudUnit')?.textContent||'KM',bearing:document.getElementById('navHudBearing')?.textContent||'BRG ---°',ref:document.getElementById('navHudRef')?.textContent||'REF --',target:document.getElementById('navHudTarget')?.textContent||'NO TARGET',leg:document.getElementById('navHudLeg')?.textContent||'',label:document.getElementById('navHudDistanceLabel')?.textContent||''});
   function applyPausedHud(){if(!navPaused||!navPausedHud)return;for(const [id,key] of [['navHudDistance','distance'],['navHudUnit','unit'],['navHudBearing','bearing'],['navHudRef','ref'],['navHudTarget','target'],['navHudLeg','leg'],['navHudDistanceLabel','label']]){const el=document.getElementById(id);if(el)el.textContent=navPausedHud[key];}}
   function elapsed(now=Date.now()){if(!navStartedAt)return{total:0,leg:0};if(navPaused)return{total:navPausedTotalElapsed,leg:navPausedLegElapsed};return{total:Math.max(0,now-navStartedAt-navTotalPausedMs),leg:Math.max(0,now-navLegStartedAt-navLegPausedMs)};}
-  function syncPauseButton(){const b=document.getElementById('navPauseBtn');if(!b)return;b.textContent=navPaused?'RESUME':'PAUSE';b.classList.toggle('active',navPaused);b.setAttribute('aria-pressed',String(navPaused));}
+  function syncPauseButton(){const b=document.getElementById('navPauseBtn');if(!b)return;const key=navPaused?'resume':'pause';b.textContent=window.reconT?.(key)||(navPaused?'RESUME':'PAUSE');b.classList.toggle('active',navPaused);b.setAttribute('aria-pressed',String(navPaused));}
   function resetPause(){navPaused=false;navPauseStartedAt=navTotalPausedMs=navLegPausedMs=navPausedTotalElapsed=navPausedLegElapsed=0;navPausedHud=null;syncPauseButton();}
-  function toggleNavPause(){if(!targetModeActive||targetModePhase!=='NAV')return;const now=Date.now();if(!navPaused){const e=elapsed(now);navPaused=true;navPauseStartedAt=now;navPausedTotalElapsed=e.total;navPausedLegElapsed=e.leg;navPausedHud=captureHud();}else{const d=Math.max(0,now-navPauseStartedAt);navTotalPausedMs+=d;navLegPausedMs+=d;navPaused=false;navPauseStartedAt=0;navPausedHud=null;}syncPauseButton();updateTargetModePanel();}
+  function toggleNavPause(){if(!targetModeActive||targetModePhase!=='NAV')return;const now=Date.now();if(!navPaused){const e=elapsed(now);navPaused=true;navPauseStartedAt=now;navPausedTotalElapsed=e.total;navPausedLegElapsed=e.leg;navPausedHud=null;}else{const d=Math.max(0,now-navPauseStartedAt);navTotalPausedMs+=d;navLegPausedMs+=d;navPaused=false;navPauseStartedAt=0;navPausedHud=null;}syncPauseButton();updateTargetModePanel();}
   window.toggleNavPause=toggleNavPause;
 
   function syncRevert(){const b=document.getElementById('navRevertLegBtn');if(b)b.disabled=!navLegRevertState;}
@@ -221,12 +221,12 @@
 
   function configureNavToolbar(){
     const bar=document.getElementById('targetModeToolbar');if(!bar)return;const b=[...bar.querySelectorAll('.nav-only')];if(b.length<5)return;
-    b[0].id='navSearchBtn';b[0].textContent='SEARCH';b[0].removeAttribute('onclick');b[0].onclick=()=>openPlanSearch();
-    b[1].id='navPauseBtn';b[1].classList.remove('gps-follow-toggle');b[1].removeAttribute('onclick');b[1].onclick=toggleNavPause;
-    b[2].id='targetNextLegBtn';b[2].textContent='NEXT LEG';b[2].classList.add('nav-next-hold');bindHold(b[2]);
-    b[3].id='targetNavStopBtn';b[3].textContent='STOP';b[4].id='navMoreBtn';b[4].textContent='MORE';
-    const compact=document.getElementById('navCollapsedNextLegBtn');compact?.classList.add('nav-next-hold');bindHold(compact);
-    const grid=document.querySelector('#navMoreSheet .v271-more-grid');if(grid&&!document.getElementById('navRevertLegBtn')){const r=document.createElement('button');r.className='osb-btn';r.id='navRevertLegBtn';r.type='button';r.textContent='REVERT LEG';r.onclick=revertLastLeg;grid.insertBefore(r,grid.querySelector('.v271-delete-button')||null);}syncPauseButton();syncRevert();
+    b[0].id='navSearchBtn';b[0].textContent=window.reconT?.('search')||'SEARCH';b[0].removeAttribute('onclick');b[0].onclick=()=>openPlanSearch();b[0].disabled=false;
+    b[1].id='navPauseBtn';b[1].classList.remove('gps-follow-toggle');b[1].removeAttribute('onclick');b[1].onclick=toggleNavPause;b[1].disabled=false;
+    b[2].id='targetNextLegBtn';b[2].textContent=window.reconT?.('nextLeg')||'NEXT LEG';b[2].classList.add('nav-next-hold');bindHold(b[2]);
+    b[3].id='targetNavStopBtn';b[3].textContent=window.reconT?.('stopNav')||'STOP';b[4].id='navMoreBtn';b[4].textContent=window.reconT?.('more')||'MORE';
+    const compact=document.getElementById('navCollapsedNextLegBtn');if(compact){compact.textContent=window.reconT?.('nextLeg')||'NEXT LEG';compact.classList.add('nav-next-hold');bindHold(compact);}
+    const grid=document.querySelector('#navMoreSheet .v271-more-grid');if(grid&&!document.getElementById('navRevertLegBtn')){const r=document.createElement('button');r.className='osb-btn';r.id='navRevertLegBtn';r.type='button';r.textContent=window.reconT?.('revertLeg')||'REVERT LEG';r.onclick=revertLastLeg;grid.insertBefore(r,grid.querySelector('.v271-delete-button')||null);}syncPauseButton();syncRevert();
   }
 
   const baseStartNavElapsed=startNavElapsed;
@@ -239,11 +239,11 @@
   const baseUpdateTargetModePanel=updateTargetModePanel;
   updateTargetModePanel=function(){
     baseUpdateTargetModePanel();configureNavToolbar();
-    if(targetModeActive&&targetModePhase==='NAV'){const e=elapsed(),el=document.getElementById('navHudElapsed');if(el)el.textContent=`TOTAL ${formatElapsed(e.total)} · LEG ${formatElapsed(e.leg)}${navPaused?' · PAUSED':''}`;if(navPaused)applyPausedHud();}
+    if(targetModeActive&&targetModePhase==='NAV'){const e=elapsed(),el=document.getElementById('navHudElapsed');if(el)el.textContent=window.reconFormatNavElapsed?.(e.total,e.leg,navPaused)||`TOTAL ${formatElapsed(e.total)} · LEG ${formatElapsed(e.leg)}${navPaused?' · PAUSED':''}`;}
     syncPauseButton();syncRevert();syncTempButton();scheduleCenterSync();
   };
   const baseSyncKnown=syncKnownActionAvailability;
-  syncKnownActionAvailability=function(){baseSyncKnown();const c=document.getElementById('gpsCenterBtn');if(c)c.disabled=!centerReference()?.coords;const off=navPaused||!hasNextNavLeg(),n=document.getElementById('targetNextLegBtn'),k=document.getElementById('navCollapsedNextLegBtn');if(n)n.disabled=off;if(k)k.disabled=off;syncRevert();syncTempButton();};
+  syncKnownActionAvailability=function(){baseSyncKnown();const c=document.getElementById('gpsCenterBtn');if(c)c.disabled=!centerReference()?.coords;const search=document.getElementById('navSearchBtn'),pause=document.getElementById('navPauseBtn');if(targetModeActive&&targetModePhase==='NAV'){if(search)search.disabled=false;if(pause)pause.disabled=false;}const off=navPaused||!hasNextNavLeg(),n=document.getElementById('targetNextLegBtn'),k=document.getElementById('navCollapsedNextLegBtn');if(n)n.disabled=off;if(k)k.disabled=off;syncRevert();syncTempButton();};
   const baseRefreshGpsPowerUi=refreshGpsPowerUi;
   refreshGpsPowerUi=function(){baseRefreshGpsPowerUi();syncTempButton();scheduleCenterSync();};
 
