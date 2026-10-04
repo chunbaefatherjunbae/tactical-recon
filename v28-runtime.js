@@ -54,6 +54,7 @@
     set('v28TrackStop', '기록 종료', 'STOP');
     set('v28TrackLatest', '최근', 'LATEST');
     set('v28TrackAll', '전체 궤적', 'ALL TRACKS');
+    set('navSearchBtn', '위치검색', 'POSITION SEARCH');
   }
 
   function validCoords(coords) {
@@ -721,8 +722,13 @@
     const hud = document.getElementById('navHudTrack');
     const track = currentTrack();
     if (hud) {
+      hud.classList.add('v28-track-access');
+      hud.setAttribute('role','button');
+      hud.setAttribute('tabindex','0');
+      hud.setAttribute('aria-label', tRuntime('궤적 제어 열기', 'OPEN TRACK CONTROLS'));
+      hud.title = tRuntime('탭하여 궤적 기록 제어', 'TAP FOR TRACK CONTROLS');
       if (!track) {
-        hud.textContent = tRuntime('궤적 꺼짐', 'TRACK OFF');
+        hud.textContent = tRuntime('궤적 꺼짐 ›', 'TRACK OFF ›');
         hud.classList.remove('track-recording');
       } else {
         const m = Number(track.distance?.measuredKm || 0).toFixed(1);
@@ -733,7 +739,7 @@
             ? tRuntime('궤적 기록중', 'TRACK REC')
             : tRuntime('궤적 저장됨', 'TRACK SAVED'));
         const estimate = tRuntime('추정 ', 'EST ');
-        hud.textContent = prefix + ' · ' + m + ' KM / ' + estimate + e + ' KM';
+        hud.textContent = prefix + ' · ' + m + ' KM / ' + estimate + e + ' KM ›';
         hud.classList.toggle('track-recording', session.state === 'RECORDING');
       }
     }
@@ -866,6 +872,21 @@
     if (browserReady || typeof document === 'undefined') return;
     browserReady = true;
     document.body.classList.add('v28-integrated');
+
+    const navTrackAccess = document.getElementById('navHudTrack');
+    if (navTrackAccess && navTrackAccess.dataset.v28TrackAccess !== '1') {
+      navTrackAccess.dataset.v28TrackAccess = '1';
+      navTrackAccess.addEventListener('click', event => {
+        event.stopPropagation();
+        openTrackSheet();
+      });
+      navTrackAccess.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        event.stopPropagation();
+        openTrackSheet();
+      });
+    }
 
     const toolbar = document.getElementById('targetModeToolbar');
     if (toolbar && !document.getElementById('v28PlanTrackBtn')) {
