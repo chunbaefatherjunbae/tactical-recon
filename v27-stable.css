@@ -1,0 +1,357 @@
+/* Tactical Recon V27 stable UI bundle.
+   Cascade order is intentionally identical to the former separate stylesheets:
+   V27.2 -> V27.2.1 -> V27.3.x. */
+
+/* ===== V27.2 ===== */
+/* Tactical Recon V27.2 stabilization UI */
+
+/* PLAN toolbar: the bar boundary is enough. Per-button dividers added noise. */
+.v272 .target-mode-actions.v271-mode-toolbar .osb-btn {
+  border-right:0 !important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+/* Keep all new-sheet action buttons optically centered and consistent. */
+.v272 .v271-bottom-sheet .osb-btn,
+.v272 .promo-modal .promo-actions .osb-btn {
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  line-height:1.15;
+}
+.v272 .v271-quick-grid .osb-btn,
+.v272 .v271-more-grid .osb-btn { width:100%; }
+.v272 .v271-via-list .osb-btn {
+  min-height:44px;
+  justify-content:flex-start;
+  padding:0 10px;
+  text-align:left;
+}
+.v272 .promo-modal .promo-actions {
+  width:100%;
+  justify-content:stretch;
+}
+.v272 .promo-modal .promo-actions .osb-btn { flex:1 1 0; min-width:0; }
+
+/* Unified START / VIA / END point info rhythm. */
+.v272 .v271-point-sheet {
+  gap:7px;
+  padding:10px !important;
+}
+.v272 .v271-point-sheet .v271-sheet-head {
+  min-height:48px;
+  padding:0 0 8px;
+  align-items:center;
+}
+.v272 .v271-point-sheet .v271-sheet-label { line-height:1.2; }
+.v272 .v271-point-sheet .v271-point-name {
+  margin-top:4px;
+  line-height:1.2;
+}
+.v272 .v271-copy-row {
+  min-height:46px;
+  padding:0 10px;
+  grid-template-columns:58px minmax(0,1fr);
+  gap:10px;
+}
+.v272 .v271-copy-row > span { align-self:center; }
+.v272 .v271-copy-row > strong {
+  align-self:center;
+  text-align:right;
+  line-height:1.3;
+}
+.v272 .v271-point-address {
+  min-height:42px;
+  padding:9px 10px;
+  border:1px solid var(--field-line);
+  display:flex;
+  align-items:center;
+  line-height:1.4;
+}
+.v272 .v271-point-address[hidden] { display:none !important; }
+.v272 .v271-delete-button { min-height:44px; }
+
+/* 46px Leaflet hitbox, unchanged visual marker scale. */
+.route-point-hitbox {
+  width:46px !important;
+  height:46px !important;
+  margin:0 !important;
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+  background:transparent !important;
+  border:0 !important;
+}
+.route-point-visual {
+  position:relative;
+  width:26px;
+  height:26px;
+  flex:0 0 26px;
+}
+.route-via-visual {
+  position:relative;
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
+}
+.route-via-hitbox .route-via-icon {
+  position:relative;
+  width:24px;
+  height:24px;
+}
+
+/* Global controls now have GPS / center-follow / TEMP in one fixed stack. */
+.v272 .global-gps-controls { width:48px; }
+.v272 .global-temp-button {
+  font-size:8px;
+  letter-spacing:.5px;
+}
+.v272 .gps-center-button.following svg { width:20px; height:20px; }
+
+/* Last valid GPS fix is a stale reference, never styled as a live lock. */
+.last-gps-hitbox {
+  width:42px !important;
+  height:42px !important;
+  margin:0 !important;
+  background:transparent !important;
+  border:0 !important;
+  pointer-events:none !important;
+}
+.last-gps-visual {
+  position:relative;
+  width:42px;
+  height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--field-dim);
+  opacity:.78;
+}
+.last-gps-visual .marker-symbol { width:24px; height:24px; filter:none; }
+.last-gps-visual .marker-frame { stroke-dasharray:3 2; }
+.last-gps-visual > span {
+  position:absolute;
+  left:50%;
+  top:34px;
+  transform:translateX(-50%);
+  white-space:nowrap;
+  padding:2px 3px;
+  border:1px solid var(--field-line);
+  background:rgba(2,7,4,.84);
+  color:var(--field-dim);
+  font:800 7px/1 var(--font-mono);
+  letter-spacing:.3px;
+}
+
+/* NEXT LEG requires a deliberate hold. */
+.nav-next-hold { position:relative; overflow:hidden; }
+.nav-next-hold::after {
+  content:"";
+  position:absolute;
+  left:0;
+  bottom:0;
+  width:0;
+  height:2px;
+  background:var(--field-active);
+  pointer-events:none;
+}
+.nav-next-hold.hold-arming::after { animation:v272-next-leg-hold .7s linear forwards; }
+@keyframes v272-next-leg-hold { from { width:0; } to { width:100%; } }
+
+@media (max-width:768px) {
+  .v272 .global-gps-controls { right:7px; width:46px; }
+  .v272 .global-gps-button { width:46px; }
+  .v272 .v271-point-sheet { padding:9px 8px !important; }
+  .v272 .v271-copy-row { grid-template-columns:54px minmax(0,1fr); padding:0 8px; }
+  .v272 .promo-modal .promo-actions { gap:5px; }
+  .v272 .promo-modal .promo-actions .osb-btn { padding:0 4px; font-size:9px; }
+}
+
+/* ===== V27.2.1 ===== */
+/* Tactical Recon V27.2.1 point-placement hotfix */
+
+/* V27.2 enlarged the Leaflet hit area but accidentally zeroed the negative
+   iconAnchor margins. Restore them so the visual marker center sits exactly
+   on the geographic coordinate/reticle while keeping the 46px touch target. */
+.route-point-hitbox {
+  margin-left:-23px !important;
+  margin-top:-23px !important;
+}
+
+.last-gps-hitbox {
+  margin-left:-21px !important;
+  margin-top:-21px !important;
+}
+
+/* Waypoint drawer system references stay separate from mission/user points. */
+.v2721-reference-head { cursor:default; }
+.v2721-reference-item .wp-item-status { letter-spacing:.4px; }
+.v2721-reference-item .wp-item-coords { font-size:9px; }
+
+/* ===== V27.3.x ===== */
+/* Tactical Recon V27.3 UI / navigation workflow */
+
+.v273 .mfd-bottom-bar .osb-cluster.v26-main-cluster {
+  width:100%;
+  flex:1 1 100%;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.v273 .mfd-bottom-bar .v26-main-cluster .v26-primary {
+  width:100%;
+  min-width:0;
+}
+
+/* GPS / adaptive RECENTER-FOLLOW / TEMP are global field controls, never mode-specific. */
+.v273 .global-gps-controls {
+  display:flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+.v273 .global-gps-controls .global-gps-button { display:flex !important; }
+
+/* Only the unavailable adaptive position/follow control gets a visible neutral disabled state. */
+.v273 #gpsCenterBtn:disabled {
+  opacity:1 !important;
+  color:rgba(188,192,189,.90) !important;
+  border-color:rgba(145,150,146,.88) !important;
+  background:rgba(72,76,74,.82) !important;
+  box-shadow:none !important;
+  filter:none !important;
+}
+
+.v273 .language-option-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+}
+.v273 .language-option-grid .osb-btn.active {
+  border-color:var(--field-active);
+  color:var(--field-active);
+  background:rgba(255,255,255,.05);
+}
+
+/* Toolbar modes are mutually exclusive. Never allow a second control row to leak through. */
+.v273 .target-mode-actions .nav-draw-only { display:none !important; }
+
+.v273.plan-set-submode .target-mode-actions .plan-main-only,
+.v273.plan-set-submode .target-mode-actions .draw-only,
+.v273.plan-set-submode .target-mode-actions .nav-only,
+.v273.plan-set-submode .target-mode-actions .nav-draw-only {
+  display:none !important;
+}
+.v273.plan-set-submode .target-mode-actions .set-only { display:flex !important; }
+
+.v273.plan-draw-submode .target-mode-actions .plan-main-only,
+.v273.plan-draw-submode .target-mode-actions .set-only,
+.v273.plan-draw-submode .target-mode-actions .nav-only,
+.v273.plan-draw-submode .target-mode-actions .nav-draw-only {
+  display:none !important;
+}
+.v273.plan-draw-submode .target-mode-actions .draw-only { display:flex !important; }
+
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .plan-main-only,
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .set-only,
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .draw-only,
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .nav-draw-only {
+  display:none !important;
+}
+.v273.target-nav:not(.nav-draw-submode) .target-mode-actions .nav-only { display:flex !important; }
+
+.v273.target-nav.nav-draw-submode .target-mode-actions .plan-main-only,
+.v273.target-nav.nav-draw-submode .target-mode-actions .set-only,
+.v273.target-nav.nav-draw-submode .target-mode-actions .draw-only,
+.v273.target-nav.nav-draw-submode .target-mode-actions .nav-only {
+  display:none !important;
+}
+.v273.target-nav.nav-draw-submode .target-mode-actions .nav-draw-only {
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+}
+.v273.target-nav.nav-draw-submode .target-mode-actions {
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+}
+.v273.target-nav.nav-draw-submode .target-mode-panel {
+  box-shadow:0 0 0 1px var(--field-active) inset,0 -8px 30px rgba(0,0,0,.32);
+}
+.v273.target-nav.nav-draw-submode .nav-hud-distance-label::after {
+  content:' · DRAW';
+  color:var(--field-active);
+}
+html[lang="ko"] .v273.target-nav.nav-draw-submode .nav-hud-distance-label::after {
+  content:' · 작도';
+}
+
+.v273 #navDrawBtn { border-style:dashed; }
+.v273 #navDrawDoneBtn { border-color:var(--field-active); }
+
+.v273 .gps-center-button.following svg path,
+.v273 .gps-center-button.following svg circle {
+  stroke-linecap:square;
+  stroke-linejoin:miter;
+}
+.v273 .gps-center-button.following .gps-center-core {
+  fill:currentColor;
+  stroke:currentColor;
+}
+
+.v273 .v2721-reference-head .wp-group-name { letter-spacing:.65px; }
+
+@media (max-width:768px) {
+  .v273.target-nav.nav-draw-submode .target-mode-actions { gap:3px; }
+  .v273.target-nav.nav-draw-submode .target-mode-actions .osb-btn {
+    padding:0 3px;
+    font-size:8px;
+  }
+}
+
+
+/* Scrollable panels keep their operational header/close controls visible. */
+.v273 .field-control-tray {
+  overscroll-behavior:contain;
+}
+.v273 .field-control-tray .field-control-head {
+  position:sticky;
+  top:-10px;
+  z-index:12;
+  margin:-10px -10px 7px;
+  padding:10px 10px 7px;
+  background:var(--field-panel-solid, #07100a);
+}
+
+.v273 .wp-drawer {
+  overflow:hidden;
+}
+.v273 .wp-drawer .drawer-head,
+.v273 .wp-drawer .wp-filter-bar {
+  flex:0 0 auto;
+  position:relative;
+  z-index:12;
+  background:var(--field-panel-solid, var(--bg-panel));
+}
+.v273 .wp-drawer #wpListContainer {
+  min-height:0;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+@media (max-width:768px) {
+  .v273 .sitrep-panel {
+    overscroll-behavior:contain;
+  }
+  .v273 .sitrep-panel .sitrep-head {
+    position:sticky;
+    top:-10px;
+    z-index:12;
+    margin:-10px -10px 0;
+    padding:10px 10px 8px;
+    background:var(--field-panel-solid, #07100a);
+  }
+}
