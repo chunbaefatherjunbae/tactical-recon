@@ -775,6 +775,25 @@ window.v28 = (function() {
     openPlanInEditor(next.id);
   }
 
+  function syncPlanObjectiveSnapshotsForSite(site) {
+    if (!site?.id || !Array.isArray(site.coords)) return;
+    const plans = getV28Plans();
+    Object.values(plans).forEach(plan => {
+      const objective = plan?.objective;
+      if (!objective) return;
+      const objectiveSiteId = String(objective.siteId || objective.id || '');
+      if (objectiveSiteId !== String(site.id)) return;
+      const nextObjective = objectiveSnapshotFrom({
+        ...site,
+        source:objective.source || 'SITE',
+        siteId:String(site.id)
+      });
+      if (!nextObjective) return;
+      const nextPlan = { ...plan, objective:nextObjective, updatedAt:Date.now() };
+      saveV28Plan(nextPlan);
+    });
+  }
+
   function currentLocalSite() {
     if (typeof getLocalIntel !== 'function' || !currentActiveTarget?.id) return null;
     const list = getLocalIntel();
@@ -898,6 +917,7 @@ window.v28 = (function() {
       return;
     }
 
+    syncPlanObjectiveSnapshotsForSite(next);
     if (targetModeActive && targetModeTarget && String(targetModeTarget.id) === String(next.id)) {
       targetModeTarget = next;
       if (typeof updateTargetModePanel === 'function') updateTargetModePanel();
@@ -1468,6 +1488,9 @@ window.v28 = (function() {
                 console.warn('V28 pre-secure opcode save failed:', e);
               }
             }
+            if (idx >= 0 && list[idx]?.status === 'SECURED') {
+              syncPlanObjectiveSnapshotsForSite(list[idx]);
+            }
           }
           return out;
         }
@@ -1496,6 +1519,7 @@ window.v28 = (function() {
         }
 
         const editId = securedSiteEditId;
+        syncPlanObjectiveSnapshotsForSite(next);
         securedSiteEditId = null;
         previousClosePromotionModalV28?.();
         if (targetModeActive && targetModeTarget && String(targetModeTarget.id) === String(editId)) {
