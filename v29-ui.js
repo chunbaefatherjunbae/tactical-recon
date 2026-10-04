@@ -104,7 +104,6 @@
   function closeSheet(){
     document.getElementById('v29Sheet')?.classList.remove('open');
     document.body.classList.remove('v29-sheet-open');
-    clearCompareLayer();
   }
   function openSheet(tab=activeTab){
     if(typeof closeFieldControls==='function')closeFieldControls();
@@ -291,10 +290,10 @@
         const idx=Number(row.dataset.index);
         row.querySelector('.v29-overlay-save')?.addEventListener('click',()=>{
           core.overlays.set(planId,idx,row.querySelector('.v29-overlay-type').value,row.querySelector('.v29-overlay-label').value);
-          renderOverlayAnnotations(planId);
+          renderOverlayAnnotations(base.state.activePlanId);
         });
         row.querySelector('.v29-overlay-clear')?.addEventListener('click',()=>{
-          core.overlays.clear(planId,idx);renderList(planId);renderOverlayAnnotations(planId);
+          core.overlays.clear(planId,idx);renderList(planId);renderOverlayAnnotations(base.state.activePlanId);
         });
       });
     };
@@ -370,8 +369,12 @@
     const saved=core.emergency.getState();
     const auto=currentReference();
     const obj=currentObjective();
-    const current=saved.current||auto?.coords||null;
-    const target=saved.target||obj?.coords||null;
+    const current=saved.currentSource==='MANUAL'
+      ? (saved.current||auto?.coords||null)
+      : (auto?.coords||saved.current||null);
+    const target=saved.targetSource==='MANUAL'
+      ? (saved.target||obj?.coords||null)
+      : (obj?.coords||saved.target||null);
     body.innerHTML=
       '<div class="v29-note">'+t('emergencyNote')+'</div>'+
       '<div class="v29-section"><div class="v29-two"><label>'+t('current')+'<select id="v29CurrentMode"><option value="auto">'+t('autoReference')+'</option><option value="manual">'+t('manual')+'</option></select></label>'+
