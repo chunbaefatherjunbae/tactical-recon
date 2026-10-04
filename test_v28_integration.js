@@ -20,7 +20,7 @@ function test(name, fn) {
 }
 
 test('PWA cache version is V28 plan UX', () => {
-  assert(sw.includes("const CACHE_VERSION = 'v28-plan-ux-20261005-2';"));
+  assert(sw.includes("const CACHE_VERSION = 'v28-plan-ux-20261005-3';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
