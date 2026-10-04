@@ -717,7 +717,7 @@
 
   function applyBoundTexts(root = document) {
     root.querySelectorAll('[data-recon-i18n]').forEach(el => {
-      if (el.dataset.v28TextOwner === '1') return;
+      if (el.dataset.v28TextOwner === '1' || el.dataset.v29TextOwner === '1') return;
       const key = el.dataset.reconI18n;
       if (key) el.textContent = window.reconT(key);
     });
