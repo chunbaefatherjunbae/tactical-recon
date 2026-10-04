@@ -63,6 +63,23 @@ test('Emergency map has no tile or network dependency',()=>{
   assert.strictEqual(/fetch\(|tileLayer\(/.test(ui.slice(ui.indexOf('function renderEmergencyMap'))),false);
 });
 
+test('Online map failure exposes automatic emergency fallback',()=>{
+  assert(ui.includes('function installMapFallback()'));
+  assert(ui.includes("layer.on('tileerror'"));
+  assert(ui.includes("if(tileErrorCount>=3)showMapFallback('TILE')"));
+  assert(ui.includes("window.addEventListener('offline'"));
+  assert(ui.includes("openSheet('emergency')"));
+  assert(css.includes('.v29-map-fallback'));
+});
+
+test('Track comparison overlay persists until explicit clear',()=>{
+  const start=ui.indexOf('function closeSheet()');
+  const end=ui.indexOf('function ensureMapFallbackBanner',start);
+  assert(start>=0&&end>start);
+  assert.strictEqual(ui.slice(start,end).includes('clearCompareLayer()'),false);
+  assert(ui.includes("id=\"v29CompareClear\""));
+});
+
 test('GPX estimated policy is explicit',()=>{
   assert(core.includes("filter(seg=>seg?.kind==='MEASURED'"));
   assert(core.includes("if(includeEstimated)"));
