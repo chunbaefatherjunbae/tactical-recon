@@ -24,7 +24,7 @@
       nextLeg:'다음구간', stopNav:'항법종료', more:'더보기', trackRec:'궤적기록', backtrack:'역추적',
       share:'공유', revertLeg:'이전구간', exitTarget:'목표종료', navControls:'항법 제어',
       planPoints:'경로지점', quick:'빠른이동', point:'지점', pointInfo:'거점정보',
-      deletePoint:'거점삭제', deleteHome:'복귀점 삭제',
+      deletePoint:'지점삭제', deleteHome:'복귀점 삭제',
       reference:'기준위치', home:'복귀점', temp:'임시위치', lastGps:'최종수신점',
       registered:'등록', unexplored:'미확인', secured:'확인완료', user:'사용자',
       reticle:'조준점', locationSearch:'위치탐색', targetSearch:'거점탐색', wildRecon:'미확인탐색',
@@ -39,7 +39,8 @@
       mapMove:'지도이동', secure:'확인완료',
       routeDash:'경로선 · 점선', overlaySolid:'표식선 · 실선',
       trackWait:'궤적 대기', trackSaved:'궤적 저장', siteEmpty:'저장된 거점이 없습니다.',
-      deleteSite:'삭제', startPoint:'출발점', viaPoint:'경유점', endPoint:'도착점', homePoint:'복귀점'
+      deleteSite:'삭제', startPoint:'출발점', viaPoint:'경유점', endPoint:'도착점', homePoint:'복귀점',
+      targetSet:'목표 지정', reconComplete:'확인완료'
     },
     en: {
       language:'LANGUAGE', languageTitle:'LANGUAGE', korean:'한국어', english:'ENGLISH',
@@ -54,7 +55,7 @@
       nextLeg:'NEXT LEG', stopNav:'STOP NAV', more:'MORE', trackRec:'TRACK REC', backtrack:'BACKTRACK',
       share:'SHARE', revertLeg:'PREV LEG', exitTarget:'EXIT OBJECTIVE', navControls:'NAV CONTROLS',
       planPoints:'ROUTE POINTS', quick:'QUICK', point:'POINT', pointInfo:'SITE INFO',
-      deletePoint:'DELETE SITE', deleteHome:'DELETE RETURN PT',
+      deletePoint:'DELETE POINT', deleteHome:'DELETE RETURN PT',
       reference:'REF POS', home:'RETURN PT', temp:'TEMP POS', lastGps:'LAST FIX',
       registered:'REGISTERED', unexplored:'UNVERIFIED', secured:'VERIFIED', user:'USER',
       reticle:'RETICLE', locationSearch:'POSITION SEARCH', targetSearch:'SEARCH SITES', wildRecon:'UNVERIFIED RECON',
@@ -69,7 +70,8 @@
       mapMove:'MOVE MAP', secure:'VERIFIED',
       routeDash:'ROUTE · DASH', overlaySolid:'OVERLAY · SOLID',
       trackWait:'TRACK WAIT', trackSaved:'TRACK SAVED', siteEmpty:'NO SAVED SITES.',
-      deleteSite:'DELETE', startPoint:'START PT', viaPoint:'VIA PT', endPoint:'END PT', homePoint:'RETURN PT'
+      deleteSite:'DELETE', startPoint:'START PT', viaPoint:'VIA PT', endPoint:'END PT', homePoint:'RETURN PT',
+      targetSet:'SET OBJECTIVE', reconComplete:'VERIFY SITE'
     }
   };
 
@@ -181,6 +183,8 @@
     '지도에서 보기':'mapMove',
     '거점 저장':'savePoint',
     '개척 완료':'secure',
+    '[ TARGET SET // 목표 설정 ]':'targetSet',
+    '[ RECON COMPLETED // 개척 완료 ]':'reconComplete',
     '거점 탐색':'targetSearch',
     '미개척 정찰':'wildRecon',
     '거점 지정':'setPoint',
@@ -271,10 +275,23 @@
       }
     }
     const navRef = document.getElementById('navHudRef');
-    if (navRef && currentLanguage === 'ko' && /^REF\s+/.test(navRef.textContent)) {
-      const raw = navRef.textContent.replace(/^REF\s+/, '').trim();
-      const key = raw === 'TEMP POS' ? 'temp' : raw === 'LAST GPS' ? 'lastGps' : null;
-      navRef.textContent = `기준 ${key ? window.reconT(key) : raw}`;
+    if (navRef) {
+      const raw = String(navRef.textContent || '').replace(/^(REF|기준)\s+/, '').trim();
+      const key =
+        ['TEMP POS','임시위치'].includes(raw) ? 'temp' :
+        ['LAST GPS','LAST FIX','최근수신점','최종수신점'].includes(raw) ? 'lastGps' : null;
+      const value = key ? window.reconT(key) : raw;
+      if (value) navRef.textContent = currentLanguage === 'ko' ? `기준 ${value}` : `REF ${value}`;
+    }
+
+    const gpsDetailRef = document.getElementById('gpsDetailRef');
+    if (gpsDetailRef) {
+      const raw = String(gpsDetailRef.textContent || '').trim();
+      const key =
+        ['TEMP POS','임시위치'].includes(raw) ? 'temp' :
+        ['LAST GPS','LAST FIX','최근수신점','최종수신점'].includes(raw) ? 'lastGps' :
+        ['NONE','없음'].includes(raw) ? 'none' : null;
+      if (key) gpsDetailRef.textContent = window.reconT(key);
     }
 
     const navDrawKind = document.getElementById('navDrawKindBtn');
@@ -292,17 +309,22 @@
       const name = item.querySelector('.wp-item-name');
       const rawName = String(name?.textContent || '').trim();
       if (name) {
-        if (['HOME / EXIT','HOME','복귀점'].includes(rawName)) name.textContent = window.reconT('home');
+        if (['HOME / EXIT','HOME','RETURN PT','복귀점'].includes(rawName)) name.textContent = window.reconT('home');
         else if (['TEMP POS','임시위치'].includes(rawName)) name.textContent = window.reconT('temp');
-        else if (['LAST GPS','최근수신점'].includes(rawName)) name.textContent = window.reconT('lastGps');
+        else if (['LAST GPS','LAST FIX','최근수신점','최종수신점'].includes(rawName)) name.textContent = window.reconT('lastGps');
       }
       if (status) {
         const isStale = /STALE|이전수신/.test(status.textContent);
-        const type = rawName.includes('LAST') || rawName === '최근수신점' ? 'lastGps'
+        const type = rawName.includes('LAST') || ['최근수신점','최종수신점'].includes(rawName) ? 'lastGps'
           : rawName.includes('TEMP') || rawName === '임시위치' ? 'temp' : 'home';
         status.textContent = `[${window.reconT(isStale ? 'stale' : 'referenceTag')}] ${window.reconT(type)}`;
       }
     });
+
+    const targetSet = document.getElementById('btnTargetSet');
+    if (targetSet) targetSet.textContent = `[ ${window.reconT('targetSet')} ]`;
+    const reconComplete = document.getElementById('btnPromote');
+    if (reconComplete) reconComplete.textContent = `[ ${window.reconT('reconComplete')} ]`;
 
     const drawButton = document.getElementById('targetDrawBtn');
     if (drawButton) drawButton.textContent = window.reconT('draw');
