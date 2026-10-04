@@ -875,6 +875,8 @@
   function selectedBacktrackTrack() {
     const planId = base.state.activePlanId;
     if (!planId) return null;
+    const preferred = window.v29?.backtrack?.get?.(planId);
+    if (preferred && buildBacktrackNodes(preferred).length) return preferred;
     const active = currentTrack();
     if (active?.planId === planId && buildBacktrackNodes(active).length) return active;
     return getPlanTracks(planId).find(track => buildBacktrackNodes(track).length) || null;
