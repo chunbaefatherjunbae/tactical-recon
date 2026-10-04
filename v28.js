@@ -1055,7 +1055,8 @@ window.v28 = (function() {
     document.getElementById('v28RoutesBtn')?.addEventListener('click', openRoutesSheet);
     document.getElementById('v28SitesBtn')?.addEventListener('click', () => {
       closePhase2Sheets();
-      if (typeof openFieldControls === 'function') openFieldControls('target');
+      if (typeof closeFieldControls === 'function') closeFieldControls();
+      if (typeof openWpDrawer === 'function') openWpDrawer();
     });
     document.getElementById('v28MenuBtn')?.addEventListener('click', () => {
       closePhase2Sheets();
@@ -1105,7 +1106,8 @@ window.v28 = (function() {
     });
     document.getElementById('v28ObjectiveChangeBtn')?.addEventListener('click', () => {
       closePhase2Sheets();
-      if (typeof openFieldControls === 'function') openFieldControls('target');
+      if (typeof closeFieldControls === 'function') closeFieldControls();
+      if (typeof openWpDrawer === 'function') openWpDrawer();
     });
     document.getElementById('v28ObjectiveClearBtn')?.addEventListener('click', () => {
       if (!activePlanId) return;
