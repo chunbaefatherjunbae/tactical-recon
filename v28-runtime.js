@@ -394,16 +394,9 @@
       return null;
     }
 
-    const hasData = track.segments.length > 0;
-    if (hasData) {
-      track.endedAt = Date.now();
-      if (!saveTrack(track)) return null;
-    } else {
-      unlinkTrackFromPlan(track.planId, track.id);
-      dropTrackRaw(track.id);
-    }
-
-    const finished = hasData ? getTrack(track.id) : null;
+    track.endedAt = Date.now();
+    if (!saveTrack(track)) return null;
+    const finished = getTrack(track.id);
     session.state = 'OFF';
     session.activeTrackId = null;
     session.lastAnchor = null;
@@ -831,6 +824,19 @@
   function installBrowserOverrides() {
     if (browserReady || typeof document === 'undefined') return;
     browserReady = true;
+    document.body.classList.add('v28-integrated');
+
+    const toolbar = document.getElementById('targetModeToolbar');
+    if (toolbar && !document.getElementById('v28PlanTrackBtn')) {
+      const button = document.createElement('button');
+      button.className = 'osb-btn plan-main-only';
+      button.id = 'v28PlanTrackBtn';
+      button.type = 'button';
+      button.textContent = 'TRACK';
+      button.addEventListener('click', openTrackSheet);
+      const exitButton = Array.from(toolbar.querySelectorAll('.plan-main-only')).find(el => el.textContent.trim() === 'EXIT');
+      toolbar.insertBefore(button, exitButton || null);
+    }
 
     const sheet = document.createElement('div');
     sheet.id = 'v28TrackSheet';
