@@ -342,6 +342,7 @@
   function markGpsGap() {
     if (session.state !== 'RECORDING') return false;
     if (!session.lastAnchor || session.lastAnchor.source !== 'GPS') return false;
+    if (session.gpsGap) return false;
     session.gpsGap = true;
     saveRecovery();
     return true;
@@ -1100,7 +1101,7 @@
           markGpsGap();
         }
       }
-    }, 400);
+    }, 1500);
 
     let lastPlanId = base.state.activePlanId;
     planRenderTimer = setInterval(() => {
@@ -1110,7 +1111,7 @@
         renderPlanTracks();
         renderTrackSheet();
       }
-    }, 500);
+    }, 1500);
   }
 
   const api = {
