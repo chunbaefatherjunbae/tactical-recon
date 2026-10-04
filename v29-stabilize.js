@@ -828,11 +828,10 @@
 
   function toggleFreeTrack(){
     if(base.track.state!=='OFF'){
-      const pid=base.state.activePlanId;
-      if(pid&&pid===freePlanId()){
-        base.track.pause();syncFreeTrackButton();return;
-      }
-      root.openV29FieldKit?.('tracks');closeFieldControls();return;
+      closeFieldControls();
+      if(typeof toggleTrackRecording==='function')toggleTrackRecording();
+      else root.openV29FieldKit?.('tracks');
+      return;
     }
     const plan=ensureFreePlan();if(!plan)return;
     base.state.activePlanId=plan.id;
