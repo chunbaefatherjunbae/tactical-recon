@@ -55,6 +55,7 @@
     set('v28TrackLatest', '최근', 'LATEST');
     set('v28TrackAll', '전체 궤적', 'ALL TRACKS');
     set('navSearchBtn', '위치검색', 'LOCATE');
+    set('targetTrackRecBtn', '궤적 관리', 'TRACK MANAGE');
   }
 
   function validCoords(coords) {
@@ -711,11 +712,7 @@
 
     const button = document.getElementById('targetTrackRecBtn');
     if (button) {
-      button.textContent = session.state === 'OFF'
-        ? tRuntime('궤적', 'TRACK')
-        : (session.state === 'PAUSED'
-          ? tRuntime('궤적 · 일시정지', 'TRACK · PAUSED')
-          : tRuntime('궤적 · 기록중', 'TRACK · REC'));
+      button.textContent = tRuntime('궤적 관리', 'TRACK MANAGE');
       button.classList.toggle('active', session.state !== 'OFF');
     }
 
@@ -725,22 +722,28 @@
       hud.classList.add('v28-track-access');
       hud.setAttribute('role','button');
       hud.setAttribute('tabindex','0');
-      hud.setAttribute('aria-label', tRuntime('궤적 제어 열기', 'OPEN TRACK CONTROLS'));
-      hud.title = tRuntime('탭하여 궤적 기록 제어', 'TAP FOR TRACK CONTROLS');
-      if (!track) {
-        hud.textContent = tRuntime('궤적 꺼짐 ›', 'TRACK OFF ›');
+      const m = Number(track?.distance?.measuredKm || 0).toFixed(1);
+      const e = Number(track?.distance?.estimatedKm || 0).toFixed(1);
+      const isOn = session.state !== 'OFF';
+      hud.setAttribute('aria-pressed', String(isOn));
+      if (session.state === 'OFF') {
+        hud.setAttribute('aria-label', tRuntime('궤적 기록 켜기', 'START TRACK'));
+        hud.title = tRuntime('탭하여 궤적 기록 시작', 'TAP TO START TRACK');
+        hud.textContent = tRuntime('궤적 OFF', 'TRACK OFF');
+        hud.classList.remove('track-recording','track-paused');
+      } else if (session.state === 'PAUSED') {
+        hud.setAttribute('aria-label', tRuntime('궤적 기록 재개', 'RESUME TRACK'));
+        hud.title = tRuntime('탭하여 궤적 기록 재개', 'TAP TO RESUME TRACK');
+        hud.textContent = tRuntime('궤적 일시정지', 'TRACK PAUSED');
         hud.classList.remove('track-recording');
+        hud.classList.add('track-paused');
       } else {
-        const m = Number(track.distance?.measuredKm || 0).toFixed(1);
-        const e = Number(track.distance?.estimatedKm || 0).toFixed(1);
-        const prefix = session.state === 'PAUSED'
-          ? tRuntime('궤적 일시정지', 'TRACK PAUSED')
-          : (session.state === 'RECORDING'
-            ? tRuntime('궤적 기록중', 'TRACK REC')
-            : tRuntime('궤적 저장됨', 'TRACK SAVED'));
-        const estimate = tRuntime('추정 ', 'EST ');
-        hud.textContent = prefix + ' · ' + m + ' KM / ' + estimate + e + ' KM ›';
-        hud.classList.toggle('track-recording', session.state === 'RECORDING');
+        hud.setAttribute('aria-label', tRuntime('궤적 기록 끄기', 'STOP TRACK'));
+        hud.title = tRuntime('탭하여 궤적 기록 종료', 'TAP TO STOP TRACK');
+        hud.textContent = tRuntime('궤적 ON · ', 'TRACK ON · ') + m + ' KM';
+        if (Number(e) > 0) hud.title += tRuntime(' · 추정 ', ' · EST ') + e + ' KM';
+        hud.classList.add('track-recording');
+        hud.classList.remove('track-paused');
       }
     }
   }
@@ -813,6 +816,15 @@
     });
   }
 
+  function toggleHudTrack() {
+    if (session.state === 'OFF') startBrowserTrack();
+    else if (session.state === 'PAUSED') resumeBrowserTrack();
+    else stopTrack();
+    syncBrowserTrackState();
+    renderPlanTracks();
+    if (document.getElementById('v28TrackSheet')?.classList.contains('open')) renderTrackSheet();
+  }
+
   function openTrackSheet() {
     if (typeof document === 'undefined') return;
     if (typeof closeNavMore === 'function') closeNavMore();
@@ -878,13 +890,13 @@
       navTrackAccess.dataset.v28TrackAccess = '1';
       navTrackAccess.addEventListener('click', event => {
         event.stopPropagation();
-        openTrackSheet();
+        toggleHudTrack();
       });
       navTrackAccess.addEventListener('keydown', event => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         event.stopPropagation();
-        openTrackSheet();
+        toggleHudTrack();
       });
     }
 
