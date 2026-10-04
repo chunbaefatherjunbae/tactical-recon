@@ -2,8 +2,8 @@
 (() => {
   'use strict';
 
-  document.title = 'TACTICAL RECON // FIELD TERMINAL V27.3';
-  document.body?.classList.add('v273');
+  document.title = 'TACTICAL RECON // FIELD TERMINAL V27.3.1';
+  document.body?.classList.add('v273','v2731');
 
   const LANG_KEY = 'tactical_recon_language_v1';
   const THEME_KEY = 'tactical_recon_optic_theme_v1';
@@ -13,57 +13,63 @@
   const I18N = {
     ko: {
       language:'언어', languageTitle:'언어 / LANGUAGE', korean:'한국어', english:'ENGLISH',
-      fieldControls:'운용메뉴', fieldMenu:'운용메뉴', nearby:'주변탐색', layers:'레이어', display:'화면', points:'거점',
+      fieldControls:'운용메뉴', fieldMenu:'운용메뉴', nearby:'탐색범위', layers:'지도표시', display:'화면모드', points:'거점',
       gpsStatus:'GPS 상태', followOn:'자동추적 켬', followOff:'자동추적 끔', roadBoost:'도로강조',
-      tempAtReticle:'임시위치 지정', savePoint:'지점저장', setHome:'복귀점 지정', centerHome:'복귀점 이동',
-      clearHome:'복귀점 삭제', clearTemp:'임시위치 삭제', registeredRange:'등록거점 범위',
-      mapLayers:'지도 레이어', reconTask:'정찰 작업', displayMode:'화면 모드',
-      target:'목표지', plan:'경로계획', menu:'메뉴', search:'검색', set:'지정', draw:'작도',
+      tempAtReticle:'임시위치 지정', savePoint:'거점저장', setHome:'복귀점 지정', centerHome:'복귀점 이동',
+      clearHome:'복귀점 삭제', clearTemp:'임시위치 삭제', registeredRange:'탐색범위',
+      mapLayers:'지도표시', reconTask:'정찰 작업', displayMode:'화면모드',
+      target:'목표', plan:'경로', menu:'메뉴', search:'탐색', set:'지정', draw:'작도',
       undo:'실행취소', exit:'종료', start:'출발점', via:'경유점', end:'도착점', done:'완료',
-      route:'경로', overlay:'표식선', clear:'지우기', pause:'일시정지', resume:'재개',
-      nextLeg:'다음구간', stopNav:'항법종료', more:'더보기', trackRec:'이동기록', backtrack:'역추적',
-      share:'공유', revertLeg:'구간복귀', exitTarget:'목표종료', navControls:'항법 제어',
-      planPoints:'경로 지점', quick:'빠른이동', point:'지점', pointInfo:'지점정보',
-      deletePoint:'지점삭제', deleteHome:'복귀점 삭제',
-      reference:'기준위치', home:'복귀점', temp:'임시위치', lastGps:'최근수신점',
-      registered:'등록거점', unexplored:'미개척', secured:'개척완료', user:'사용자거점',
-      reticle:'조준점', locationSearch:'위치검색', targetSearch:'거점탐색', wildRecon:'미개척정찰',
+      route:'경로선', overlay:'표식선', clear:'지우기', pause:'일시정지', resume:'재개',
+      nextLeg:'다음구간', stopNav:'항법종료', more:'더보기', trackRec:'궤적기록', backtrack:'역추적',
+      share:'공유', revertLeg:'이전구간', exitTarget:'목표종료', navControls:'항법 제어',
+      planPoints:'경로지점', quick:'빠른이동', point:'지점', pointInfo:'거점정보',
+      deletePoint:'거점삭제', deleteHome:'복귀점 삭제',
+      reference:'기준위치', home:'복귀점', temp:'임시위치', lastGps:'최종수신점',
+      registered:'등록', unexplored:'미확인', secured:'확인완료', user:'사용자',
+      reticle:'조준점', locationSearch:'위치탐색', targetSearch:'거점탐색', wildRecon:'미확인탐색',
       setPoint:'거점지정', copy:'복사', close:'닫기', cancel:'취소',
-      noTarget:'목표지 없음', notSet:'미지정', none:'없음', positionRequired:'기준위치 필요',
-      gpsNoFix:'GPS 미수신', trackOff:'이동기록 꺼짐', refShort:'기준 --', hide:'접기',
+      noTarget:'목표 없음', notSet:'미지정', none:'없음', positionRequired:'기준위치 필요',
+      gpsNoFix:'GPS 미수신', trackOff:'기록 꺼짐', refShort:'기준 --', hide:'접기',
       paused:'일시정지', stale:'이전수신', referenceTag:'기준위치', address:'주소',
-      move:'이동', save:'저장', find:'찾기', northUp:'NORTH UP',
-      currentPosition:'현위치', nav:'항법', targetModeTitle:'목표지 // 경로계획',
+      move:'이동', save:'저장', find:'탐색', northUp:'NORTH UP',
+      currentPosition:'현위치', nav:'항법', targetModeTitle:'목표 // 경로계획',
       reticleTelemetry:'조준점 제원', followLabel:'자동추적', all:'전체',
       gpsFieldPosition:'GPS 상태 / 기준위치', loadRoute:'경로 불러오기', exportGpx:'GPX 내보내기',
-      mapMove:'지도이동', secure:'개척완료'
+      mapMove:'지도이동', secure:'확인완료',
+      routeDash:'경로선 · 점선', overlaySolid:'표식선 · 실선',
+      trackWait:'궤적 대기', trackSaved:'궤적 저장', siteEmpty:'저장된 거점이 없습니다.',
+      deleteSite:'삭제', startPoint:'출발점', viaPoint:'경유점', endPoint:'도착점', homePoint:'복귀점'
     },
     en: {
       language:'LANGUAGE', languageTitle:'LANGUAGE', korean:'한국어', english:'ENGLISH',
-      fieldControls:'FIELD CONTROLS', fieldMenu:'FIELD MENU', nearby:'NEARBY', layers:'LAYERS', display:'DISPLAY', points:'POINTS',
+      fieldControls:'FIELD CONTROLS', fieldMenu:'FIELD MENU', nearby:'SEARCH RANGE', layers:'LAYERS', display:'DISPLAY', points:'SITES',
       gpsStatus:'GPS STATUS', followOn:'FOLLOW ON', followOff:'FOLLOW OFF', roadBoost:'ROAD BOOST',
-      tempAtReticle:'TEMP POS @ RETICLE', savePoint:'SAVE POINT', setHome:'SET HOME', centerHome:'RECENTER HOME',
-      clearHome:'CLEAR HOME', clearTemp:'CLEAR TEMP POS', registeredRange:'REGISTERED RANGE',
-      mapLayers:'MAP MARKER LAYERS', reconTask:'RECON TASK', displayMode:'DISPLAY MODE',
-      target:'TARGET', plan:'PLAN', menu:'MENU', search:'SEARCH', set:'SET', draw:'DRAW',
+      tempAtReticle:'TEMP POS @ RETICLE', savePoint:'SAVE SITE', setHome:'SET RETURN PT', centerHome:'GO RETURN PT',
+      clearHome:'CLEAR RETURN PT', clearTemp:'CLEAR TEMP POS', registeredRange:'SEARCH RANGE',
+      mapLayers:'MAP LAYERS', reconTask:'RECON TASK', displayMode:'DISPLAY',
+      target:'OBJECTIVE', plan:'ROUTE', menu:'MENU', search:'SEARCH', set:'SET', draw:'PLOT',
       undo:'UNDO', exit:'EXIT', start:'START', via:'VIA', end:'END', done:'DONE',
       route:'ROUTE', overlay:'OVERLAY', clear:'CLEAR', pause:'PAUSE', resume:'RESUME',
-      nextLeg:'NEXT LEG', stopNav:'STOP', more:'MORE', trackRec:'TRACK REC', backtrack:'BACKTRACK',
-      share:'SHARE', revertLeg:'REVERT LEG', exitTarget:'EXIT TARGET', navControls:'NAV CONTROLS',
-      planPoints:'PLAN POINTS', quick:'QUICK', point:'POINT', pointInfo:'POINT INFO',
-      deletePoint:'DELETE POINT', deleteHome:'DELETE HOME',
-      reference:'REFERENCE', home:'HOME', temp:'TEMP POS', lastGps:'LAST GPS',
-      registered:'REGISTERED', unexplored:'UNEXPLORED', secured:'SECURED', user:'USER',
-      reticle:'RETICLE', locationSearch:'LOCATION SEARCH', targetSearch:'REGISTERED', wildRecon:'WILD RECON',
-      setPoint:'SET POINT', copy:'COPY', close:'CLOSE', cancel:'CANCEL',
-      noTarget:'NO TARGET', notSet:'NOT SET', none:'NONE', positionRequired:'POSITION REQUIRED',
+      nextLeg:'NEXT LEG', stopNav:'STOP NAV', more:'MORE', trackRec:'TRACK REC', backtrack:'BACKTRACK',
+      share:'SHARE', revertLeg:'PREV LEG', exitTarget:'EXIT OBJECTIVE', navControls:'NAV CONTROLS',
+      planPoints:'ROUTE POINTS', quick:'QUICK', point:'POINT', pointInfo:'SITE INFO',
+      deletePoint:'DELETE SITE', deleteHome:'DELETE RETURN PT',
+      reference:'REF POS', home:'RETURN PT', temp:'TEMP POS', lastGps:'LAST FIX',
+      registered:'REGISTERED', unexplored:'UNVERIFIED', secured:'VERIFIED', user:'USER',
+      reticle:'RETICLE', locationSearch:'POSITION SEARCH', targetSearch:'SEARCH SITES', wildRecon:'UNVERIFIED RECON',
+      setPoint:'SET SITE', copy:'COPY', close:'CLOSE', cancel:'CANCEL',
+      noTarget:'NO OBJECTIVE', notSet:'NOT SET', none:'NONE', positionRequired:'REF POS REQUIRED',
       gpsNoFix:'GPS NO FIX', trackOff:'TRACK OFF', refShort:'REF --', hide:'HIDE',
-      paused:'PAUSED', stale:'STALE', referenceTag:'REFERENCE', address:'ADDRESS',
-      move:'MOVE', save:'SAVE', find:'FIND', northUp:'NORTH UP',
-      currentPosition:'CURRENT POSITION', nav:'NAV', targetModeTitle:'TARGET MODE // ROUTE PLAN',
+      paused:'PAUSED', stale:'STALE', referenceTag:'REF POS', address:'ADDRESS',
+      move:'MOVE', save:'SAVE', find:'SEARCH', northUp:'NORTH UP',
+      currentPosition:'CURRENT POSITION', nav:'NAV', targetModeTitle:'OBJECTIVE // ROUTE PLAN',
       reticleTelemetry:'RETICLE TELEMETRY', followLabel:'FOLLOW', all:'ALL',
-      gpsFieldPosition:'GPS STATUS / FIELD POSITION', loadRoute:'LOAD ROUTE', exportGpx:'EXPORT GPX',
-      mapMove:'MOVE MAP', secure:'SECURED'
+      gpsFieldPosition:'GPS STATUS / REF POS', loadRoute:'LOAD ROUTE', exportGpx:'EXPORT GPX',
+      mapMove:'MOVE MAP', secure:'VERIFIED',
+      routeDash:'ROUTE · DASH', overlaySolid:'OVERLAY · SOLID',
+      trackWait:'TRACK WAIT', trackSaved:'TRACK SAVED', siteEmpty:'NO SAVED SITES.',
+      deleteSite:'DELETE', startPoint:'START PT', viaPoint:'VIA PT', endPoint:'END PT', homePoint:'RETURN PT'
     }
   };
 
@@ -133,6 +139,7 @@
     'PLAN POINTS':'planPoints',
     'QUICK':'quick',
     'POINT':'point',
+    'POINT INFO':'pointInfo',
     'DELETE POINT':'deletePoint',
     'DELETE HOME':'deleteHome',
     'REFERENCE':'reference',
@@ -140,6 +147,13 @@
     'HOME / EXIT':'home',
     'TEMP POS':'temp',
     'LAST GPS':'lastGps',
+    'HOME POINT':'homePoint',
+    'START POINT':'startPoint',
+    'VIA POINT':'viaPoint',
+    'END POINT':'endPoint',
+    'TRACK ACQUIRING':'trackWait',
+    'TRACK SAVED':'trackSaved',
+    'DRAW ON':'draw',
     'REGISTERED':'registered',
     'UNEXPLORED':'unexplored',
     'SECURED':'secured',
@@ -290,6 +304,66 @@
       }
     });
 
+    const drawButton = document.getElementById('targetDrawBtn');
+    if (drawButton) drawButton.textContent = window.reconT('draw');
+
+    const drawKindButton = document.getElementById('targetDrawKindBtn');
+    if (drawKindButton) drawKindButton.textContent = window.reconT(routeDrawKind === 'MARK' ? 'overlaySolid' : 'routeDash');
+
+    const navTrack = document.getElementById('navHudTrack');
+    if (navTrack) {
+      const raw = String(navTrack.textContent || '').trim();
+      const km = raw.match(/·\s*([\d.]+\s*KM)$/)?.[1] || '';
+      if (/TRACK ACQUIRING|궤적 대기/.test(raw)) navTrack.textContent = window.reconT('trackWait');
+      else if (/TRACK REC|궤적기록/.test(raw)) navTrack.textContent = `${window.reconT('trackRec')}${km ? ` · ${km}` : ''}`;
+      else if (/TRACK SAVED|궤적 저장/.test(raw)) navTrack.textContent = `${window.reconT('trackSaved')}${km ? ` · ${km}` : ''}`;
+      else if (/TRACK OFF|기록 꺼짐/.test(raw)) navTrack.textContent = window.reconT('trackOff');
+    }
+
+    const pointType = document.getElementById('planPointType');
+    if (pointType) {
+      const raw = String(pointType.textContent || '').trim();
+      const key = /HOME|복귀/.test(raw) ? 'homePoint'
+        : /START|출발/.test(raw) ? 'startPoint'
+        : /VIA|경유/.test(raw) ? 'viaPoint'
+        : /END|도착/.test(raw) ? 'endPoint' : null;
+      if (key) pointType.textContent = window.reconT(key);
+    }
+
+    document.querySelectorAll('#wpDrawer .wp-group:not(.v2721-reference-group)').forEach(section => {
+      const groupName = section.querySelector('.wp-group-name');
+      const rawGroup = String(groupName?.textContent || '').trim();
+      const groupKey =
+        ['REGISTERED','등록'].includes(rawGroup) ? 'registered' :
+        ['UNEXPLORED','UNVERIFIED','미확인'].includes(rawGroup) ? 'unexplored' :
+        ['SECURED','VERIFIED','확인완료'].includes(rawGroup) ? 'secured' :
+        ['USER','사용자'].includes(rawGroup) ? 'user' : null;
+      if (groupName && groupKey) groupName.textContent = window.reconT(groupKey);
+
+      section.querySelectorAll('.wp-item-status').forEach(status => {
+        const raw = String(status.textContent || '');
+        const match = raw.match(/^\[([^\]]+)\]\s*(.*)$/);
+        if (!match) return;
+        const translated = match[1].split('·').map(part => {
+          const token = part.trim();
+          if (token === 'REGISTERED' || token === '등록') return window.reconT('registered');
+          if (token === 'UNEXPLORED' || token === 'UNVERIFIED' || token === '미확인') return window.reconT('unexplored');
+          if (token === 'SECURED' || token === 'VERIFIED' || token === '확인완료') return window.reconT('secured');
+          if (token === 'USER' || token === '사용자') return window.reconT('user');
+          return token;
+        }).join(' · ');
+        status.textContent = `[${translated}] ${match[2]}`;
+      });
+
+      section.querySelectorAll('.wp-item-delete').forEach(btn => btn.textContent = window.reconT('deleteSite'));
+    });
+
+    const empty = document.querySelector('#wpListContainer > div');
+    if (empty && /저장된 POINTS가 없습니다|NO SAVED SITES/.test(empty.textContent || '')) {
+      empty.textContent = window.reconT('siteEmpty');
+    }
+
+    syncSiteCounter();
     syncLanguageButtons();
   }
 
@@ -353,8 +427,36 @@
     syncLanguageButtons();
   }
 
-  // Main bottom RECENTER duplicates the global adaptive center/follow control.
+  // The global adaptive position control owns RECENTER/CENTERED/FOLLOW.
+  // Keep it permanently visible and use the freed bottom slot for SITES.
   document.getElementById('primaryCenterBtn')?.remove();
+
+  function ensureMainSitesButton() {
+    const cluster = document.querySelector('.v26-main-cluster');
+    const sites = document.getElementById('btnWpCount');
+    if (!cluster || !sites) return;
+    const menuButton = [...cluster.querySelectorAll('button')].find(el => String(el.getAttribute('onclick') || '').includes("openFieldControls('menu')"));
+    sites.classList.add('v26-primary');
+    sites.onclick = () => { try { closeFieldControls(); } catch (e) {} openWpDrawer(); };
+    sites.dataset.reconI18n = 'points';
+    if (sites.parentElement !== cluster || (menuButton && sites.nextElementSibling !== menuButton)) {
+      cluster.insertBefore(sites, menuButton || null);
+    }
+  }
+
+  function syncSiteCounter() {
+    const counter = document.getElementById('btnWpCount');
+    if (!counter) return;
+    let count = 0;
+    try { count = getWaypoints('ALL').length; } catch (e) {}
+    counter.textContent = count > 0 ? `${window.reconT('points')} (${count})` : window.reconT('points');
+  }
+
+  const baseUpdateWpCounterV2731 = updateWpCounter;
+  updateWpCounter = function() {
+    try { baseUpdateWpCounterV2731(); } catch (e) {}
+    syncSiteCounter();
+  };
 
   // Persist DISPLAY theme, road emphasis and marker-layer visibility only.
   const baseSetOpticThemeV273 = setOpticTheme;
@@ -570,6 +672,14 @@
   }
   window.exitNavDrawMode = exitNavDrawMode;
 
+  const baseExitPlanSubmodeV2731 = exitPlanSubmode;
+  exitPlanSubmode = function() {
+    const needsSave = Boolean(targetModeActive && targetModePhase === 'PLAN' &&
+      (routeDirty || (routeCurrentSegment && routeCurrentSegment.length >= 2)));
+    if (needsSave && !saveTargetRoute()) return;
+    return baseExitPlanSubmodeV2731();
+  };
+
   const baseReturnToTargetPlanV273 = returnToTargetPlan;
   returnToTargetPlan = function() {
     if (navDrawMode) exitNavDrawMode(true);
@@ -606,6 +716,8 @@
   const baseRenderWpDrawerListV273 = renderWpDrawerList;
   renderWpDrawerList = function() {
     const out = baseRenderWpDrawerListV273();
+    bindKnownTexts(document.getElementById('wpDrawer'));
+    applyBoundTexts(document.getElementById('wpDrawer'));
     syncDynamicLanguage();
     return out;
   };
@@ -635,8 +747,10 @@
     }
   }, true);
 
+  ensureMainSitesButton();
   ensureLanguagePanel();
   ensureNavDrawControls();
   restoreDisplayPreferences();
   applyLanguage();
+  syncSiteCounter();
 })();
