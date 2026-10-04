@@ -79,6 +79,36 @@ body.v29-stabilized .v29-section input { font-size:12px; min-height:44px; }
 body.v29-stabilized .v29-metric-grid span { font-size:9.5px; color:var(--field-dim-readable); }
 body.v29-stabilized .v29-metric-grid strong { font-size:12px; }
 
+body.v29-stabilized .sys-telemetry,
+body.v29-stabilized .offline-badge,
+body.v29-stabilized .address-search-coords,
+body.v29-stabilized .route-locate-hint,
+body.v29-stabilized .v271-sheet-label,
+body.v29-stabilized .v271-via-empty,
+body.v29-stabilized .v271-point-address,
+body.v29-stabilized .v26-menu-note,
+body.v29-stabilized .gps-detail-cell span,
+body.v29-stabilized .coord-copy-feedback {
+  font-size:10px !important;
+  color:var(--field-dim-readable) !important;
+}
+body.v29-stabilized .address-search-name,
+body.v29-stabilized .address-value,
+body.v29-stabilized .gps-detail-cell strong {
+  font-size:11.5px !important;
+}
+body.v29-stabilized .target-panel-collapse,
+body.v29-stabilized .v271-sheet-close,
+body.v29-stabilized .global-gps-button,
+body.v29-stabilized .gps-center-button {
+  min-width:44px !important;
+  min-height:44px !important;
+}
+body.v29-stabilized .target-panel-collapse {
+  padding:0 7px;
+  font-size:10px;
+}
+
 /* ---------- PLAN header split ---------- */
 body.v29-stabilized:not(.target-nav) #planInfoTrigger {
   display:grid;
