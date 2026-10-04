@@ -369,6 +369,7 @@
   function setBacktrackTrack(planId, trackId) {
     const track = base.track?.get?.(trackId);
     if (!track || String(track.planId || '') !== String(planId || '')) return false;
+    if ((base.track?.buildBacktrackNodes?.(track) || []).length < 2) return false;
     const prefs = getBacktrackPrefs();
     prefs[String(planId)] = String(trackId);
     return writeJson(BACKTRACK_PREF_KEY, prefs);
@@ -726,13 +727,16 @@
     }
 
     tracks.forEach(track=>{
-      parts.push('<trk><name>'+xmlEscape('TRACK · '+new Date(track.startedAt).toISOString())+'</name>');
-      (track.segments||[]).filter(seg=>seg?.kind==='MEASURED'&&Array.isArray(seg.points)&&seg.points.length).forEach(seg=>{
-        parts.push('<trkseg>');
-        seg.points.forEach(p=>parts.push(trkPointXml(p)));
-        parts.push('</trkseg>');
-      });
-      parts.push('</trk>');
+      const measured=(track.segments||[]).filter(seg=>seg?.kind==='MEASURED'&&Array.isArray(seg.points)&&seg.points.length);
+      if(measured.length){
+        parts.push('<trk><name>'+xmlEscape('TRACK · '+new Date(track.startedAt).toISOString())+'</name>');
+        measured.forEach(seg=>{
+          parts.push('<trkseg>');
+          seg.points.forEach(p=>parts.push(trkPointXml(p)));
+          parts.push('</trkseg>');
+        });
+        parts.push('</trk>');
+      }
 
       if(includeEstimated){
         (track.segments||[]).filter(seg=>seg?.kind==='ESTIMATED').forEach((seg,index)=>{
