@@ -1,0 +1,63 @@
+/* Tactical Recon V27.3 UI / navigation workflow */
+
+.v273 .v26-main-cluster {
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.v273 .v26-main-cluster .v26-primary { width:100%; min-width:0; }
+
+.v273 .language-option-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+}
+.v273 .language-option-grid .osb-btn.active {
+  border-color:var(--field-active);
+  color:var(--field-active);
+  background:rgba(255,255,255,.05);
+}
+
+.v273 .nav-draw-only { display:none; }
+.v273.target-nav.nav-draw-submode .target-mode-actions .nav-only { display:none !important; }
+.v273.target-nav.nav-draw-submode .target-mode-actions .nav-draw-only {
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+}
+.v273.target-nav.nav-draw-submode .target-mode-actions {
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+}
+.v273.target-nav.nav-draw-submode .target-mode-panel {
+  box-shadow:0 0 0 1px var(--field-active) inset,0 -8px 30px rgba(0,0,0,.32);
+}
+.v273.target-nav.nav-draw-submode .nav-hud-distance-label::after {
+  content:' · DRAW';
+  color:var(--field-active);
+}
+html[lang="ko"] .v273.target-nav.nav-draw-submode .nav-hud-distance-label::after {
+  content:' · 작도';
+}
+
+.v273 #navDrawBtn { border-style:dashed; }
+.v273 #navDrawDoneBtn { border-color:var(--field-active); }
+
+.v273 .gps-center-button.following svg path,
+.v273 .gps-center-button.following svg circle {
+  stroke-linecap:square;
+  stroke-linejoin:miter;
+}
+.v273 .gps-center-button.following .gps-center-core {
+  fill:currentColor;
+  stroke:currentColor;
+}
+
+.v273 .v2721-reference-head .wp-group-name { letter-spacing:.65px; }
+
+@media (max-width:768px) {
+  .v273.target-nav.nav-draw-submode .target-mode-actions { gap:3px; }
+  .v273.target-nav.nav-draw-submode .target-mode-actions .osb-btn {
+    padding:0 3px;
+    font-size:8px;
+  }
+}
