@@ -94,9 +94,9 @@ test('NAV recovery never explicitly starts GPS or bearing sensor',()=>{
 });
 
 test('Track HUD is start pause resume while STOP remains management action',()=>{
-  const start=stabilize.indexOf('function installSaferTrackHud');
-  const end=stabilize.indexOf('/* ---------- NAV recovery'),start);
-  const block=stabilize.slice(start,end);
+  const trackStart=stabilize.indexOf('function installSaferTrackHud');
+  const trackEnd=stabilize.indexOf('/* ---------- NAV recovery',trackStart);
+  const block=stabilize.slice(trackStart,trackEnd);
   assert(block.includes("base.track.state==='OFF'"));
   assert(block.includes("base.track.state==='RECORDING'"));
   assert(block.includes('base.track.pause()'));
@@ -112,8 +112,8 @@ test('Full backup covers app localStorage and IndexedDB mirror',()=>{
 });
 
 test('Free track flow can start without opening PLAN editor',()=>{
-  const start=stabilize.indexOf('function toggleFreeTrack');
-  const block=stabilize.slice(start,start+1200);
+  const freeStart=stabilize.indexOf('function toggleFreeTrack');
+  const block=stabilize.slice(freeStart,freeStart+1200);
   assert(block.includes('ensureFreePlan()'));
   assert(block.includes('base.state.activePlanId=plan.id'));
   assert(block.includes('base.track.start(plan.id,trackSeed())'));
