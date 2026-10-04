@@ -59,7 +59,7 @@ window.v28 = (function() {
       
       const checkPt = (pt, allowedSources) => {
          if (typeof pt.lat !== 'number' || typeof pt.lon !== 'number' || !isFinite(pt.lat) || !isFinite(pt.lon) || pt.lat < -90 || pt.lat > 90 || pt.lon < -180 || pt.lon > 180) return false;
-         if (!isValidTimestamp(pt.timestamp)) return false;
+         if (pt.timestamp !== undefined && !isValidTimestamp(pt.timestamp)) return false;
          if (!allowedSources.includes(pt.source)) return false;
          return true;
       };
@@ -205,15 +205,23 @@ window.v28 = (function() {
         }).filter(p => !isNaN(p.lat) && !isNaN(p.lon) && isFinite(p.lat) && isFinite(p.lon) && p.lat >= -90 && p.lat <= 90 && p.lon >= -180 && p.lon <= 180) : []
       };
     } else if (seg.kind === 'ESTIMATED') {
-      let fromSrc = sanitizeString(seg.from?.source) || 'GPS';
-      if (!['GPS', 'TEMP', 'LAST_FIX'].includes(fromSrc)) fromSrc = 'GPS';
-      let toSrc = sanitizeString(seg.to?.source) || 'GPS';
-      if (!['GPS', 'TEMP'].includes(toSrc)) toSrc = 'GPS';
+      const sanitizeEstimatedEndpoint = (pt) => {
+        if (!pt || typeof pt !== 'object') return undefined;
+        const endpoint = {
+          lat: Number(pt.lat),
+          lon: Number(pt.lon),
+          source: sanitizeString(pt.source)
+        };
+        if (Object.prototype.hasOwnProperty.call(pt, 'timestamp')) {
+          endpoint.timestamp = pt.timestamp;
+        }
+        return endpoint;
+      };
       return {
         kind: 'ESTIMATED',
-        reason: sanitizeString(seg.reason) || 'TEMP_BRIDGE',
-        from: seg.from ? { lat: Number(seg.from.lat), lon: Number(seg.from.lon), timestamp: sanitizeTimestamp(seg.from.timestamp), source: fromSrc } : undefined,
-        to: seg.to ? { lat: Number(seg.to.lat), lon: Number(seg.to.lon), timestamp: sanitizeTimestamp(seg.to.timestamp), source: toSrc } : undefined
+        reason: sanitizeString(seg.reason),
+        from: sanitizeEstimatedEndpoint(seg.from),
+        to: sanitizeEstimatedEndpoint(seg.to)
       };
     }
     return null;
@@ -275,11 +283,19 @@ window.v28 = (function() {
   }
 
   function resolveRegisteredTarget(targetId) {
-    if (typeof window !== 'undefined' && Array.isArray(window.RECON_TARGETS)) {
-       const found = window.RECON_TARGETS.find(t => t && String(t.id) === String(targetId));
-       if (found && Array.isArray(found.coords) && found.coords.length === 2 && isFinite(found.coords[0]) && isFinite(found.coords[1])) {
-          return { id: String(found.id), name: found.name || 'Target ' + targetId, coords: [found.coords[0], found.coords[1]], source: 'SITE' };
-       }
+    if (typeof RECON_TARGETS !== 'undefined' && Array.isArray(RECON_TARGETS)) {
+      const found = RECON_TARGETS.find(t => t && String(t.id) === String(targetId));
+      if (found) {
+        const coords = sanitizeCoords(found.coords);
+        if (coords) {
+          return {
+            id: String(found.id),
+            name: found.name || 'Target ' + targetId,
+            coords: coords,
+            source: 'SITE'
+          };
+        }
+      }
     }
     return null;
   }
