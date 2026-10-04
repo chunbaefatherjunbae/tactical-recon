@@ -249,6 +249,20 @@
     if (revert) revert.textContent = window.reconT('revertLeg');
     const temp = document.getElementById('tempQuickBtn');
     if (temp) temp.textContent = currentLanguage === 'ko' ? '임시' : 'TEMP';
+
+    const centerControl = document.getElementById('gpsCenterBtn');
+    if (centerControl) {
+      if (gpsFollowEnabled) {
+        centerControl.title = currentLanguage === 'ko' ? '자동추적 켬 · 탭하여 해제' : 'FOLLOW ON · TAP TO DISENGAGE';
+        centerControl.setAttribute('aria-label', currentLanguage === 'ko' ? '자동추적 해제' : 'DISENGAGE FOLLOW');
+      } else if (gpsPowerEnabled && hasGpsFix && centerControl.classList.contains('active')) {
+        centerControl.title = currentLanguage === 'ko' ? '현위치 중앙 · 다시 탭하면 자동추적' : 'POSITION CENTERED · TAP AGAIN FOR FOLLOW';
+        centerControl.setAttribute('aria-label', currentLanguage === 'ko' ? '자동추적 시작' : 'ENGAGE FOLLOW');
+      } else {
+        centerControl.title = currentLanguage === 'ko' ? '기준위치로 복귀' : 'RECENTER TO REFERENCE POSITION';
+        centerControl.setAttribute('aria-label', currentLanguage === 'ko' ? '기준위치로 복귀' : 'RECENTER');
+      }
+    }
     const kind = document.getElementById('targetDrawKindBtn');
     if (kind) kind.textContent = window.reconT(routeDrawKind === 'MARK' ? 'overlay' : 'route');
 
@@ -469,9 +483,7 @@
   function syncSiteCounter() {
     const counter = document.getElementById('btnWpCount');
     if (!counter) return;
-    let count = 0;
-    try { count = getWaypoints('ALL').length; } catch (e) {}
-    counter.textContent = count > 0 ? `${window.reconT('points')} (${count})` : window.reconT('points');
+    counter.textContent = window.reconT('points');
   }
 
   const baseUpdateWpCounterV2731 = updateWpCounter;
