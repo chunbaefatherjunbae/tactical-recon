@@ -624,7 +624,7 @@
         renderOverlayAnnotations(lastPlanId);
         if(sheet.classList.contains('open')&&['reuse','tracks','overlay','emergency','export'].includes(activeTab))renderShell();
       }
-    },700);
+    },1500);
 
     root.openV29FieldKit=openSheet;
   }
