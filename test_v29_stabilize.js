@@ -29,9 +29,9 @@ test('Offline vendor dependencies are local static assets',()=>{
 });
 
 test('Index and service worker use the final V29 cache identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'v29-stabilized-20261005-2';"));
-  assert(index.includes('service-worker.js?v=29-stabilized-20261005-2'));
-  assert(index.includes('tactical-recon-sw-reload-v29-stabilized-20261005-2'));
+  assert(sw.includes("const CACHE_VERSION = 'v29-mission-ux-20261005-1';"));
+  assert(index.includes('service-worker.js?v=29-mission-ux-20261005-1'));
+  assert(index.includes('tactical-recon-sw-reload-v29-mission-ux-20261005-1'));
 });
 
 test('Index starts without Leaflet or MGRS CDN dependencies',()=>{
@@ -120,11 +120,91 @@ test('Site filters separate status from source',()=>{
   assert(stabilize.includes("REGISTERED:(siteSourceFilter!=='LOCAL'&&siteStatusFilter==='ALL')"));
 });
 
-test('Task menu exposes bearing as first-class function',()=>{
-  assert(stabilize.includes("data-v29-menu=\"bearing\""));
-  assert(stabilize.includes("makeSection('control-bearing','BEARING'"));
-  assert(stabilize.includes("t('bearing')"));
+test('Mission menu keeps bearing contextual to the active objective',()=>{
+  assert(stabilize.includes("data-v29-mission-menu=\"position\""));
+  assert(stabilize.includes("data-v29-mission-menu=\"maptools\""));
+  assert(stabilize.includes("data-v29-mission-menu=\"records\""));
+  assert(stabilize.includes("data-v29-mission-menu=\"data\""));
+  assert(stabilize.includes("data-v29-mission-menu=\"system\""));
+  assert(stabilize.includes('function openMissionBearing()'));
+  assert(stabilize.includes("openFieldControls('bearing')"));
+  assert(css.includes('body.v29-stabilized.target-mode.v29-bearing-open .field-control-tray'));
 });
+
+
+test('Home bar exposes mission-first RECON SITES PLAN MENU',()=>{
+  assert(stabilize.includes("id=\"v29MainRecon\""));
+  assert(stabilize.includes("id=\"btnWpCount\""));
+  assert(stabilize.includes("id=\"v29MainPlan\""));
+  assert(stabilize.includes("id=\"v29MainMenu\""));
+  assert(stabilize.includes("openFieldControls('recon')"));
+  assert(stabilize.includes("base.ui.openRoutes()"));
+  assert(css.includes('grid-template-columns:repeat(4,minmax(0,1fr))'));
+});
+
+test('RECON treats recorded sites and unexplored coordinates as peer exploration sources',()=>{
+  assert(stabilize.includes("id=\"v29RecordedRecon\""));
+  assert(stabilize.includes("id=\"v29WildRecon\""));
+  assert(stabilize.includes("reconRecorded:'기록 거점 탐색'"));
+  assert(stabilize.includes("reconWild:'미개척 탐색'"));
+  assert(stabilize.includes("item?.source==='REGISTERED_VERIFICATION'"));
+  assert(stabilize.includes("lastReconMode='RECORDED'"));
+  assert(stabilize.includes("lastReconMode='WILD'"));
+});
+
+test('Recorded built-in sites can be field verified without modifying the built-in DB',()=>{
+  assert(stabilize.includes("statusType==='REGISTERED'"));
+  assert(stabilize.includes("source:'REGISTERED_VERIFICATION'"));
+  assert(stabilize.includes("registeredSourceId:String(registered.id)"));
+  assert(stabilize.includes("preSecureStatus:'REGISTERED'"));
+  assert(stabilize.includes("localIds.has(String(item.id))"));
+});
+
+test('Objective context stays on the map with REF OBJ framing and mission telemetry',()=>{
+  assert(stabilize.includes('function frameObjectiveContext()'));
+  assert(stabilize.includes("map.fitBounds(L.latLngBounds([ref.coords,obj.coords])"));
+  assert(stabilize.includes('function syncMissionMapContext()'));
+  assert(stabilize.includes("DIST '+missionDistance(bundle.distanceKm)+' · GRID '"));
+  assert(stabilize.includes('function openMissionObjectiveSheet()'));
+  assert(stabilize.includes("id='v29ObjectiveInfoSheet'"));
+});
+
+test('Light map is a normal map tool and tile fallback opens it',()=>{
+  assert(stabilize.includes("id='v29LightMap'"));
+  assert(stabilize.includes("id='v29LightMapBtn'"));
+  assert(stabilize.includes('function openLightMap()'));
+  assert(stabilize.includes("clone.addEventListener('click',openLightMap)"));
+  assert(css.includes('.v29-light-map-canvas'));
+  assert(css.includes('.v29-light-map-readout'));
+});
+
+test('Draw UX removes gesture instructions and selects overlay meaning before drawing',()=>{
+  assert(css.includes('body.v29-stabilized.route-drawing .target-mode-kicker::after'));
+  assert(css.includes("content:'' !important"));
+  assert(stabilize.includes('function openDrawTypePicker()'));
+  assert(stabilize.includes("['DANGER','drawDanger']"));
+  assert(stabilize.includes("['BLOCKED','drawBlocked']"));
+  assert(stabilize.includes("['OBSERVATION','drawObservation']"));
+  assert(stabilize.includes("['REFERENCE','drawReference']"));
+  assert(stabilize.includes("core.overlays.set(planId,i,activeOverlayType,'')"));
+});
+
+test('Draw clear owns current stroke plus saved route or overlay segments',()=>{
+  const start=stabilize.indexOf('function installDrawUx()');
+  const end=stabilize.indexOf('function installRegisteredVerification()',start);
+  const block=stabilize.slice(start,end);
+  assert(block.includes("const hasCurrent=typeof routeCurrentSegment"));
+  assert(block.includes("if(typeof cancelCurrentRouteStroke==='function')cancelCurrentRouteStroke()"));
+  assert(block.includes("if(overlay)routeMarkSegments=[];else routeDraftSegments=[]"));
+  assert(block.includes("core.overlays.clear(base.state.activePlanId,item.segmentIndex)"));
+});
+
+test('Free track label returns to start state after TRACK stop',()=>{
+  assert(stabilize.includes("if(base.track?.stop&&!base.track.stop.__v29MenuSync)"));
+  assert(stabilize.includes("setTimeout(()=>{syncFreeTrackButton();syncMissionMenuText();},0)"));
+  assert(stabilize.includes("id=\"v29FreeTrackMissionBtn\""));
+});
+
 
 test('Bearing sensor is opt-in and shuts down on exit/background',()=>{
   assert(stabilize.includes('async function startBearingSensor()'));
