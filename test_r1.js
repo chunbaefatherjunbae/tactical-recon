@@ -23,9 +23,9 @@ test('R1 is the final runtime layer',()=>{
 });
 
 test('PWA cache identity moved to R1',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r1-4-visual-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r1-4-visual-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r1-4-visual-20261006-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r1-4-1-reticle-20261006-1';"));
+  assert(index.includes('service-worker.js?v=r1-4-1-reticle-20261006-1'));
+  assert(index.includes('tactical-recon-sw-reload-r1-4-1-reticle-20261006-1'));
 });
 
 test('Home bar is RECON SITES RECORDS MENU',()=>{
@@ -171,6 +171,14 @@ test('R1.4 restores V-series reticle visibility',()=>{
   assert(css.includes('width:40px !important'));
   assert(css.includes('height:40px !important'));
   assert(css.includes('background:var(--field-active) !important'));
+});
+
+test('R1.4.1 restores the actual V-series mobile reticle size',()=>{
+  assert(css.includes('/* R1.4.1 // restore the actual V-series mobile reticle dimensions. */'));
+  assert(css.includes('width:94px !important'));
+  assert(css.includes('height:94px !important'));
+  assert(css.includes('width:34px !important'));
+  assert(css.includes('height:34px !important'));
 });
 
 test('R1.4 corners use screen edges and scale is bottom-center',()=>{
