@@ -483,6 +483,94 @@
     updateTargetModePanel=wrapped;
   }
 
+
+  function blurSearchFocus(scope){
+    try{
+      const active=document.activeElement;
+      if(active&&(!scope||scope.contains(active))&&typeof active.blur==='function')active.blur();
+    }catch(e){}
+  }
+
+  function bindReliableClose(selector,handler,flag){
+    const btn=document.querySelector(selector);
+    if(!btn||btn.dataset[flag]==='1')return;
+    btn.dataset[flag]='1';
+    btn.removeAttribute('onclick');
+    btn.addEventListener('click',event=>{
+      event.preventDefault();
+      event.stopPropagation();
+      handler();
+    });
+  }
+
+  function installSearchCloseReliability(){
+    if(typeof closePlanSearch==='function'&&!closePlanSearch.__v29ReliableClose){
+      const previous=closePlanSearch;
+      const wrapped=function(){
+        locationTokens.plan++;
+        const sheet=document.getElementById('planSearchSheet');
+        blurSearchFocus(sheet);
+        const out=previous.apply(this,arguments);
+        sheet?.classList.remove('open');
+        sheet?.setAttribute('aria-hidden','true');
+        return out;
+      };
+      wrapped.__v29ReliableClose=true;
+      closePlanSearch=wrapped;
+    }
+
+    if(typeof closeAddressSearch==='function'&&!closeAddressSearch.__v29ReliableClose){
+      const previous=closeAddressSearch;
+      const wrapped=function(){
+        locationTokens.address++;
+        const backdrop=document.getElementById('addressSearchBackdrop');
+        blurSearchFocus(backdrop);
+        const out=previous.apply(this,arguments);
+        if(backdrop)backdrop.style.display='none';
+        return out;
+      };
+      wrapped.__v29ReliableClose=true;
+      closeAddressSearch=wrapped;
+    }
+
+    if(typeof closeRouteLocate==='function'&&!closeRouteLocate.__v29ReliableClose){
+      const previous=closeRouteLocate;
+      const wrapped=function(){
+        locationTokens.route++;
+        const backdrop=document.getElementById('routeLocateBackdrop');
+        blurSearchFocus(backdrop);
+        const out=previous.apply(this,arguments);
+        if(backdrop)backdrop.style.display='none';
+        return out;
+      };
+      wrapped.__v29ReliableClose=true;
+      closeRouteLocate=wrapped;
+    }
+
+    bindReliableClose('#planSearchSheet .v271-sheet-close',()=>closePlanSearch(),'v29ReliableClose');
+    bindReliableClose('#addressSearchBackdrop .promo-actions button[onclick*="closeAddressSearch"]',()=>closeAddressSearch(),'v29ReliableClose');
+    bindReliableClose('#routeLocateBackdrop .promo-actions button[onclick*="closeRouteLocate"]',()=>closeRouteLocate(),'v29ReliableClose');
+
+    if(!document.documentElement.dataset.v29SearchEscape){
+      document.documentElement.dataset.v29SearchEscape='1';
+      document.addEventListener('keydown',event=>{
+        if(event.key!=='Escape')return;
+        const plan=document.getElementById('planSearchSheet');
+        const address=document.getElementById('addressSearchBackdrop');
+        const route=document.getElementById('routeLocateBackdrop');
+        const planOpen=Boolean(plan?.classList.contains('open'));
+        const addressOpen=Boolean(address&&getComputedStyle(address).display!=='none');
+        const routeOpen=Boolean(route&&getComputedStyle(route).display!=='none');
+        if(!planOpen&&!addressOpen&&!routeOpen)return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if(planOpen)closePlanSearch();
+        if(addressOpen)closeAddressSearch();
+        if(routeOpen)closeRouteLocate();
+      },true);
+    }
+  }
+
   /* ---------- shared map location picker ---------- */
   function pickerLabel(mode){
     if(mode==='SITE')return t('pickerSite');
@@ -2103,6 +2191,7 @@
     document.body.classList.add('v29-stabilized');
     installLastFix();
     installUnifiedSearch();
+    installSearchCloseReliability();
     if(typeof openAddressSearch==='function'&&!openAddressSearch.__v29PickerAware){
       const previous=openAddressSearch;
       const wrapped=function(){

@@ -3,7 +3,11 @@ const assert=require('assert');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
+const stable=fs.readFileSync('v27-stable.js','utf8');
+const v28source=fs.readFileSync('v28.js','utf8');
 const runtime=fs.readFileSync('v28-runtime.js','utf8');
+const v29source=fs.readFileSync('v29.js','utf8');
+const v29ui=fs.readFileSync('v29-ui.js','utf8');
 const storage=fs.readFileSync('v29-storage.js','utf8');
 const stabilize=fs.readFileSync('v29-stabilize.js','utf8');
 const css=fs.readFileSync('v29-stabilize.css','utf8');
@@ -28,10 +32,11 @@ test('Offline vendor dependencies are local static assets',()=>{
   assert.strictEqual(sw.includes('VENDOR_ASSETS'),false);
 });
 
-test('Index and service worker use the final V29 cache identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'v29-mission-map-20261005-2';"));
-  assert(index.includes('service-worker.js?v=29-mission-ux-20261005-1'));
-  assert(index.includes('tactical-recon-sw-reload-v29-mission-map-20261005-2'));
+test('Index and service worker use one interaction-hotfix cache identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'v29-interaction-hotfix-20261005-3';"));
+  assert(index.includes('service-worker.js?v=v29-interaction-hotfix-20261005-3'));
+  assert(index.includes('tactical-recon-sw-reload-v29-interaction-hotfix-20261005-3'));
+  assert.strictEqual(index.includes('service-worker.js?v=29-mission-ux-20261005-1'),false);
 });
 
 test('Index starts without Leaflet or MGRS CDN dependencies',()=>{
@@ -80,6 +85,62 @@ test('PLAN header splits objective and NAV actions and removes extra NAV button'
   assert(stabilize.includes("if(typeof startTargetNavigation==='function')startTargetNavigation();"));
   assert(stabilize.includes("document.getElementById('v28PlanNavBtn')?.remove()"));
   assert(css.includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
+});
+
+
+
+test('NEXT LEG is a normal tap action, not an undocumented hold gesture',()=>{
+  assert.strictEqual(stable.includes('NEXT_LEG_HOLD_MS'),false);
+  const start=stable.indexOf('function bindNextLeg(btn)');
+  const end=stable.indexOf('function configureNavToolbar()',start);
+  assert(start>=0&&end>start);
+  const block=stable.slice(start,end);
+  assert(block.includes("btn.addEventListener('click'"));
+  assert(block.includes('commitNextLeg()'));
+  assert.strictEqual(block.includes('pointerdown'),false);
+  assert.strictEqual(block.includes('setTimeout'),false);
+});
+
+test('Location search close lifecycle is owned by the final V29 layer',()=>{
+  const start=stabilize.indexOf('function installSearchCloseReliability()');
+  const end=stabilize.indexOf('/* ---------- shared map location picker ---------- */',start);
+  assert(start>=0&&end>start);
+  const block=stabilize.slice(start,end);
+  assert(block.includes("locationTokens.plan++"));
+  assert(block.includes("locationTokens.address++"));
+  assert(block.includes("locationTokens.route++"));
+  assert(block.includes("sheet?.classList.remove('open')"));
+  assert(block.includes("sheet?.setAttribute('aria-hidden','true')"));
+  assert(block.includes("blurSearchFocus"));
+  assert(block.includes("removeAttribute('onclick')"));
+  assert(block.includes("event.stopImmediatePropagation()"));
+  assert(css.includes('body.v29-stabilized .v271-sheet-close'));
+  assert(css.includes('pointer-events:auto !important'));
+});
+
+test('Every inline UI action resolves to a loaded runtime symbol',()=>{
+  const loaded=[index,stable,v28source,storage,runtime,v29source,v29ui,stabilize].join('\n');
+  const handlers=[...index.matchAll(/\bon(?:click|change|input|keydown|pointerdown|pointerup|dblclick)\s*=\s*"([^"]+)"/g)].map(m=>m[1]);
+  const calls=new Set();
+  handlers.forEach(handler=>{
+    for(const match of handler.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)){
+      const name=match[1];
+      if(!['if','for','while','switch','function','Math','String','Number','Boolean','Object','Array','Date','JSON','encodeURIComponent','parseInt','parseFloat','stopPropagation','preventDefault'].includes(name))calls.add(name);
+    }
+  });
+  const escape=name=>name.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\test('Objective reticle and site creation share map location picker',()=>{');
+  const defined=name=>{
+    const n=escape(name);
+    return [
+      new RegExp('function\\s+'+n+'\\s*\\('),
+      new RegExp('\\b'+n+'\\s*=\\s*(?:async\\s*)?function\\b'),
+      new RegExp('\\b'+n+'\\s*=\\s*(?:async\\s*)?\\([^)]*\\)\\s*=>'),
+      new RegExp('window\\.'+n+'\\s*='),
+      new RegExp('root\\.'+n+'\\s*=')
+    ].some(re=>re.test(loaded));
+  };
+  const unresolved=[...calls].filter(name=>!defined(name));
+  assert.deepStrictEqual(unresolved,[]);
 });
 
 test('Objective reticle and site creation share map location picker',()=>{

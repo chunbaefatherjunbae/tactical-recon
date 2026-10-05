@@ -10,7 +10,6 @@
   document.body?.classList.add('v272');
 
   const CENTER_TOLERANCE_PX = 18;
-  const NEXT_LEG_HOLD_MS = 700;
   let lastGpsReference = null;
   let tempReferenceOverride = false;
   let lastGpsMarkerV272 = null;
@@ -216,21 +215,27 @@
   function revertLastLeg(){if(!targetModeActive||targetModePhase!=='NAV'||!navLegRevertState)return;const s=navLegRevertState;navLegIndex=s.legIndex;navLegTimes=[...s.navLegTimes];navLegStartedAt=Date.now()-Math.max(0,s.previousLegElapsedMs);navLegPausedMs=0;navPausedLegElapsed=s.previousLegElapsedMs;navLegRevertState=null;updateTargetModePanel();syncRevert();}
   window.revertLastLeg=revertLastLeg;
 
-  function bindHold(btn){
-    if(!btn||btn.dataset.v272HoldBound==='1')return;btn.dataset.v272HoldBound='1';btn.removeAttribute('onclick');let timer=0,fired=false;
-    const cancel=()=>{clearTimeout(timer);timer=0;btn.classList.remove('hold-arming');};
-    btn.addEventListener('pointerdown',e=>{if(btn.disabled)return;e.preventDefault();fired=false;cancel();btn.classList.add('hold-arming');try{btn.setPointerCapture(e.pointerId);}catch(_){}timer=setTimeout(()=>{fired=true;btn.classList.remove('hold-arming');commitNextLeg();if(navigator.vibrate)try{navigator.vibrate(18);}catch(_){}},NEXT_LEG_HOLD_MS);});
-    ['pointerup','pointercancel','pointerleave'].forEach(t=>btn.addEventListener(t,e=>{if(!fired)cancel();else btn.classList.remove('hold-arming');try{btn.releasePointerCapture(e.pointerId);}catch(_){}}));
-    btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
+  function bindNextLeg(btn){
+    if(!btn||btn.dataset.v272NextBound==='1')return;
+    btn.dataset.v272NextBound='1';
+    btn.removeAttribute('onclick');
+    btn.classList.remove('nav-next-hold','hold-arming');
+    btn.addEventListener('click',e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      if(btn.disabled)return;
+      commitNextLeg();
+      if(navigator.vibrate)try{navigator.vibrate(12);}catch(_){}
+    });
   }
 
   function configureNavToolbar(){
     const bar=document.getElementById('targetModeToolbar');if(!bar)return;const b=[...bar.querySelectorAll('.nav-only')];if(b.length<5)return;
     b[0].id='navSearchBtn';if(!document.body?.classList.contains('v28-integrated'))b[0].textContent=window.reconT?.('search')||'SEARCH';b[0].removeAttribute('onclick');b[0].onclick=()=>openPlanSearch();b[0].disabled=false;
     b[1].id='navPauseBtn';b[1].classList.remove('gps-follow-toggle');b[1].removeAttribute('onclick');b[1].onclick=toggleNavPause;b[1].disabled=false;
-    b[2].id='targetNextLegBtn';b[2].textContent=window.reconT?.('nextLeg')||'NEXT LEG';b[2].classList.add('nav-next-hold');bindHold(b[2]);
+    b[2].id='targetNextLegBtn';b[2].textContent=window.reconT?.('nextLeg')||'NEXT LEG';bindNextLeg(b[2]);
     b[3].id='targetNavStopBtn';b[3].textContent=window.reconT?.('stopNav')||'STOP';b[4].id='navMoreBtn';b[4].textContent=window.reconT?.('more')||'MORE';
-    const compact=document.getElementById('navCollapsedNextLegBtn');if(compact){compact.textContent=window.reconT?.('nextLeg')||'NEXT LEG';compact.classList.add('nav-next-hold');bindHold(compact);}
+    const compact=document.getElementById('navCollapsedNextLegBtn');if(compact){compact.textContent=window.reconT?.('nextLeg')||'NEXT LEG';bindNextLeg(compact);}
     const grid=document.querySelector('#navMoreSheet .v271-more-grid');if(grid&&!document.getElementById('navRevertLegBtn')){const r=document.createElement('button');r.className='osb-btn';r.id='navRevertLegBtn';r.type='button';r.textContent=window.reconT?.('revertLeg')||'REVERT LEG';r.onclick=revertLastLeg;grid.insertBefore(r,grid.querySelector('.v271-delete-button')||null);}syncPauseButton();syncRevert();
   }
 

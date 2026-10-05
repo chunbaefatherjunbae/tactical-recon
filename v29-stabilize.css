@@ -104,6 +104,10 @@ body.v29-stabilized .gps-center-button {
   min-width:44px !important;
   min-height:44px !important;
 }
+body.v29-stabilized .v271-sheet-close {
+  touch-action:manipulation;
+  pointer-events:auto !important;
+}
 body.v29-stabilized .target-panel-collapse {
   padding:0 7px;
   font-size:10px;
