@@ -2962,6 +2962,24 @@
   }
 
 
+
+  function syncR13FieldShell(){
+    const mgrsLabel=document.querySelector('.telemetry-osd .osd-mgrs-btn > div:first-child');
+    if(mgrsLabel)mgrsLabel.textContent='MGRS';
+    try{
+      if(typeof map!=='undefined'&&map?.invalidateSize)map.invalidateSize({animate:false,pan:false});
+    }catch(e){}
+    scheduleR12OverlayLayout();
+    syncR13WorkingGridUi();
+  }
+
+  function installR13FieldShell(){
+    syncR13FieldShell();
+    window.addEventListener('pageshow',()=>setTimeout(syncR13FieldShell,0));
+    window.visualViewport?.addEventListener('resize',()=>requestAnimationFrame(syncR13FieldShell),{passive:true});
+    setTimeout(syncR13FieldShell,90);
+  }
+
   /* ---------- language + lifecycle ---------- */
   function syncAllText(){
     syncMenuText();syncSiteControlsText();refreshBearingPanel();syncPlanHeader();syncMissionHomebarText();syncMissionMenuText();syncReconPanel();syncMissionHeader();syncMissionMapModeUi();syncR1MapSearch();renderR1Records();
@@ -3008,6 +3026,7 @@
     installR1Shell();
     installR12OverlayLayout();
     installR13SearchUi();
+    installR13FieldShell();
 
     const previousRender=typeof renderWpDrawerList==='function'?renderWpDrawerList:null;
     if(previousRender&&!previousRender.__v29Sites){
