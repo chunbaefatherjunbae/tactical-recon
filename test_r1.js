@@ -23,9 +23,9 @@ test('R1 is the final runtime layer',()=>{
 });
 
 test('PWA cache identity moved to R1',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r1-2-reticle-20261005-1';"));
-  assert(index.includes('service-worker.js?v=r1-2-reticle-20261005-1'));
-  assert(index.includes('tactical-recon-sw-reload-r1-2-reticle-20261005-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r1-3-field-20261005-1';"));
+  assert(index.includes('service-worker.js?v=r1-3-field-20261005-1'));
+  assert(index.includes('tactical-recon-sw-reload-r1-3-field-20261005-1'));
 });
 
 test('Home bar is RECON SITES RECORDS MENU',()=>{
@@ -124,7 +124,39 @@ test('R1.2 resolves LAST FIX label collision and scale placement',()=>{
   assert(css.includes('top:calc(var(--r12-frame-bottom) - 25px) !important'));
 });
 
-test('R1.2 mobile UI has dedicated map shell cards',()=>{
+test('R1.3 working-grid search accepts abbreviated MGRS safely',()=>{
+  assert(r1.includes("const WORKING_GRID_KEY='tactical_recon_working_grid_v1'"));
+  assert(r1.includes('function workingGridContext()'));
+  assert(r1.includes('function expandMgrsQuery(query)'));
+  assert(r1.includes("source:expanded.workingGridApplied?'MGRS_SHORT':'MGRS'"));
+  assert(r1.includes("e?.code==='GRID_PREFIX_REQUIRED'"));
+  assert(r1.includes("GRID '+ctx.prefix"));
+});
+
+test('R1.3 address results expose confidence and open location directly',()=>{
+  assert(r1.includes('function requestedHouseNumber(query)'));
+  assert(r1.includes('houseConfirmed=!wantedHouse||actualHouse===wantedHouse'));
+  assert(r1.includes("번지 미확인 · "));
+  assert(r1.includes('function activateSearchResult(item)'));
+  assert(r1.includes("id:'R13-SEARCH-'"));
+  assert(r1.includes("row.onclick=()=>activateSearchResult(item)"));
+  assert(css.includes('#addressSearchBackdrop .promo-actions button:not(:first-child)'));
+});
+
+test('R1.3 field shell removes dead viewport space and strengthens optic UI',()=>{
+  assert(css.includes('body.r13-ui #map'));
+  assert(css.includes('position:fixed !important'));
+  assert(css.includes('inset:0 !important'));
+  assert(css.includes('body.r13-ui .bracket'));
+  assert(css.includes('width:30px !important'));
+  assert(css.includes('body.r13-ui .temp-marker::before'));
+  assert(css.includes('linear-gradient(currentColor,currentColor) left top/7px 1px no-repeat'));
+  assert(css.includes('body.r13-ui .gps-status-osd'));
+  assert(css.includes('display:none !important'));
+  assert(index.includes('>MGRS</div>'));
+});
+
+test('R1.3 mobile UI has dedicated map shell cards',()=>{
   assert(css.includes('.r1-map-search'));
   assert(css.includes('.r1-location-card'));
   assert(css.includes('.r1-records-sheet'));
