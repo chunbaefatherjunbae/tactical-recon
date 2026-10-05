@@ -718,16 +718,6 @@
       box-shadow: none;
       z-index: 1000;
     }
-    .top-compass-bar::before {
-      content:"REC  ●";
-      position:absolute;
-      left:-42px;
-      top:7px;
-      color:var(--field-active);
-      font-size:9px;
-      letter-spacing:1px;
-      white-space:nowrap;
-    }
     .compass-tape {
       font-size: 10px;
       letter-spacing: 1.5px;
@@ -5869,13 +5859,13 @@
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js?v=r1-3-field-20261005-1', { scope: './', updateViaCache: 'none' })
+        navigator.serviceWorker.register('./service-worker.js?v=r1-4-visual-20261006-1', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-r1-3-field-20261005-1';
+        const reloadKey = 'tactical-recon-sw-reload-r1-4-visual-20261006-1';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();
