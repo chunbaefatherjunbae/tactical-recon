@@ -97,7 +97,7 @@ test('R1.1 field view cleans the optical overlay',()=>{
   assert(css.includes('background:transparent !important'));
   assert(css.includes('body.r11-ui .telemetry-osd .osd-subgrid { display:none !important; }'));
   assert(css.includes('body.r11-ui .gps-status-osd .gps-status-row { display:none !important; }'));
-  assert(css.includes('data-r1-tab="records"'));
+  assert(r1.includes('data-r1-tab="records"'));
 });
 
 test('R1.1 mobile UI has dedicated map shell cards',()=>{
