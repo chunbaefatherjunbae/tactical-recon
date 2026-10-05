@@ -27,6 +27,8 @@
   let siteSourceFilter='ALL';
   let navRecoveryInstalled=false;
   let r11LastFixMarker=null;
+  let r12OverlayFrame=0;
+  let r12OverlayResizeObserver=null;
 
   const text={
     ko:{
@@ -362,6 +364,141 @@
       r11LastFixMarker.setIcon(r11LastFixIcon());
     }
     if(!map.hasLayer(r11LastFixMarker))r11LastFixMarker.addTo(map);
+    scheduleR12OverlayLayout();
+  }
+
+
+  function r12VisibleRect(selector){
+    const el=document.querySelector(selector);
+    if(!el)return null;
+    const style=getComputedStyle(el);
+    if(style.display==='none'||style.visibility==='hidden'||Number(style.opacity)===0)return null;
+    const rect=el.getBoundingClientRect();
+    if(rect.width<1||rect.height<1)return null;
+    return rect;
+  }
+
+  function getR12OverlayBounds(){
+    const mapEl=document.getElementById('map');
+    if(!mapEl)return null;
+    const mapRect=mapEl.getBoundingClientRect();
+    if(mapRect.width<1||mapRect.height<1)return null;
+
+    let top=mapRect.top+14;
+    [
+      '.top-compass-bar',
+      '.r1-map-search',
+      '.telemetry-osd',
+      '.gps-status-osd'
+    ].forEach(selector=>{
+      const rect=r12VisibleRect(selector);
+      if(rect&&rect.bottom>mapRect.top&&rect.top<mapRect.bottom){
+        top=Math.max(top,rect.bottom+14);
+      }
+    });
+
+    let bottom=mapRect.bottom-14;
+    [
+      '.mfd-bottom-bar',
+      '.target-mode-panel',
+      '.r1-location-card',
+      '.r1-records-sheet',
+      '.field-control-tray'
+    ].forEach(selector=>{
+      const rect=r12VisibleRect(selector);
+      if(!rect)return;
+      const intersectsBottom=rect.top>mapRect.top+120&&rect.top<mapRect.bottom&&rect.bottom>mapRect.top;
+      if(intersectsBottom)bottom=Math.min(bottom,rect.top-14);
+    });
+
+    if(bottom-top<220){
+      top=mapRect.top+16;
+      bottom=mapRect.bottom-80;
+    }
+
+    return {
+      mapRect,
+      top,
+      bottom,
+      left:mapRect.left+14,
+      right:mapRect.right-14,
+      reticleX:mapRect.left+(mapRect.width/2),
+      reticleY:mapRect.top+(mapRect.height/2)
+    };
+  }
+
+  function resolveR12LastFixLabelCollision(bounds){
+    const visual=document.querySelector('.r11-last-fix-visual');
+    if(!visual||!bounds||!r11LastFixMarker||typeof map==='undefined')return;
+    visual.classList.remove('r12-label-above','r12-label-right');
+    try{
+      const point=map.latLngToContainerPoint(r11LastFixMarker.getLatLng());
+      const mapRect=bounds.mapRect;
+      const x=mapRect.left+point.x;
+      const y=mapRect.top+point.y;
+      const dx=x-bounds.reticleX;
+      const dy=y-bounds.reticleY;
+      if(Math.hypot(dx,dy)>82)return;
+      if(Math.abs(dx)>=Math.abs(dy))visual.classList.add('r12-label-above');
+      else visual.classList.add('r12-label-right');
+    }catch(e){}
+  }
+
+  function syncR12OverlayLayout(){
+    const bounds=getR12OverlayBounds();
+    if(!bounds)return;
+    const rootStyle=document.documentElement.style;
+    rootStyle.setProperty('--r12-frame-top',bounds.top.toFixed(1)+'px');
+    rootStyle.setProperty('--r12-frame-bottom',bounds.bottom.toFixed(1)+'px');
+    rootStyle.setProperty('--r12-frame-left',bounds.left.toFixed(1)+'px');
+    rootStyle.setProperty('--r12-frame-right',bounds.right.toFixed(1)+'px');
+    rootStyle.setProperty('--r12-reticle-x',bounds.reticleX.toFixed(1)+'px');
+    rootStyle.setProperty('--r12-reticle-y',bounds.reticleY.toFixed(1)+'px');
+    resolveR12LastFixLabelCollision(bounds);
+  }
+
+  function scheduleR12OverlayLayout(){
+    cancelAnimationFrame(r12OverlayFrame);
+    r12OverlayFrame=requestAnimationFrame(syncR12OverlayLayout);
+  }
+
+  function installR12OverlayLayout(){
+    if(document.body.dataset.r12Overlay==='1')return;
+    document.body.dataset.r12Overlay='1';
+
+    if(typeof map!=='undefined'&&map?.on){
+      map.on('resize moveend zoomend',scheduleR12OverlayLayout);
+    }
+    window.addEventListener('resize',scheduleR12OverlayLayout,{passive:true});
+    window.addEventListener('orientationchange',scheduleR12OverlayLayout,{passive:true});
+    window.visualViewport?.addEventListener('resize',scheduleR12OverlayLayout,{passive:true});
+    window.visualViewport?.addEventListener('scroll',scheduleR12OverlayLayout,{passive:true});
+
+    new MutationObserver(scheduleR12OverlayLayout).observe(document.body,{
+      attributes:true,
+      attributeFilter:['class']
+    });
+
+    if(window.ResizeObserver){
+      r12OverlayResizeObserver=new ResizeObserver(scheduleR12OverlayLayout);
+      [
+        '#map',
+        '.top-compass-bar',
+        '.r1-map-search',
+        '.telemetry-osd',
+        '.gps-status-osd',
+        '.mfd-bottom-bar',
+        '.target-mode-panel'
+      ].forEach(selector=>{
+        const el=document.querySelector(selector);
+        if(el)r12OverlayResizeObserver.observe(el);
+      });
+    }
+
+    requestAnimationFrame(()=>{
+      syncR12OverlayLayout();
+      setTimeout(syncR12OverlayLayout,80);
+    });
   }
 
   function formatReferenceAge(ms){
@@ -2636,8 +2773,8 @@
 
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R1.1 FIELD TERMINAL';
-    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui');
+    document.title='TACTICAL RECON // R1.2 FIELD TERMINAL';
+    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui','r12-ui');
     installLastFix();
     installUnifiedSearch();
     installSearchCloseReliability();
@@ -2668,6 +2805,7 @@
     ensurePicker();
     installMissionUx();
     installR1Shell();
+    installR12OverlayLayout();
 
     const previousRender=typeof renderWpDrawerList==='function'?renderWpDrawerList:null;
     if(previousRender&&!previousRender.__v29Sites){
@@ -2684,9 +2822,15 @@
     new MutationObserver(()=>syncAllText()).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
     document.addEventListener('visibilitychange',()=>{
       if(document.hidden){stopBearingSensor();persistNavRecovery();}
-      else syncPersistentLastFixMarker();
+      else{
+        syncPersistentLastFixMarker();
+        scheduleR12OverlayLayout();
+      }
     });
-    window.addEventListener('pageshow',()=>syncPersistentLastFixMarker());
+    window.addEventListener('pageshow',()=>{
+      syncPersistentLastFixMarker();
+      scheduleR12OverlayLayout();
+    });
     window.addEventListener('pagehide',()=>{stopBearingSensor();persistNavRecovery();});
 
     syncAllText();
