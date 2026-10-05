@@ -35,6 +35,10 @@
       gpsPower:'GPS 전원',nearby:'주변 탐색',layers:'레이어',roads:'도로 강조',display:'표시 모드',
       reuse:'재활용/궤적',gpx:'GPX 반출',backup:'전체 백업',restore:'백업 복원',
       freeTrack:'자유 궤적 시작',freeTrackManage:'자유 궤적 관리',
+      recon:'탐색',records:'기록',lightMap:'경량 지도',standardMap:'일반 지도',language:'언어',
+      reconRecorded:'기록 거점 탐색',reconWild:'미개척 탐색',reconRange:'탐색 반경',
+      objectiveInfo:'목표 정보',objectiveChange:'목표 변경',planAction:'계획',navAction:'항법',bearingAction:'방위각',mapFit:'지도 맞춤',
+      drawRoute:'ROUTE',drawDanger:'위험',drawBlocked:'차단',drawObservation:'관측',drawReference:'참고',drawOther:'기타',
       pickerSearch:'위치 검색',pickerCancel:'취소',pickerSite:'이 위치 선택',pickerObjective:'목표로 지정',
       pickerTemp:'TEMP로 지정',pickerHome:'HOME으로 지정',
       objectiveHint:'탭하여 목표 변경',objectiveRequired:'목표 지정 필요',navStart:'탭하여 항법 시작',positionRequired:'위치 기준 필요',
@@ -59,6 +63,10 @@
       gpsPower:'GPS POWER',nearby:'NEARBY',layers:'LAYERS',roads:'ROAD BOOST',display:'DISPLAY',
       reuse:'REUSE / TRACKS',gpx:'GPX EXPORT',backup:'FULL BACKUP',restore:'RESTORE BACKUP',
       freeTrack:'START FREE TRACK',freeTrackManage:'MANAGE FREE TRACK',
+      recon:'RECON',records:'RECORDS',lightMap:'LIGHT MAP',standardMap:'STANDARD MAP',language:'LANGUAGE',
+      reconRecorded:'RECORDED SITE',reconWild:'UNEXPLORED',reconRange:'RECON RANGE',
+      objectiveInfo:'OBJECTIVE INFO',objectiveChange:'CHANGE OBJ',planAction:'PLAN',navAction:'NAV',bearingAction:'BEARING',mapFit:'FIT MAP',
+      drawRoute:'ROUTE',drawDanger:'DANGER',drawBlocked:'BLOCKED',drawObservation:'OBS',drawReference:'REFERENCE',drawOther:'OTHER',
       pickerSearch:'POSITION SEARCH',pickerCancel:'CANCEL',pickerSite:'USE THIS LOCATION',pickerObjective:'SET OBJECTIVE',
       pickerTemp:'SET TEMP',pickerHome:'SET HOME',
       objectiveHint:'TAP TO CHANGE OBJECTIVE',objectiveRequired:'OBJECTIVE REQUIRED',navStart:'TAP TO START NAV',positionRequired:'REFERENCE REQUIRED',
@@ -683,9 +691,11 @@
   function installSiteFilterData(){
     if(typeof getWaypointEntries!=='function'||getWaypointEntries.__v29Separated)return;
     const wrapped=function(){
-      const registered=(typeof RECON_TARGETS!=='undefined'&&Array.isArray(RECON_TARGETS)?RECON_TARGETS:[])
-        .map(item=>({...item,__kind:'REGISTERED'}));
       const local=typeof getLocalIntel==='function'?getLocalIntel().map(item=>({...item})):[];
+      const localIds=new Set(local.filter(item=>item?.source==='REGISTERED_VERIFICATION').map(item=>String(item.id)));
+      const registered=(typeof RECON_TARGETS!=='undefined'&&Array.isArray(RECON_TARGETS)?RECON_TARGETS:[])
+        .filter(item=>!localIds.has(String(item.id)))
+        .map(item=>({...item,__kind:'REGISTERED'}));
       const statusFiltered=local.filter(item=>
         siteStatusFilter==='ALL'||String(item.status||'UNEXPLORED')===siteStatusFilter
       );
@@ -1105,6 +1115,760 @@
     });
   }
 
+
+  /* ---------- mission-first RECON / OBJECTIVE / MAP UX ---------- */
+  let missionLayer=null;
+  let lightMapOpen=false;
+  let activeOverlayType='REFERENCE';
+  let overlaySeenCount=0;
+  let overlaySeenPlanId='';
+  let lastReconMode=null;
+
+  const OVERLAY_COPY={
+    DANGER:'drawDanger',
+    BLOCKED:'drawBlocked',
+    OBSERVATION:'drawObservation',
+    REFERENCE:'drawReference',
+    OTHER:'drawOther'
+  };
+
+  function overlayLabel(type){
+    return t(OVERLAY_COPY[String(type||'REFERENCE').toUpperCase()]||'drawReference');
+  }
+
+  function missionObjectiveStatus(obj=activeObjective()){
+    if(!obj)return '';
+    const id=String(obj.siteId||obj.id||'');
+    try{
+      const local=typeof getLocalIntel==='function'?getLocalIntel().find(item=>String(item?.id||'')===id):null;
+      if(local?.status)return String(local.status).toUpperCase();
+      const registered=typeof RECON_TARGETS!=='undefined'&&Array.isArray(RECON_TARGETS)
+        ? RECON_TARGETS.find(item=>String(item?.id||'')===id):null;
+      if(registered)return 'REGISTERED';
+    }catch(e){}
+    return 'OBJECTIVE';
+  }
+
+  function missionMetrics(){
+    const ref=currentReference();
+    const obj=activeObjective();
+    const bundle=ref?.coords&&obj?.coords?core.geo.bearingBundle(ref.coords,obj.coords,{date:new Date()}):null;
+    return {ref,obj,bundle};
+  }
+
+  function missionDistance(km){
+    const n=Number(km);
+    if(!Number.isFinite(n))return '--';
+    return n<1?Math.max(0,Math.round(n*1000))+' M':n.toFixed(n>=100?0:1)+' KM';
+  }
+
+  function ensureMissionLayer(){
+    if(missionLayer||typeof L==='undefined'||typeof map==='undefined')return missionLayer;
+    missionLayer=L.layerGroup().addTo(map);
+    return missionLayer;
+  }
+
+  function syncMissionMapContext(){
+    const layer=ensureMissionLayer();
+    if(!layer)return;
+    layer.clearLayers();
+    if(typeof targetModeActive==='undefined'||!targetModeActive||typeof targetModePhase==='undefined'||targetModePhase!=='PLAN')return;
+    const {ref,obj}=missionMetrics();
+    if(!ref?.coords||!obj?.coords)return;
+    const color=typeof getOpticColor==='function'?getOpticColor():'#93d7a0';
+    const type=String(ref.type||'REF');
+    const dash=type==='LAST_FIX'?'2 8':(type==='TEMP'?'10 5':'6 5');
+    L.polyline([ref.coords,obj.coords],{interactive:false,color,weight:2,opacity:.78,dashArray:dash}).addTo(layer);
+    L.circleMarker(ref.coords,{interactive:false,radius:5,color,weight:2,fill:false,opacity:.9}).addTo(layer);
+    L.circleMarker(obj.coords,{interactive:false,radius:7,color,weight:2,fill:false,opacity:1}).addTo(layer);
+  }
+
+  function frameObjectiveContext(){
+    if(typeof map==='undefined'||!map?.fitBounds||typeof L==='undefined')return;
+    const {ref,obj}=missionMetrics();
+    if(!obj?.coords)return;
+    try{
+      if(ref?.coords){
+        if(typeof targetModeShowGps!=='undefined'&&ref.type==='GPS')targetModeShowGps=true;
+        if(typeof syncGpsMarkerVisibility==='function')syncGpsMarkerVisibility();
+        map.fitBounds(L.latLngBounds([ref.coords,obj.coords]),{padding:[44,44],maxZoom:15,animate:false});
+      }else{
+        map.setView(obj.coords,Math.max(map.getZoom(),14),{animate:false});
+      }
+      if(typeof flushReticleTelemetry==='function')flushReticleTelemetry();
+    }catch(e){}
+    syncMissionMapContext();
+  }
+
+  function ensureMissionObjectiveSheet(){
+    let sheet=document.getElementById('v29ObjectiveInfoSheet');
+    if(sheet)return sheet;
+    sheet=document.createElement('section');
+    sheet.id='v29ObjectiveInfoSheet';
+    sheet.className='v29-mission-sheet';
+    sheet.hidden=true;
+    sheet.innerHTML=
+      '<div class="v29-mission-sheet-head"><strong id="v29ObjInfoTitle"></strong><button class="v29-sheet-x" type="button">×</button></div>'+
+      '<div id="v29ObjInfoStatus" class="v29-mission-status"></div>'+
+      '<div class="v29-mission-metrics">'+
+        '<div><span>DIST</span><strong id="v29ObjDist">--</strong></div>'+
+        '<div><span>GRID</span><strong id="v29ObjGrid">---°</strong></div>'+
+        '<div><span>MAG</span><strong id="v29ObjMag">---°</strong></div>'+
+        '<div><span>REF</span><strong id="v29ObjRef">--</strong></div>'+
+      '</div>'+
+      '<button class="v29-mission-coords" id="v29ObjCoords" type="button">--</button>'+
+      '<div class="v29-mission-actions">'+
+        '<button class="osb-btn" id="v29ObjBearing" type="button"></button>'+
+        '<button class="osb-btn" id="v29ObjPlan" type="button"></button>'+
+        '<button class="osb-btn active" id="v29ObjNav" type="button"></button>'+
+        '<button class="osb-btn" id="v29ObjChange" type="button"></button>'+
+        '<button class="osb-btn" id="v29ObjFit" type="button"></button>'+
+      '</div>';
+    document.body.appendChild(sheet);
+    sheet.querySelector('.v29-sheet-x')?.addEventListener('click',closeMissionObjectiveSheet);
+    sheet.querySelector('#v29ObjBearing')?.addEventListener('click',openMissionBearing);
+    sheet.querySelector('#v29ObjPlan')?.addEventListener('click',()=>{
+      closeMissionObjectiveSheet();
+      const plan=activePlan();
+      if(plan)base.ui.openPlan(plan.id);
+    });
+    sheet.querySelector('#v29ObjNav')?.addEventListener('click',()=>{
+      closeMissionObjectiveSheet();
+      if(typeof startTargetNavigation==='function')startTargetNavigation();
+    });
+    sheet.querySelector('#v29ObjChange')?.addEventListener('click',()=>{
+      closeMissionObjectiveSheet();
+      base.ui.openObjective();
+    });
+    sheet.querySelector('#v29ObjFit')?.addEventListener('click',()=>{
+      closeMissionObjectiveSheet();
+      frameObjectiveContext();
+    });
+    sheet.querySelector('#v29ObjCoords')?.addEventListener('click',async()=>{
+      const obj=activeObjective();if(!obj?.coords)return;
+      const mgrsText=typeof calcMGRS==='function'?calcMGRS(obj.coords[0],obj.coords[1]):'';
+      const value=mgrsText||obj.coords.map(v=>Number(v).toFixed(6)).join(', ');
+      try{await navigator.clipboard.writeText(value);notify(lang()==='ko'?'좌표를 복사했습니다.':'COORDINATES COPIED.');}catch(e){}
+    });
+    return sheet;
+  }
+
+  function closeMissionObjectiveSheet(){
+    const sheet=document.getElementById('v29ObjectiveInfoSheet');
+    if(sheet)sheet.hidden=true;
+  }
+
+  function renderMissionObjectiveSheet(){
+    const sheet=ensureMissionObjectiveSheet();
+    const {ref,obj,bundle}=missionMetrics();
+    if(!obj){sheet.hidden=true;return;}
+    const set=(id,value)=>{const el=sheet.querySelector('#'+id);if(el)el.textContent=value;};
+    set('v29ObjInfoTitle',obj.name||t('objectiveInfo'));
+    set('v29ObjInfoStatus','OBJ · '+missionObjectiveStatus(obj));
+    set('v29ObjDist',missionDistance(bundle?.distanceKm));
+    set('v29ObjGrid',formatDeg(bundle?.gridBearing));
+    set('v29ObjMag',formatDeg(bundle?.magneticBearing));
+    let refText=ref?.type||'--';
+    if(ref?.ageMs!==undefined)refText+=' · '+formatReferenceAge(ref.ageMs);
+    set('v29ObjRef',refText);
+    const mgrsText=typeof calcMGRS==='function'?calcMGRS(obj.coords[0],obj.coords[1]):'';
+    set('v29ObjCoords',(mgrsText?mgrsText+' · ':'')+obj.coords.map(v=>Number(v).toFixed(5)).join(', '));
+    set('v29ObjBearing',t('bearingAction'));
+    set('v29ObjPlan',t('planAction'));
+    set('v29ObjNav',t('navAction'));
+    set('v29ObjChange',t('objectiveChange'));
+    set('v29ObjFit',t('mapFit'));
+  }
+
+  function openMissionObjectiveSheet(){
+    const obj=activeObjective();
+    if(!obj){base.ui.openObjective();return;}
+    renderMissionObjectiveSheet();
+    ensureMissionObjectiveSheet().hidden=false;
+  }
+
+  function openMissionBearing(){
+    closeMissionObjectiveSheet();
+    document.body.classList.add('v29-bearing-open');
+    if(typeof openFieldControls==='function')openFieldControls('bearing');
+  }
+
+  function syncMissionHeader(){
+    if(typeof targetModeActive==='undefined'||!targetModeActive||typeof targetModePhase==='undefined'||targetModePhase!=='PLAN'){
+      syncMissionMapContext();
+      closeMissionObjectiveSheet();
+      return;
+    }
+    const plan=activePlan();
+    const {ref,obj,bundle}=missionMetrics();
+    const kicker=document.querySelector('#planInfoTrigger .target-mode-kicker');
+    const name=document.getElementById('targetModeName');
+    const stats=document.getElementById('targetModeStats');
+    const hint=document.getElementById('planNavHint');
+    if(document.body.classList.contains('plan-draw-submode')){
+      if(kicker)kicker.textContent=typeof routeDrawKind!=='undefined'&&routeDrawKind==='MARK'
+        ? 'OVERLAY MODE · '+overlayLabel(activeOverlayType)
+        : 'ROUTE MODE';
+    }else if(kicker){
+      kicker.textContent=obj?'OBJ · '+missionObjectiveStatus(obj):(lang()==='ko'?'계획 · ':'PLAN · ')+(plan?.name||'');
+    }
+    if(name)name.textContent=obj?.name||t('noObjective');
+    if(stats){
+      stats.textContent=bundle
+        ? 'DIST '+missionDistance(bundle.distanceKm)+' · GRID '+formatDeg(bundle.gridBearing)+' · MAG '+formatDeg(bundle.magneticBearing)+' · REF '+String(ref?.type||'--')
+        : (obj?(lang()==='ko'?'기준위치가 필요합니다.':'REFERENCE POSITION REQUIRED.'):'');
+    }
+    if(hint){
+      if(!obj)hint.textContent=t('objectiveRequired');
+      else if(ref?.type==='LAST_FIX')hint.textContent=t('lastFix')+' · '+formatReferenceAge(ref.ageMs)+' · '+t('navStart');
+      else hint.textContent=ref?.coords?t('navStart'):t('positionRequired');
+    }
+    syncMissionMapContext();
+    syncDrawControls();
+    if(!document.getElementById('v29ObjectiveInfoSheet')?.hidden)renderMissionObjectiveSheet();
+    if(lightMapOpen)renderLightMap();
+  }
+
+  function installMissionHeader(){
+    const copy=document.querySelector('#planInfoTrigger .v29-objective-area');
+    if(copy&&copy.dataset.v29MissionInfo!=='1'){
+      const clone=copy.cloneNode(true);
+      clone.dataset.v29MissionInfo='1';
+      copy.replaceWith(clone);
+      clone.addEventListener('click',event=>{event.stopPropagation();openMissionObjectiveSheet();});
+      clone.addEventListener('keydown',event=>{
+        if(event.key!=='Enter'&&event.key!==' ')return;
+        event.preventDefault();event.stopPropagation();openMissionObjectiveSheet();
+      });
+    }
+    if(typeof updateTargetModePanel==='function'&&!updateTargetModePanel.__v29MissionUx){
+      const previous=updateTargetModePanel;
+      const wrapped=function(){
+        const out=previous.apply(this,arguments);
+        syncMissionHeader();
+        return out;
+      };
+      wrapped.__v29MissionUx=true;
+      updateTargetModePanel=wrapped;
+    }
+    if(typeof enterTargetMode==='function'&&!enterTargetMode.__v29MissionFrame){
+      const previous=enterTargetMode;
+      const wrapped=function(){
+        const out=previous.apply(this,arguments);
+        setTimeout(()=>{installMissionHeader();syncMissionHeader();frameObjectiveContext();},0);
+        return out;
+      };
+      wrapped.__v29MissionFrame=true;
+      enterTargetMode=wrapped;
+    }
+  }
+
+  function installMissionHomebar(){
+    const cluster=document.querySelector('.v26-main-cluster');
+    if(!cluster)return;
+    cluster.innerHTML=
+      '<button class="osb-btn v26-primary" id="v29MainRecon" type="button"></button>'+
+      '<button class="osb-btn v26-primary" id="btnWpCount" type="button"></button>'+
+      '<button class="osb-btn v26-primary" id="v29MainPlan" type="button"></button>'+
+      '<button class="osb-btn v26-primary" id="v29MainMenu" type="button"></button>';
+    cluster.querySelector('#v29MainRecon')?.addEventListener('click',()=>openFieldControls('recon'));
+    cluster.querySelector('#btnWpCount')?.addEventListener('click',()=>{closeFieldControls();openWpDrawer();});
+    cluster.querySelector('#v29MainPlan')?.addEventListener('click',()=>base.ui.openRoutes());
+    cluster.querySelector('#v29MainMenu')?.addEventListener('click',()=>openFieldControls('menu'));
+    syncMissionHomebarText();
+  }
+
+  function syncMissionHomebarText(){
+    const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+    set('v29MainRecon',t('recon'));
+    set('btnWpCount',lang()==='ko'?'거점':'SITES');
+    set('v29MainPlan',t('planAction'));
+    set('v29MainMenu',lang()==='ko'?'메뉴':'MENU');
+  }
+
+  function runRecordedRecon(){
+    try{
+      if(typeof selectedRadius!=='undefined'&&selectedRadius!=='all'&&typeof hasGpsFix!=='undefined'&&!hasGpsFix){
+        alert(lang()==='ko'?'거리 기반 기록 거점 탐색은 GPS FIX 이후 사용할 수 있습니다.':'RANGE-BASED RECORDED SITE RECON REQUIRES GPS FIX.');
+        return;
+      }
+      const claimed=new Set((typeof getLocalIntel==='function'?getLocalIntel():[])
+        .filter(item=>item?.source==='REGISTERED_VERIFICATION')
+        .map(item=>String(item.id)));
+      const pool=(typeof RECON_TARGETS!=='undefined'&&Array.isArray(RECON_TARGETS)?RECON_TARGETS:[]).filter(site=>{
+        if(claimed.has(String(site.id)))return false;
+        if(typeof selectedRadius==='undefined'||selectedRadius==='all')return true;
+        if(typeof baseLocation==='undefined'||typeof calcDistanceKmRaw!=='function')return false;
+        return calcDistanceKmRaw(baseLocation[0],baseLocation[1],site.coords[0],site.coords[1])<=Number(selectedRadius);
+      });
+      if(!pool.length){
+        alert(lang()==='ko'?'선택 반경에 아직 확인하지 않은 기록 거점이 없습니다.':'NO UNVERIFIED RECORDED SITES IN THIS RANGE.');
+        return;
+      }
+      lastReconMode='RECORDED';
+      const pick=pool[Math.floor(Math.random()*pool.length)];
+      openSitrep(pick,'REGISTERED');
+      closeFieldControls();
+    }catch(e){
+      if(typeof deployRegisteredRecon==='function')deployRegisteredRecon();
+    }
+  }
+
+  function installReconPanel(){
+    const section=makeSection('control-recon','RECON',
+      '<div class="v29-recon-note"></div>'+
+      '<div class="v29-control-label" id="v29ReconRangeLabel"></div>'+
+      '<div class="field-control-grid v29-recon-range">'+
+        '<button class="osb-btn" data-v29-range="30" type="button">30 KM</button>'+
+        '<button class="osb-btn" data-v29-range="80" type="button">80 KM</button>'+
+        '<button class="osb-btn" data-v29-range="150" type="button">150 KM</button>'+
+        '<button class="osb-btn" data-v29-range="all" type="button">ALL</button>'+
+      '</div>'+
+      '<div class="v29-recon-actions">'+
+        '<button class="osb-btn active" id="v29RecordedRecon" type="button"></button>'+
+        '<button class="osb-btn active" id="v29WildRecon" type="button"></button>'+
+      '</div>');
+    section.querySelectorAll('[data-v29-range]').forEach(btn=>btn.addEventListener('click',()=>{
+      if(typeof setRadar==='function')setRadar(btn.dataset.v29Range,btn);
+      syncReconPanel();
+    }));
+    section.querySelector('#v29RecordedRecon')?.addEventListener('click',runRecordedRecon);
+    section.querySelector('#v29WildRecon')?.addEventListener('click',()=>{
+      lastReconMode='WILD';
+      if(typeof deployWildRecon==='function')deployWildRecon();
+    });
+    syncReconPanel();
+  }
+
+  function syncReconPanel(){
+    const section=document.getElementById('control-recon');if(!section)return;
+    const note=section.querySelector('.v29-recon-note');
+    if(note)note.textContent=lang()==='ko'
+      ? '기록 거점은 현대 지도에서 잊힌 장소를 다시 찾고, 미개척 탐색은 무작위 좌표를 직접 개척합니다.'
+      : 'RECORDED SITES REDISCOVER FORGOTTEN PLACES. UNEXPLORED RECON GENERATES A NEW RANDOM COORDINATE.';
+    const label=document.getElementById('v29ReconRangeLabel');if(label)label.textContent=t('reconRange');
+    const current=typeof selectedRadius!=='undefined'?String(selectedRadius):'all';
+    section.querySelectorAll('[data-v29-range]').forEach(btn=>btn.classList.toggle('active',String(btn.dataset.v29Range)===current));
+    const recorded=document.getElementById('v29RecordedRecon');if(recorded)recorded.textContent=t('reconRecorded');
+    const wild=document.getElementById('v29WildRecon');if(wild)wild.textContent=t('reconWild');
+  }
+
+  function installMissionMenu(){
+    const menu=document.querySelector('#control-menu .v26-menu-grid');
+    if(!menu)return;
+    menu.innerHTML=
+      '<button class="osb-btn" data-v29-mission-menu="position" type="button"></button>'+
+      '<button class="osb-btn" data-v29-mission-menu="maptools" type="button"></button>'+
+      '<button class="osb-btn" data-v29-mission-menu="records" type="button"></button>'+
+      '<button class="osb-btn" data-v29-mission-menu="data" type="button"></button>'+
+      '<button class="osb-btn" data-v29-mission-menu="system" type="button"></button>';
+    menu.querySelectorAll('[data-v29-mission-menu]').forEach(btn=>btn.addEventListener('click',()=>openFieldControls(btn.dataset.v29MissionMenu)));
+
+    const records=makeSection('control-records','RECORDS',
+      '<div class="field-control-grid v29-two-col">'+
+        '<button class="osb-btn" id="v29RecordsManage" type="button"></button>'+
+        '<button class="osb-btn active" id="v29FreeTrackMissionBtn" type="button"></button>'+
+      '</div>');
+    records.querySelector('#v29RecordsManage')?.addEventListener('click',()=>{closeFieldControls();root.openV29FieldKit?.('tracks');});
+    records.querySelector('#v29FreeTrackMissionBtn')?.addEventListener('click',toggleFreeTrack);
+
+    const oldFree=document.getElementById('v29FreeTrackBtn');if(oldFree)oldFree.remove();
+
+    const mapSection=document.getElementById('control-maptools');
+    const mapGrid=mapSection?.querySelector('.field-control-grid');
+    if(mapGrid&&!document.getElementById('v29LightMapBtn')){
+      const light=document.createElement('button');
+      light.className='osb-btn active';
+      light.id='v29LightMapBtn';
+      light.type='button';
+      light.addEventListener('click',()=>{closeFieldControls();openLightMap();});
+      mapGrid.prepend(light);
+    }
+
+    const system=document.getElementById('control-system');
+    const systemGrid=system?.querySelector('.field-control-grid');
+    if(systemGrid){
+      systemGrid.innerHTML='<button class="osb-btn" id="v29LanguageBtn" type="button"></button>';
+      systemGrid.querySelector('#v29LanguageBtn')?.addEventListener('click',()=>openFieldControls('language'));
+    }
+    syncMissionMenuText();
+  }
+
+  function syncMissionMenuText(){
+    const labels={
+      '[data-v29-mission-menu="position"]':t('locate'),
+      '[data-v29-mission-menu="maptools"]':t('map'),
+      '[data-v29-mission-menu="records"]':t('records'),
+      '[data-v29-mission-menu="data"]':t('data'),
+      '[data-v29-mission-menu="system"]':t('system'),
+      '#v29RecordsManage':t('reuse'),
+      '#v29FreeTrackMissionBtn':(base.track.state!=='OFF'&&base.state.activePlanId===freePlanId())?t('freeTrackManage'):t('freeTrack'),
+      '#v29LightMapBtn':t('lightMap'),
+      '#v29LanguageBtn':t('language')
+    };
+    Object.entries(labels).forEach(([sel,label])=>{const el=document.querySelector(sel);if(el)el.textContent=label;});
+  }
+
+  function lightMapSites(){
+    const out=[];
+    try{
+      if(typeof RECON_TARGETS!=='undefined'&&Array.isArray(RECON_TARGETS))out.push(...RECON_TARGETS);
+      if(typeof getLocalIntel==='function')out.push(...getLocalIntel());
+    }catch(e){}
+    return out.filter(item=>validCoords(item?.coords));
+  }
+
+  function ensureLightMap(){
+    let el=document.getElementById('v29LightMap');
+    if(el)return el;
+    el=document.createElement('section');
+    el.id='v29LightMap';
+    el.className='v29-light-map';
+    el.hidden=true;
+    el.innerHTML=
+      '<div class="v29-light-map-head"><div><small>TACTICAL RECON // LOW DATA</small><strong id="v29LightMapTitle"></strong></div>'+
+      '<button class="osb-btn" id="v29LightMapClose" type="button"></button></div>'+
+      '<div class="v29-light-map-canvas" id="v29LightMapCanvas"></div>'+
+      '<div class="v29-light-map-readout" id="v29LightMapReadout"></div>';
+    document.body.appendChild(el);
+    el.querySelector('#v29LightMapClose')?.addEventListener('click',closeLightMap);
+    return el;
+  }
+
+  function renderLightMap(){
+    const el=ensureLightMap();
+    if(!lightMapOpen)return;
+    const canvas=el.querySelector('#v29LightMapCanvas');
+    const readout=el.querySelector('#v29LightMapReadout');
+    const title=el.querySelector('#v29LightMapTitle');
+    const close=el.querySelector('#v29LightMapClose');
+    if(title)title.textContent=t('lightMap');
+    if(close)close.textContent=t('standardMap');
+
+    const {ref,obj,bundle}=missionMetrics();
+    const plan=activePlan();
+    const route=(plan?.routeSegments||[]).flat().filter(validCoords);
+    let pts=[...route];
+    if(ref?.coords)pts.push(ref.coords);
+    if(obj?.coords)pts.push(obj.coords);
+    if(!pts.length&&typeof map!=='undefined'&&map?.getCenter){
+      const c=map.getCenter();pts.push([c.lat,c.lng]);
+    }
+    if(!pts.length){canvas.innerHTML='';if(readout)readout.textContent='NO POSITION';return;}
+
+    let minLat=Math.min(...pts.map(p=>Number(p[0]))),maxLat=Math.max(...pts.map(p=>Number(p[0])));
+    let minLon=Math.min(...pts.map(p=>Number(p[1]))),maxLon=Math.max(...pts.map(p=>Number(p[1])));
+    const latPad=Math.max(.012,(maxLat-minLat)*.2),lonPad=Math.max(.012,(maxLon-minLon)*.2);
+    minLat-=latPad;maxLat+=latPad;minLon-=lonPad;maxLon+=lonPad;
+    const W=600,H=420,pad=38;
+    const x=lon=>pad+(lon-minLon)/(maxLon-minLon)*(W-2*pad);
+    const y=lat=>H-pad-(lat-minLat)/(maxLat-minLat)*(H-2*pad);
+    let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="LIGHT MAP">';
+    svg+='<text class="north" x="'+(W/2)+'" y="22">N</text>';
+    for(let i=0;i<=5;i++){
+      const gx=pad+i*(W-2*pad)/5,gy=pad+i*(H-2*pad)/5;
+      svg+='<line class="grid" x1="'+gx+'" y1="'+pad+'" x2="'+gx+'" y2="'+(H-pad)+'"/>';
+      svg+='<line class="grid" x1="'+pad+'" y1="'+gy+'" x2="'+(W-pad)+'" y2="'+gy+'"/>';
+    }
+    (plan?.routeSegments||[]).forEach(seg=>{
+      const clean=(seg||[]).filter(validCoords);if(clean.length<2)return;
+      svg+='<polyline class="route" points="'+clean.map(p=>x(p[1]).toFixed(1)+','+y(p[0]).toFixed(1)).join(' ')+'"/>';
+    });
+    lightMapSites()
+      .filter(site=>site.coords[0]>=minLat&&site.coords[0]<=maxLat&&site.coords[1]>=minLon&&site.coords[1]<=maxLon)
+      .slice(0,40)
+      .forEach(site=>{svg+='<circle class="site" cx="'+x(site.coords[1])+'" cy="'+y(site.coords[0])+'" r="2.6"/>';});
+    if(ref?.coords&&obj?.coords)svg+='<line class="direct" x1="'+x(ref.coords[1])+'" y1="'+y(ref.coords[0])+'" x2="'+x(obj.coords[1])+'" y2="'+y(obj.coords[0])+'"/>';
+    if(ref?.coords){
+      svg+='<circle class="current" cx="'+x(ref.coords[1])+'" cy="'+y(ref.coords[0])+'" r="7"/>';
+      svg+='<text class="tag" x="'+(x(ref.coords[1])+10)+'" y="'+(y(ref.coords[0])-8)+'">REF</text>';
+    }
+    if(obj?.coords){
+      const tx=x(obj.coords[1]),ty=y(obj.coords[0]);
+      svg+='<path class="target" d="M '+tx+' '+(ty-10)+' L '+(tx+10)+' '+ty+' L '+tx+' '+(ty+10)+' L '+(tx-10)+' '+ty+' Z"/>';
+      svg+='<text class="tag" x="'+(tx+12)+'" y="'+(ty-9)+'">OBJ</text>';
+    }
+    svg+='<text class="bounds" x="'+pad+'" y="'+(H-10)+'">'+minLat.toFixed(3)+'..'+maxLat.toFixed(3)+' / '+minLon.toFixed(3)+'..'+maxLon.toFixed(3)+'</text>';
+    svg+='</svg>';
+    canvas.innerHTML=svg;
+    if(readout){
+      readout.textContent=bundle
+        ? 'DIST '+missionDistance(bundle.distanceKm)+' · GRID '+formatDeg(bundle.gridBearing)+' · MAG '+formatDeg(bundle.magneticBearing)+' · REF '+String(ref?.type||'--')
+        : 'REF '+String(ref?.type||'--')+(obj?' · OBJ SET':' · NO OBJ');
+    }
+  }
+
+  function openLightMap(){
+    lightMapOpen=true;
+    const el=ensureLightMap();
+    el.hidden=false;
+    document.body.classList.add('v29-light-map-open');
+    renderLightMap();
+  }
+
+  function closeLightMap(){
+    lightMapOpen=false;
+    const el=document.getElementById('v29LightMap');if(el)el.hidden=true;
+    document.body.classList.remove('v29-light-map-open');
+  }
+
+  function installLightMapFallback(){
+    const btn=document.querySelector('#v29MapFallback button');
+    if(btn&&btn.dataset.v29LightMap!=='1'){
+      const clone=btn.cloneNode(true);
+      clone.dataset.v29LightMap='1';
+      btn.replaceWith(clone);
+      clone.addEventListener('click',openLightMap);
+    }
+  }
+
+  function ensureDrawTypePicker(){
+    let el=document.getElementById('v29DrawTypePicker');
+    if(el)return el;
+    el=document.createElement('div');
+    el.id='v29DrawTypePicker';
+    el.className='v29-draw-type-picker';
+    el.hidden=true;
+    const types=[
+      ['ROUTE','drawRoute'],
+      ['DANGER','drawDanger'],
+      ['BLOCKED','drawBlocked'],
+      ['OBSERVATION','drawObservation'],
+      ['REFERENCE','drawReference'],
+      ['OTHER','drawOther']
+    ];
+    el.innerHTML='<div class="v29-draw-type-title">PLOT TYPE</div><div class="v29-draw-type-grid">'+
+      types.map(([value,key])=>'<button class="osb-btn" data-v29-draw-type="'+value+'" type="button">'+t(key)+'</button>').join('')+
+      '</div>';
+    document.body.appendChild(el);
+    el.querySelectorAll('[data-v29-draw-type]').forEach(btn=>btn.addEventListener('click',()=>{
+      selectDrawType(btn.dataset.v29DrawType);
+      el.hidden=true;
+    }));
+    return el;
+  }
+
+  function selectDrawType(type){
+    const value=String(type||'ROUTE').toUpperCase();
+    if(typeof cancelCurrentRouteStroke==='function'&&typeof routeCurrentPolyline!=='undefined'&&routeCurrentPolyline)cancelCurrentRouteStroke();
+    if(value==='ROUTE'){
+      routeDrawKind='ROUTE';
+    }else{
+      routeDrawKind='MARK';
+      activeOverlayType=core.overlays.types.includes(value)?value:'REFERENCE';
+    }
+    overlaySeenCount=Array.isArray(routeMarkSegments)?routeMarkSegments.length:0;
+    overlaySeenPlanId=String(base.state.activePlanId||'');
+    if(typeof updateTargetModePanel==='function')updateTargetModePanel();
+    syncDrawControls();
+  }
+
+  function openDrawTypePicker(){
+    const el=ensureDrawTypePicker();
+    el.hidden=false;
+    el.querySelectorAll('[data-v29-draw-type]').forEach(btn=>{
+      const selected=routeDrawKind==='ROUTE'
+        ? btn.dataset.v29DrawType==='ROUTE'
+        : btn.dataset.v29DrawType===activeOverlayType;
+      btn.classList.toggle('active',selected);
+    });
+  }
+
+  function syncDrawControls(){
+    const btn=document.getElementById('targetDrawKindBtn');
+    if(btn)btn.textContent=typeof routeDrawKind!=='undefined'&&routeDrawKind==='MARK'
+      ? 'OVL · '+overlayLabel(activeOverlayType)
+      : t('drawRoute');
+    const clear=document.getElementById('drawClearBtn');
+    if(clear&&typeof routeDrawKind!=='undefined'){
+      const bucket=routeDrawKind==='MARK'?routeMarkSegments:routeDraftSegments;
+      const current=typeof routeCurrentSegment!=='undefined'&&Array.isArray(routeCurrentSegment)&&routeCurrentSegment.length>0;
+      clear.disabled=!(Array.isArray(bucket)&&bucket.length)||false;
+      if(current)clear.disabled=false;
+    }
+  }
+
+  function installDrawUx(){
+    const old=document.getElementById('targetDrawKindBtn');
+    if(old&&old.dataset.v29TypePicker!=='1'){
+      const clone=old.cloneNode(true);
+      clone.dataset.v29TypePicker='1';
+      clone.removeAttribute('onclick');
+      old.replaceWith(clone);
+      clone.addEventListener('click',openDrawTypePicker);
+    }
+
+    if(typeof clearRouteDraft==='function'&&!clearRouteDraft.__v29Reliable){
+      const wrapped=function(){
+        if(typeof targetModeActive==='undefined'||!targetModeActive||typeof targetModePhase==='undefined'||targetModePhase!=='PLAN')return;
+        const overlay=routeDrawKind==='MARK';
+        const bucket=overlay?routeMarkSegments:routeDraftSegments;
+        const hasCurrent=typeof routeCurrentSegment!=='undefined'&&Array.isArray(routeCurrentSegment)&&routeCurrentSegment.length>0;
+        if((!Array.isArray(bucket)||!bucket.length)&&!hasCurrent)return;
+        const label=overlay?'OVERLAY':'ROUTE';
+        if(!confirm((lang()==='ko'?label+' 선을 모두 지우시겠습니까?':'CLEAR ALL '+label+' LINES?')))return;
+        const meta=overlay&&base.state.activePlanId?core.overlays.list(base.state.activePlanId):[];
+        const snapshot=typeof capturePlanEditState==='function'?capturePlanEditState():null;
+        if(typeof cancelCurrentRouteStroke==='function')cancelCurrentRouteStroke();
+        if(overlay)routeMarkSegments=[];else routeDraftSegments=[];
+        if(snapshot&&typeof recordPlanUndo==='function')recordPlanUndo(snapshot);
+        routeDirty=true;
+        if(typeof renderRouteDraft==='function')renderRouteDraft();
+        if(base.ui.saveActive?.()){
+          if(overlay)meta.forEach(item=>core.overlays.clear(base.state.activePlanId,item.segmentIndex));
+          core.ui.renderOverlay?.(base.state.activePlanId);
+        }
+        overlaySeenCount=overlay?0:(Array.isArray(routeMarkSegments)?routeMarkSegments.length:0);
+        if(typeof updateTargetModePanel==='function')updateTargetModePanel();
+        syncDrawControls();
+      };
+      wrapped.__v29Reliable=true;
+      clearRouteDraft=wrapped;
+    }
+
+    const container=typeof map!=='undefined'&&map?.getContainer?map.getContainer():null;
+    if(container&&!container.dataset.v29OverlayCapture){
+      container.dataset.v29OverlayCapture='1';
+      container.addEventListener('pointerup',()=>{
+        setTimeout(()=>{
+          if(typeof targetModeActive==='undefined'||!targetModeActive||typeof targetModePhase==='undefined'||targetModePhase!=='PLAN')return;
+          const planId=String(base.state.activePlanId||'');
+          const count=Array.isArray(routeMarkSegments)?routeMarkSegments.length:0;
+          if(planId!==overlaySeenPlanId){
+            overlaySeenPlanId=planId;
+            overlaySeenCount=count;
+            return;
+          }
+          if(typeof routeDrawKind!=='undefined'&&routeDrawKind==='MARK'&&count>overlaySeenCount){
+            const start=overlaySeenCount;
+            if(base.ui.saveActive?.()){
+              for(let i=start;i<count;i++)core.overlays.set(planId,i,activeOverlayType,'');
+              core.ui.renderOverlay?.(planId);
+            }
+          }
+          overlaySeenCount=count;
+          syncDrawControls();
+        },0);
+      },{passive:true});
+    }
+    syncDrawControls();
+  }
+
+  function installRegisteredVerification(){
+    if(typeof openSitrep==='function'&&!openSitrep.__v29RegisteredVerify){
+      const previous=openSitrep;
+      const wrapped=function(target,statusType){
+        const out=previous.apply(this,arguments);
+        const promote=document.getElementById('btnPromote');
+        if(promote&&statusType==='REGISTERED'){
+          promote.style.display='flex';
+          promote.textContent=lang()==='ko'?'[ FIELD VERIFIED // 개척 완료 ]':'[ FIELD VERIFIED // SECURE SITE ]';
+        }
+        return out;
+      };
+      wrapped.__v29RegisteredVerify=true;
+      openSitrep=wrapped;
+    }
+    if(typeof confirmPromotion==='function'&&!confirmPromotion.__v29RegisteredVerify){
+      const previous=confirmPromotion;
+      const wrapped=function(){
+        const target=typeof currentActiveTarget!=='undefined'?currentActiveTarget:null;
+        if(!target)return previous.apply(this,arguments);
+        const list=typeof getLocalIntel==='function'?getLocalIntel():[];
+        if(list.some(item=>String(item?.id||'')===String(target.id||'')))return previous.apply(this,arguments);
+        const registered=typeof RECON_TARGETS!=='undefined'&&Array.isArray(RECON_TARGETS)
+          ? RECON_TARGETS.find(item=>String(item?.id||'')===String(target.id||'')):null;
+        if(!registered)return previous.apply(this,arguments);
+        const name=document.getElementById('promoNameInput')?.value.trim()||registered.name;
+        const memo=document.getElementById('promoMemoInput')?.value.trim()||'현장 답사 완료. 접근 및 위치 확인.';
+        const copy={
+          ...registered,
+          name,
+          desc:memo,
+          status:'SECURED',
+          source:'REGISTERED_VERIFICATION',
+          registeredSourceId:String(registered.id),
+          preSecureStatus:'REGISTERED',
+          preSecureOpCode:registered.opCode,
+          securedAt:new Date().toISOString().substring(0,16).replace('T',' ')
+        };
+        try{
+          list.unshift(copy);
+          saveLocalIntel(list);
+          if(typeof syncPlanObjectiveSnapshotsForSite==='function')syncPlanObjectiveSnapshotsForSite(copy);
+          if(typeof targetModeActive!=='undefined'&&targetModeActive&&typeof targetModeTarget!=='undefined'&&targetModeTarget&&String(targetModeTarget.id)===String(copy.id)){
+            targetModeTarget=copy;
+            if(typeof updateTargetModePanel==='function')updateTargetModePanel();
+          }
+          openSitrep(copy,'SECURED');
+          closePromotionModal();
+          notify(lang()==='ko'?'기록 거점을 현장 확인 완료로 등록했습니다.':'RECORDED SITE VERIFIED.');
+          return true;
+        }catch(e){
+          alert(lang()==='ko'?'개척 상태 저장에 실패했습니다.':'FAILED TO SAVE VERIFIED SITE.');
+          return false;
+        }
+      };
+      wrapped.__v29RegisteredVerify=true;
+      confirmPromotion=wrapped;
+    }
+  }
+
+  function installTrackStateSync(){
+    if(base.track?.stop&&!base.track.stop.__v29MenuSync){
+      const previous=base.track.stop;
+      const wrapped=function(){
+        const out=previous.apply(this,arguments);
+        setTimeout(()=>{syncFreeTrackButton();syncMissionMenuText();},0);
+        return out;
+      };
+      wrapped.__v29MenuSync=true;
+      base.track.stop=wrapped;
+    }
+  }
+
+  function installMissionFieldControlHooks(){
+    if(typeof openFieldControls==='function'&&!openFieldControls.__v29MissionUx){
+      const previous=openFieldControls;
+      const wrapped=function(section){
+        const out=previous.apply(this,arguments);
+        if(section==='recon')syncReconPanel();
+        if(section==='records')syncMissionMenuText();
+        return out;
+      };
+      wrapped.__v29MissionUx=true;
+      openFieldControls=wrapped;
+    }
+    if(typeof closeFieldControls==='function'&&!closeFieldControls.__v29MissionUx){
+      const previous=closeFieldControls;
+      const wrapped=function(){
+        document.body.classList.remove('v29-bearing-open');
+        return previous.apply(this,arguments);
+      };
+      wrapped.__v29MissionUx=true;
+      closeFieldControls=wrapped;
+    }
+  }
+
+  function installMissionUx(){
+    installMissionHomebar();
+    installReconPanel();
+    installMissionMenu();
+    installMissionHeader();
+    installDrawUx();
+    installRegisteredVerification();
+    installTrackStateSync();
+    installMissionFieldControlHooks();
+    installLightMapFallback();
+    ensureMissionObjectiveSheet();
+    ensureLightMap();
+    syncMissionHomebarText();
+    syncMissionMenuText();
+    syncReconPanel();
+    syncMissionHeader();
+  }
+
+
   /* ---------- FREE TRACK ---------- */
   function freePlanId(){return localStorage.getItem(FREE_PLAN_KEY)||'';}
   function ensureFreePlan(){
@@ -1134,11 +1898,13 @@
     const active=base.track.state!=='OFF'&&base.state.activePlanId===freePlanId();
     btn.textContent=active?t('freeTrackManage'):t('freeTrack');
     btn.classList.toggle('active',active);
+    const missionBtn=document.getElementById('v29FreeTrackMissionBtn');
+    if(missionBtn){missionBtn.textContent=active?t('freeTrackManage'):t('freeTrack');missionBtn.classList.toggle('active',active);}
   }
 
   /* ---------- language + lifecycle ---------- */
   function syncAllText(){
-    syncMenuText();syncSiteControlsText();refreshBearingPanel();syncPlanHeader();
+    syncMenuText();syncSiteControlsText();refreshBearingPanel();syncPlanHeader();syncMissionHomebarText();syncMissionMenuText();syncReconPanel();syncMissionHeader();
     const picker=document.getElementById('v29LocationPicker');
     if(picker&&!picker.hidden){
       picker.querySelector('#v29PickerSearch').textContent=t('pickerSearch');
@@ -1178,6 +1944,7 @@
     installSaferTrackHud();
     installNavRecoveryHooks();
     ensurePicker();
+    installMissionUx();
 
     const previousRender=typeof renderWpDrawerList==='function'?renderWpDrawerList:null;
     if(previousRender&&!previousRender.__v29Sites){
@@ -1204,7 +1971,11 @@
     restoreBackup:restoreFullBackup,
     startBearingSensor,
     stopBearingSensor,
-    getLastFix:persistentLastFix
+    getLastFix:persistentLastFix,
+    openLightMap,
+    closeLightMap,
+    frameObjectiveContext,
+    openObjectiveInfo:openMissionObjectiveSheet
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
