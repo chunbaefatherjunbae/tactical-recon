@@ -1832,6 +1832,9 @@
       const previous=openFieldControls;
       const wrapped=function(section){
         const out=previous.apply(this,arguments);
+        const title=document.getElementById('fieldControlTitle');
+        const names={recon:t('recon'),records:t('records')};
+        if(title&&names[section])title.textContent=names[section];
         if(section==='recon')syncReconPanel();
         if(section==='records')syncMissionMenuText();
         return out;
