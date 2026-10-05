@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - r1-structure-overhaul
   workflow_dispatch:
 
 permissions:
@@ -30,8 +31,10 @@ jobs:
           node --check v29-ui.js
           node --check v29-storage.js
           node --check v29-stabilize.js
+          node --check r1.js
           node --check service-worker.js
           node --check test_v29_stabilize.js
+          node --check test_r1.js
 
       - name: Run regression tests
         run: |
@@ -40,7 +43,7 @@ jobs:
           node test_v28_integration.js
           node test_v29.js
           node test_v29_integration.js
-          node test_v29_stabilize.js
+          node test_r1.js
 
   deploy:
     needs: validate
