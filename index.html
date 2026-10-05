@@ -1541,7 +1541,7 @@
       <span id="currentOpticLabel" style="color:var(--accent);">NVG-G</span>
     </div>
     <div class="osd-mgrs-btn" onclick="copyReticleMGRS(this)" title="클릭 시 10계단 MGRS 복사">
-      <div style="font-size:8px; color:var(--text-dim); margin-bottom:2px;">10-DIGIT MGRS (TAP TO COPY)</div>
+      <div style="font-size:8px; color:var(--text-dim); margin-bottom:2px;">MGRS</div>
       <div class="osd-mgrs-val" id="reticleMgrs">CALCULATING...</div>
     </div>
     <div class="osd-subgrid">
@@ -5869,13 +5869,13 @@
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js?v=r1-2-reticle-20261005-1', { scope: './', updateViaCache: 'none' })
+        navigator.serviceWorker.register('./service-worker.js?v=r1-3-field-20261005-1', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-r1-2-reticle-20261005-1';
+        const reloadKey = 'tactical-recon-sw-reload-r1-3-field-20261005-1';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();

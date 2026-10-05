@@ -1387,3 +1387,260 @@ body.r12-ui .map-scale-label {
     bottom:auto !important;
   }
 }
+
+
+/* ============================================================
+   R1.3 // FIELD SHELL + SEARCH EFFICIENCY
+   Tightens the iPhone shell, strengthens the optic frame,
+   and gives TEMP / Working Grid their own clear visual language.
+   ============================================================ */
+
+:root {
+  --r13-nav-base:52px;
+}
+
+/* iOS standalone/Safari can expose body below a 100dvh Leaflet container.
+   Pin the actual map to the viewport so the field view never ends early. */
+body.r13-ui #map {
+  position:fixed !important;
+  inset:0 !important;
+  width:auto !important;
+  height:auto !important;
+  min-height:0 !important;
+}
+
+/* Bottom nav occupies only controls + the real safe area. */
+body.r13-ui .mfd-bottom-bar {
+  bottom:0 !important;
+  min-height:calc(var(--r13-nav-base) + env(safe-area-inset-bottom)) !important;
+  padding:3px 8px max(4px,env(safe-area-inset-bottom)) !important;
+  background:rgba(3,9,5,.96) !important;
+  box-shadow:0 -3px 12px rgba(0,0,0,.24) !important;
+}
+body.r13-ui .mfd-bottom-bar .v26-main-cluster {
+  height:46px !important;
+}
+body.r13-ui .mfd-bottom-bar .v26-main-cluster .osb-btn {
+  min-height:44px !important;
+  height:44px !important;
+}
+
+/* MGRS is self-explanatory on this screen. Keep the value, remove tutorial copy. */
+body.r13-ui .telemetry-osd .osd-mgrs-btn > div:first-child {
+  display:none !important;
+}
+body.r13-ui .telemetry-osd .osd-mgrs-btn {
+  display:block !important;
+  min-height:30px !important;
+}
+body.r13-ui .telemetry-osd .osd-mgrs-val {
+  text-align:left !important;
+  font-size:11.5px !important;
+  letter-spacing:.035em !important;
+}
+
+/* GPS state is already owned by the right-side GPS button.
+   Detailed ELEV / ACC / FOLLOW stay available in GPS detail. */
+@media (max-width:768px) {
+  body.r13-ui .gps-status-osd {
+    display:none !important;
+  }
+
+  body.r13-ui .global-gps-controls {
+    top:calc(env(safe-area-inset-top) + 86px) !important;
+  }
+
+  body.r13-ui .telemetry-osd {
+    top:calc(env(safe-area-inset-top) + 86px) !important;
+    min-height:34px !important;
+    right:62px !important;
+    padding:3px 7px !important;
+    background:rgba(3,9,5,.66) !important;
+  }
+}
+
+/* Optic frame is a product identity element, not a nearly invisible decoration. */
+body.r13-ui .bracket {
+  width:30px !important;
+  height:30px !important;
+  opacity:.94 !important;
+  border-width:1px !important;
+  border-color:var(--field-active) !important;
+  filter:drop-shadow(0 0 3px var(--accent-glow)) !important;
+}
+body.r13-ui .bracket.tr,
+body.r13-ui .bracket.br {
+  left:calc(var(--r12-frame-right) - 30px) !important;
+}
+body.r13-ui .bracket.bl,
+body.r13-ui .bracket.br {
+  top:calc(var(--r12-frame-bottom) - 30px) !important;
+}
+body.r13-ui .bracket::before {
+  content:'';
+  position:absolute;
+  opacity:.52;
+  pointer-events:none;
+}
+body.r13-ui .bracket.tl::before,
+body.r13-ui .bracket.bl::before {
+  left:5px;
+  width:10px;
+  height:1px;
+  background:currentColor;
+}
+body.r13-ui .bracket.tr::before,
+body.r13-ui .bracket.br::before {
+  right:5px;
+  width:10px;
+  height:1px;
+  background:currentColor;
+}
+body.r13-ui .bracket.tl::before,
+body.r13-ui .bracket.tr::before { top:5px; }
+body.r13-ui .bracket.bl::before,
+body.r13-ui .bracket.br::before { bottom:5px; }
+
+body.r13-ui .reticle-container {
+  opacity:.62 !important;
+  filter:drop-shadow(0 0 2px var(--accent-glow));
+}
+
+/* Scale becomes part of the lower-left optic frame.
+   Its baseline aligns with the bottom bracket's horizontal leg. */
+body.r13-ui .map-scale-osd,
+body.r13-ui:not(.target-mode) .map-scale-osd {
+  left:calc(var(--r12-frame-left) + 18px) !important;
+  top:calc(var(--r12-frame-bottom) - 6px) !important;
+  bottom:auto !important;
+  filter:drop-shadow(0 0 2px var(--accent-glow)) !important;
+}
+body.r13-ui .map-scale-line {
+  height:6px !important;
+  opacity:.9 !important;
+}
+body.r13-ui .map-scale-label {
+  margin-top:4px !important;
+  margin-left:4px !important;
+  font-size:9px !important;
+  opacity:.96 !important;
+}
+
+/* TEMP is a temporary reference point, not another site marker.
+   Four broken brackets + center point create a reference-point symbol. */
+body.r13-ui .temp-marker {
+  width:30px !important;
+  height:30px !important;
+  color:var(--accent) !important;
+  filter:drop-shadow(0 0 3px var(--accent-glow)) !important;
+}
+body.r13-ui .temp-marker::before {
+  content:'' !important;
+  position:absolute !important;
+  inset:3px !important;
+  border:0 !important;
+  transform:none !important;
+  background:
+    linear-gradient(currentColor,currentColor) left top/7px 1px no-repeat,
+    linear-gradient(currentColor,currentColor) left top/1px 7px no-repeat,
+    linear-gradient(currentColor,currentColor) right top/7px 1px no-repeat,
+    linear-gradient(currentColor,currentColor) right top/1px 7px no-repeat,
+    linear-gradient(currentColor,currentColor) left bottom/7px 1px no-repeat,
+    linear-gradient(currentColor,currentColor) left bottom/1px 7px no-repeat,
+    linear-gradient(currentColor,currentColor) right bottom/7px 1px no-repeat,
+    linear-gradient(currentColor,currentColor) right bottom/1px 7px no-repeat !important;
+}
+body.r13-ui .temp-marker::after {
+  content:'' !important;
+  position:absolute !important;
+  left:50% !important;
+  top:50% !important;
+  width:5px !important;
+  height:5px !important;
+  border:1px solid currentColor !important;
+  border-radius:50% !important;
+  background:rgba(2,8,4,.72) !important;
+  box-shadow:0 0 4px var(--accent-glow) !important;
+  transform:translate(-50%,-50%) !important;
+}
+body.r13-ui .temp-marker .v26-map-label {
+  top:31px !important;
+  padding:2px 4px !important;
+  border-color:color-mix(in srgb,currentColor 48%,transparent) !important;
+}
+
+/* LAST FIX remains visible but secondary to live/temporary reference points. */
+body.r13-ui .r11-last-fix-visual {
+  opacity:.58 !important;
+}
+body.r13-ui .r11-last-fix-visual > span {
+  opacity:.78;
+  background:rgba(2,8,4,.56) !important;
+}
+
+/* R1.3 Working Grid search presentation. */
+#addressSearchBackdrop .promo-modal {
+  gap:10px;
+}
+.r13-working-grid {
+  min-height:28px;
+  display:flex;
+  align-items:center;
+  padding:0 8px;
+  border-left:2px solid var(--field-active,var(--accent));
+  background:rgba(255,255,255,.025);
+  color:var(--field-active,var(--accent));
+  font:900 9px/1 var(--font-mono);
+  letter-spacing:.06em;
+}
+.r13-working-grid[data-source="MAP"] {
+  border-left-style:dashed;
+  opacity:.82;
+}
+#addressSearchBackdrop .address-search-results {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+#addressSearchBackdrop .r13-search-result {
+  padding:10px 11px;
+}
+#addressSearchBackdrop .r13-search-result .address-search-name {
+  font-size:11.5px;
+  color:var(--field-active,var(--text-main));
+}
+#addressSearchBackdrop .r13-search-result .address-search-coords {
+  margin-top:5px;
+  font-size:9px;
+  line-height:1.35;
+  color:var(--field-dim-readable,var(--text-dim));
+}
+#addressSearchBackdrop .promo-actions {
+  justify-content:flex-start;
+  margin-top:2px;
+}
+#addressSearchBackdrop .promo-actions button:not(:first-child) {
+  display:none !important;
+}
+
+@media (max-width:768px) {
+  body.r13-ui .r1-map-search {
+    top:calc(env(safe-area-inset-top) + 36px) !important;
+  }
+
+  /* With GPS strip removed, optic frame starts directly after the MGRS row. */
+  body.r13-ui .bracket.tl,
+  body.r13-ui .bracket.tr {
+    top:var(--r12-frame-top) !important;
+  }
+
+  body.r13-ui .r1-location-card,
+  body.r13-ui .r1-records-sheet {
+    bottom:calc(var(--r13-nav-base) + env(safe-area-inset-bottom) + 8px) !important;
+  }
+
+  #addressSearchBackdrop .promo-modal {
+    width:calc(100% - 28px);
+    padding:14px;
+  }
+}
