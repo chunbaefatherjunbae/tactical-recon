@@ -21,7 +21,7 @@ function test(name, fn) {
 }
 
 test('PWA cache version is current V29 stabilized cache', () => {
-  assert(sw.includes("const CACHE_VERSION = 'v29-mission-map-20261005-2';"));
+  assert(sw.includes("const CACHE_VERSION = 'v29-interaction-hotfix-20261005-3';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
