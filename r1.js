@@ -15,6 +15,7 @@
   const BACKUP_FORMAT='TACTICAL_RECON_BACKUP';
   const BACKUP_VERSION=1;
   const FREE_PLAN_KEY='tactical_recon_free_track_plan_v1';
+  const WORKING_GRID_KEY='tactical_recon_working_grid_v1';
 
   let installed=false;
   let pickerMode=null;
@@ -130,9 +131,106 @@
   /* ---------- unified location service ---------- */
   const locationTokens={address:0,route:0,plan:0};
 
+  function mgrsPrefixFromText(value){
+    const compact=String(value||'').toUpperCase().replace(/\s+/g,'');
+    const m=compact.match(/^(\d{1,2}[C-X])([A-Z]{2})(\d{2,10})$/);
+    if(!m||m[3].length%2!==0)return null;
+    return {zoneBand:m[1],grid:m[2],prefix:m[1]+' '+m[2],compactPrefix:m[1]+m[2]};
+  }
+
+  function mgrsPrefixForCoords(coords){
+    if(!validCoords(coords)||typeof calcMGRS!=='function')return null;
+    const text=calcMGRS(Number(coords[0]),Number(coords[1]));
+    const prefix=mgrsPrefixFromText(text);
+    return prefix?{...prefix,mgrs:text}:null;
+  }
+
+  function storedWorkingGrid(){
+    const raw=readJson(WORKING_GRID_KEY,null);
+    if(!raw?.compactPrefix||!/^(\d{1,2}[C-X])([A-Z]{2})$/.test(String(raw.compactPrefix)))return null;
+    const compact=String(raw.compactPrefix).toUpperCase();
+    const m=compact.match(/^(\d{1,2}[C-X])([A-Z]{2})$/);
+    return {zoneBand:m[1],grid:m[2],prefix:m[1]+' '+m[2],compactPrefix:compact,source:'SAVED'};
+  }
+
+  function saveWorkingGrid(prefix,source='INPUT'){
+    if(!prefix?.compactPrefix)return;
+    writeJson(WORKING_GRID_KEY,{compactPrefix:prefix.compactPrefix,source,timestamp:Date.now()});
+  }
+
+  function workingGridContext(){
+    const ref=currentReference();
+    if(ref?.coords){
+      const prefix=mgrsPrefixForCoords(ref.coords);
+      if(prefix)return {...prefix,source:String(ref.type||'REF')};
+    }
+    try{
+      if(typeof map!=='undefined'&&map?.getCenter){
+        const c=map.getCenter();
+        const prefix=mgrsPrefixForCoords([Number(c.lat),Number(c.lng)]);
+        if(prefix)return {...prefix,source:'MAP'};
+      }
+    }catch(e){}
+    return storedWorkingGrid();
+  }
+
+  function isMgrsPrecisionDigits(value){
+    return /^\d{2,10}$/.test(value)&&value.length%2===0;
+  }
+
+  function expandMgrsQuery(query){
+    const compact=String(query||'').toUpperCase().replace(/[\s-]+/g,'');
+    if(!compact)return null;
+
+    const full=compact.match(/^(\d{1,2}[C-X])([A-Z]{2})(\d{2,10})$/);
+    if(full&&isMgrsPrecisionDigits(full[3])){
+      const prefix={zoneBand:full[1],grid:full[2],prefix:full[1]+' '+full[2],compactPrefix:full[1]+full[2]};
+      saveWorkingGrid(prefix,'FULL');
+      return {mgrs:compact,workingGridApplied:false,prefix};
+    }
+
+    const gridOnly=compact.match(/^([A-Z]{2})(\d{2,10})$/);
+    if(gridOnly&&isMgrsPrecisionDigits(gridOnly[2])){
+      const ctx=workingGridContext();
+      if(!ctx){
+        const error=new Error('GRID_PREFIX_REQUIRED');error.code='GRID_PREFIX_REQUIRED';throw error;
+      }
+      const prefix={zoneBand:ctx.zoneBand,grid:gridOnly[1],prefix:ctx.zoneBand+' '+gridOnly[1],compactPrefix:ctx.zoneBand+gridOnly[1]};
+      saveWorkingGrid(prefix,'GRID');
+      return {mgrs:prefix.compactPrefix+gridOnly[2],workingGridApplied:true,prefix,workingGridSource:ctx.source};
+    }
+
+    if(isMgrsPrecisionDigits(compact)){
+      const ctx=workingGridContext();
+      if(!ctx){
+        const error=new Error('GRID_PREFIX_REQUIRED');error.code='GRID_PREFIX_REQUIRED';throw error;
+      }
+      saveWorkingGrid(ctx,'SHORT');
+      return {mgrs:ctx.compactPrefix+compact,workingGridApplied:true,prefix:ctx,workingGridSource:ctx.source};
+    }
+    return null;
+  }
+
   function parseLocation(query){
     const raw=String(query||'').trim();
     if(!raw)return null;
+
+    let expanded=null;
+    try{expanded=expandMgrsQuery(raw);}catch(e){throw e;}
+    if(expanded&&root.mgrs?.toPoint){
+      try{
+        const p=root.mgrs.toPoint(expanded.mgrs);
+        const coords=[Number(p?.[1]),Number(p?.[0])];
+        if(validCoords(coords))return {
+          lat:coords[0],lon:coords[1],name:'MGRS POSITION',address:'',
+          source:expanded.workingGridApplied?'MGRS_SHORT':'MGRS',
+          mgrs:typeof calcMGRS==='function'?calcMGRS(coords[0],coords[1]):expanded.mgrs,
+          workingGridApplied:Boolean(expanded.workingGridApplied),
+          workingGridSource:expanded.workingGridSource||null
+        };
+      }catch(e){}
+    }
+
     try{
       if(typeof parseDirectRouteLocation==='function'){
         const direct=parseDirectRouteLocation(raw);
@@ -145,14 +243,16 @@
     if(m&&validCoords([Number(m[1]),Number(m[2])])){
       return {lat:Number(m[1]),lon:Number(m[2]),name:'WGS84 POSITION',address:'',source:'WGS84'};
     }
-    try{
-      if(root.mgrs?.toPoint){
-        const p=root.mgrs.toPoint(raw.replace(/\s+/g,''));
-        const coords=[Number(p?.[1]),Number(p?.[0])];
-        if(validCoords(coords))return {lat:coords[0],lon:coords[1],name:'MGRS POSITION',address:'',source:'MGRS'};
-      }
-    }catch(e){}
     return null;
+  }
+
+  function requestedHouseNumber(query){
+    const m=String(query||'').trim().match(/(?:대로|로|길)\s*(\d+(?:-\d+)?)\s*$/);
+    return m?m[1]:null;
+  }
+
+  function addressResultMgrs(item){
+    return item?.mgrs||(typeof calcMGRS==='function'?calcMGRS(item.lat,item.lon):'');
   }
 
   async function searchLocations(query){
@@ -163,25 +263,74 @@
       error.code='OFFLINE';
       throw error;
     }
-    const url='https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=6&addressdetails=1&accept-language=ko&q='+encodeURIComponent(String(query||'').trim());
+    const rawQuery=String(query||'').trim();
+    const wantedHouse=requestedHouseNumber(rawQuery);
+    const url='https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=8&addressdetails=1&accept-language=ko&q='+encodeURIComponent(rawQuery);
     const response=await fetch(url,{headers:{Accept:'application/json'}});
     if(!response.ok)throw new Error('LOCATION_SEARCH_FAILED');
     const rows=await response.json();
     if(!Array.isArray(rows))return [];
-    return rows.map(row=>{
+    const mapped=rows.map(row=>{
       const lat=Number(row.lat),lon=Number(row.lon);
       if(!validCoords([lat,lon]))return null;
-      let address=String(row.display_name||query||'').trim();
+      let address=String(row.display_name||rawQuery||'').trim();
       try{
         if(typeof normalizeKoreanAddress==='function')address=normalizeKoreanAddress(row,address)||address;
       }catch(e){}
-      return {lat,lon,name:String(row.name||address||query||'POSITION'),address,source:'ADDRESS',raw:row};
+      const actualHouse=String(row?.address?.house_number||'').trim();
+      const houseConfirmed=!wantedHouse||actualHouse===wantedHouse;
+      const mgrsText=typeof calcMGRS==='function'?calcMGRS(lat,lon):'';
+      return {
+        lat,lon,name:String(row.name||address||rawQuery||'POSITION'),address,source:'ADDRESS',raw:row,
+        mgrs:mgrsText,requestedHouse:wantedHouse,actualHouse,houseConfirmed
+      };
     }).filter(Boolean);
+
+    mapped.sort((a,b)=>Number(b.houseConfirmed)-Number(a.houseConfirmed));
+    const seen=new Set();
+    return mapped.filter(item=>{
+      const key=(item.address||'').replace(/\s+/g,' ').trim()+'|'+addressResultMgrs(item);
+      if(seen.has(key))return false;
+      seen.add(key);return true;
+    }).slice(0,6);
   }
 
   function coordsSubtitle(item,digits=5){
-    const mgrsText=typeof calcMGRS==='function'?calcMGRS(item.lat,item.lon):'';
+    const mgrsText=addressResultMgrs(item);
+    if(item.source==='ADDRESS'){
+      const quality=item.requestedHouse&&!item.houseConfirmed
+        ? (lang()==='ko'?'번지 미확인 · ':'HOUSE NO. UNVERIFIED · ')
+        : '';
+      return quality+(mgrsText||'MGRS --');
+    }
+    if(item.source==='MGRS'||item.source==='MGRS_SHORT'){
+      const gridNote=item.workingGridApplied
+        ? (lang()==='ko'?'WORKING GRID 적용 · ':'WORKING GRID · ')
+        : '';
+      return gridNote+(mgrsText||'MGRS')+' · '+item.lat.toFixed(digits)+', '+item.lon.toFixed(digits);
+    }
     return item.lat.toFixed(digits)+', '+item.lon.toFixed(digits)+(mgrsText?' · '+mgrsText:'');
+  }
+
+  function activateSearchResult(item){
+    selectedAddressResult=item;
+    try{
+      if(typeof closeAddressSearch==='function')closeAddressSearch();
+      map.setView([Number(item.lat),Number(item.lon)],Math.max(map.getZoom(),16),{animate:false});
+      if(typeof flushReticleTelemetry==='function')flushReticleTelemetry();
+    }catch(e){}
+    if(pickerMode){
+      ensurePicker()?._update?.();
+      return;
+    }
+    showR1LocationCard({
+      id:'R13-SEARCH-'+Date.now(),
+      name:item.name||item.address||r1Text('검색 위치','SEARCH RESULT'),
+      address:item.address||'',
+      coords:[Number(item.lat),Number(item.lon)],
+      source:item.source||'INPUT',
+      searchQuality:item.requestedHouse&&!item.houseConfirmed?'HOUSE_UNVERIFIED':'VERIFIED'
+    },'LOCATION');
   }
 
   function installUnifiedSearch(){
@@ -204,20 +353,23 @@
           if(token!==locationTokens.address)return;
           results.textContent='';
           if(!found.length){results.innerHTML='<div class="address-search-empty">'+(lang()==='ko'?'검색 결과가 없습니다.':'NO RESULTS')+'</div>';return;}
-          found.forEach((item,index)=>{
-            const row=document.createElement('button');row.type='button';row.className='address-search-item';
+          found.forEach(item=>{
+            const row=document.createElement('button');row.type='button';row.className='address-search-item r13-search-result';
             const title=document.createElement('span');title.className='address-search-name';title.textContent=item.address||item.name;
             const sub=document.createElement('span');sub.className='address-search-coords';sub.textContent=coordsSubtitle(item,item.source==='ADDRESS'?5:6);
             row.append(title,sub);
-            row.onclick=()=>selectAddressResult(item,row);
+            row.onclick=()=>activateSearchResult(item);
             results.appendChild(row);
-            if(found.length===1&&item.source!=='ADDRESS')selectAddressResult(item,row);
           });
         }catch(e){
           if(token!==locationTokens.address)return;
-          results.innerHTML='<div class="address-search-empty">'+(e?.code==='OFFLINE'
-            ? (lang()==='ko'?'OFFLINE · 주소 검색은 사용할 수 없습니다. WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ADDRESS SEARCH UNAVAILABLE. ENTER WGS84 OR MGRS.')
-            : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
+          results.innerHTML='<div class="address-search-empty">'+(
+            e?.code==='OFFLINE'
+              ? (lang()==='ko'?'OFFLINE · 주소 검색은 사용할 수 없습니다. WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ADDRESS SEARCH UNAVAILABLE. ENTER WGS84 OR MGRS.')
+              : e?.code==='GRID_PREFIX_REQUIRED'
+                ? (lang()==='ko'?'GRID PREFIX가 없습니다. 전체 MGRS를 한 번 입력하거나 지도 기준 위치를 먼저 지정하세요.':'GRID PREFIX REQUIRED. ENTER A FULL MGRS OR SET A MAP REFERENCE.')
+                : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.')
+          )+'</div>';
         }finally{if(button&&token===locationTokens.address)button.disabled=false;}
       };
       wrapped.__v29Unified=true;
@@ -297,6 +449,56 @@
       wrapped.__v29Unified=true;
       searchPlanLocation=wrapped;
     }
+  }
+
+
+  function syncR13WorkingGridUi(){
+    const chip=document.getElementById('r13WorkingGrid');
+    if(!chip)return;
+    const ctx=workingGridContext();
+    if(!ctx){
+      chip.textContent=lang()==='ko'?'GRID -- · 전체 MGRS 필요':'GRID -- · FULL MGRS REQUIRED';
+      chip.dataset.source='NONE';
+      return;
+    }
+    chip.textContent='GRID '+ctx.prefix+' · '+String(ctx.source||'MAP').replace('LAST_FIX','LAST FIX');
+    chip.dataset.source=String(ctx.source||'MAP');
+  }
+
+  function installR13SearchUi(){
+    const modal=document.querySelector('#addressSearchBackdrop .promo-modal');
+    const input=document.getElementById('addressSearchInput');
+    if(!modal||!input)return;
+
+    const title=modal.querySelector('.promo-title');
+    if(title)title.textContent=r1Text('위치탐색','LOCATION SEARCH');
+
+    const hint=title?.nextElementSibling;
+    if(hint)hint.textContent=r1Text(
+      '주소·MGRS·WGS84를 한 검색창에서 사용합니다. GRID가 표시되면 좌표 10자리만 입력해도 됩니다.',
+      'SEARCH ADDRESS, MGRS OR WGS84. WHEN GRID IS SHOWN, ENTER ONLY THE 10-DIGIT COORDINATE.'
+    );
+
+    let chip=document.getElementById('r13WorkingGrid');
+    if(!chip){
+      chip=document.createElement('div');
+      chip.id='r13WorkingGrid';
+      chip.className='r13-working-grid';
+      const row=input.parentElement;
+      row?.parentElement?.insertBefore(chip,row);
+    }
+
+    input.placeholder=r1Text('주소 / 27311 41963 / CG 27311 41963 / 전체 MGRS','주소 / 27311 41963 / CG 27311 41963 / FULL MGRS');
+
+    const actions=modal.querySelector('.promo-actions');
+    if(actions){
+      [...actions.querySelectorAll('button')].forEach((btn,index)=>{
+        btn.hidden=index!==0;
+      });
+      const close=actions.querySelector('button');
+      if(close)close.textContent=r1Text('닫기','CLOSE');
+    }
+    syncR13WorkingGridUi();
   }
 
   /* ---------- persistent LAST FIX ---------- */
@@ -2773,23 +2975,22 @@
 
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R1.2 FIELD TERMINAL';
-    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui','r12-ui');
+    document.title='TACTICAL RECON // R1.3 FIELD TERMINAL';
+    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui','r12-ui','r13-ui');
     installLastFix();
     installUnifiedSearch();
     installSearchCloseReliability();
-    if(typeof openAddressSearch==='function'&&!openAddressSearch.__v29PickerAware){
+    if(typeof openAddressSearch==='function'&&!openAddressSearch.__r13Search){
       const previous=openAddressSearch;
       const wrapped=function(){
         const out=previous.apply(this,arguments);
-        const save=document.getElementById('addressSaveButton');
-        const temp=document.getElementById('addressTempButton');
-        if(save)save.hidden=false;
-        if(temp)temp.hidden=false;
+        installR13SearchUi();
         syncAddressSearchPickerMode();
+        const actions=document.querySelector('#addressSearchBackdrop .promo-actions');
+        if(actions)[...actions.querySelectorAll('button')].forEach((btn,index)=>{btn.hidden=index!==0;});
         return out;
       };
-      wrapped.__v29PickerAware=true;
+      wrapped.__r13Search=true;
       openAddressSearch=wrapped;
     }
     installSiteFilterData();
@@ -2806,6 +3007,7 @@
     installMissionUx();
     installR1Shell();
     installR12OverlayLayout();
+    installR13SearchUi();
 
     const previousRender=typeof renderWpDrawerList==='function'?renderWpDrawerList:null;
     if(previousRender&&!previousRender.__v29Sites){
@@ -2833,7 +3035,9 @@
     });
     window.addEventListener('pagehide',()=>{stopBearingSensor();persistNavRecovery();});
 
+    if(typeof map!=='undefined'&&map?.on)map.on('moveend',syncR13WorkingGridUi);
     syncAllText();
+    syncR13WorkingGridUi();
   }
 
   root.v29Stabilize={
