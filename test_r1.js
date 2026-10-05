@@ -23,9 +23,9 @@ test('R1 is the final runtime layer',()=>{
 });
 
 test('PWA cache identity moved to R1',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r1-structure-20261005-1';"));
-  assert(index.includes('service-worker.js?v=r1-structure-20261005-1'));
-  assert(index.includes('tactical-recon-sw-reload-r1-structure-20261005-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r1-1-ui-20261005-1';"));
+  assert(index.includes('service-worker.js?v=r1-1-ui-20261005-1'));
+  assert(index.includes('tactical-recon-sw-reload-r1-1-ui-20261005-1'));
 });
 
 test('Home bar is RECON SITES RECORDS MENU',()=>{
@@ -80,7 +80,27 @@ test('R1 keeps existing navigation, search and bearing engines',()=>{
   assert(r1.includes('core.geo.bearingBundle'));
 });
 
-test('R1 mobile UI has dedicated map shell cards',()=>{
+test('R1.1 restores persisted LAST FIX as a map marker',()=>{
+  assert(r1.includes('let r11LastFixMarker=null'));
+  assert(r1.includes('function syncPersistentLastFixMarker()'));
+  assert(r1.includes("document.querySelector('.last-gps-hitbox')"));
+  assert(r1.includes("className:'r11-last-fix-hitbox'"));
+  assert(r1.includes('refreshPositionState.__r11LastFixMarker'));
+  assert(css.includes('.r11-last-fix-visual'));
+});
+
+test('R1.1 field view cleans the optical overlay',()=>{
+  assert(css.includes('--r11-bottom-nav-h'));
+  assert(css.includes('body.r11-ui .bracket'));
+  assert(css.includes('body.r11-ui .reticle-container'));
+  assert(css.includes('body.r11-ui:not(.target-mode) .map-scale-osd'));
+  assert(css.includes('background:transparent !important'));
+  assert(css.includes('body.r11-ui .telemetry-osd .osd-subgrid { display:none !important; }'));
+  assert(css.includes('body.r11-ui .gps-status-osd .gps-status-row { display:none !important; }'));
+  assert(r1.includes('data-r1-tab="records"'));
+});
+
+test('R1.1 mobile UI has dedicated map shell cards',()=>{
   assert(css.includes('.r1-map-search'));
   assert(css.includes('.r1-location-card'));
   assert(css.includes('.r1-records-sheet'));
