@@ -128,9 +128,8 @@ test('Every inline UI action resolves to a loaded runtime symbol',()=>{
       if(!['if','for','while','switch','function','Math','String','Number','Boolean','Object','Array','Date','JSON','encodeURIComponent','parseInt','parseFloat','stopPropagation','preventDefault'].includes(name))calls.add(name);
     }
   });
-  const escape=name=>name.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\test('Objective reticle and site creation share map location picker',()=>{');
   const defined=name=>{
-    const n=escape(name);
+    const n=name;
     return [
       new RegExp('function\\s+'+n+'\\s*\\('),
       new RegExp('\\b'+n+'\\s*=\\s*(?:async\\s*)?function\\b'),
