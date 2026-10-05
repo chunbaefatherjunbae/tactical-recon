@@ -112,7 +112,7 @@ test('Location search close lifecycle is owned by the final V29 layer',()=>{
   assert(block.includes("sheet?.classList.remove('open')"));
   assert(block.includes("sheet?.setAttribute('aria-hidden','true')"));
   assert(block.includes("blurSearchFocus"));
-  assert(block.includes("removeAttribute('onclick')"));
+  assert(stabilize.includes("btn.removeAttribute('onclick')"));
   assert(block.includes("event.stopImmediatePropagation()"));
   assert(css.includes('body.v29-stabilized .v271-sheet-close'));
   assert(css.includes('pointer-events:auto !important'));
