@@ -1786,3 +1786,16 @@ body.r14-ui .top-compass-bar::before {
   display:none !important;
   content:none !important;
 }
+
+
+/* R1.4.1 // restore the actual V-series mobile reticle dimensions. */
+@media (max-width:768px) {
+  body.r14-ui .reticle-container {
+    width:94px !important;
+    height:94px !important;
+  }
+  body.r14-ui .target-gate {
+    width:34px !important;
+    height:34px !important;
+  }
+}
