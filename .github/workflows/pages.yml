@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - r1-structure-overhaul
+      - r1.1-ui-polish
   workflow_dispatch:
 
 permissions:
