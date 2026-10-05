@@ -454,6 +454,77 @@ body.v29-stabilized.route-marking .target-mode-kicker::after {
   content:'' !important;
 }
 
+
+
+.v29-mission-map-hud {
+  position:fixed;
+  left:8px;
+  right:8px;
+  bottom:calc(var(--v271-toolbar-h) + 8px);
+  z-index:1330;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:6px;
+  padding:7px;
+  border:1px solid var(--field-line-strong);
+  background:var(--field-panel-solid,rgba(3,10,6,.96));
+  box-shadow:0 -6px 24px rgba(0,0,0,.28);
+  color:var(--field-text);
+}
+.v29-mission-map-hud[hidden] { display:none !important; }
+body.v29-stabilized.v29-mission-map .mfd-bottom-bar {
+  opacity:1 !important;
+  pointer-events:auto !important;
+}
+.v29-mission-map-copy {
+  min-width:0;
+  min-height:48px;
+  padding:4px 7px;
+  border:0;
+  border-left:2px solid var(--field-line-strong);
+  background:transparent;
+  color:inherit;
+  text-align:left;
+  font-family:var(--font-mono);
+}
+.v29-mission-map-copy span {
+  display:block;
+  color:var(--field-dim-readable);
+  font-size:8.5px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.v29-mission-map-copy strong {
+  display:block;
+  margin-top:2px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--field-active);
+  font-size:12px;
+}
+.v29-mission-map-copy small {
+  display:block;
+  margin-top:3px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--field-dim-readable);
+  font-size:8.5px;
+  font-weight:800;
+}
+.v29-mission-map-actions {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(58px,1fr));
+  gap:4px;
+}
+.v29-mission-map-actions .osb-btn {
+  min-width:58px;
+  min-height:48px;
+  padding:0 6px;
+  font-size:9.5px;
+}
+
 .v29-mission-sheet {
   position:fixed;
   left:8px;
@@ -498,7 +569,7 @@ body.v29-stabilized.route-marking .target-mode-kicker::after {
 }
 .v29-mission-metrics {
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(5,minmax(0,1fr));
   border:1px solid var(--field-line);
 }
 .v29-mission-metrics > div {
@@ -641,10 +712,19 @@ body.v29-stabilized.target-mode.v29-bearing-open .field-control-tray {
 .v29-draw-type-grid .osb-btn { min-height:46px; }
 
 @media (max-width:520px) {
+  .v29-mission-map-hud {
+    left:5px;
+    right:5px;
+    grid-template-columns:1fr;
+    gap:5px;
+  }
+  .v29-mission-map-actions { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .v29-mission-map-actions .osb-btn { min-height:44px; }
   .v29-mission-sheet { left:5px; right:5px; padding:7px; }
   .v29-mission-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .v29-mission-metrics > div:nth-child(2) { border-right:0; }
-  .v29-mission-metrics > div:nth-child(-n+2) { border-bottom:1px solid var(--field-line); }
+  .v29-mission-metrics > div { border-right:1px solid var(--field-line); border-bottom:1px solid var(--field-line); }
+  .v29-mission-metrics > div:nth-child(2n) { border-right:0; }
+  .v29-mission-metrics .v29-mission-ref { grid-column:1/-1; border-right:0; border-bottom:0; }
   .v29-mission-actions { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .v29-recon-actions { grid-template-columns:1fr 1fr; }
   .v29-light-map { padding-left:5px; padding-right:5px; }

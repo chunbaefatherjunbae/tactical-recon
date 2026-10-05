@@ -22,6 +22,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Syntax check
+        run: |
+          node --check v28.js
+          node --check v28-runtime.js
+          node --check v29.js
+          node --check v29-ui.js
+          node --check v29-storage.js
+          node --check v29-stabilize.js
+          node --check service-worker.js
+          node --check test_v29_stabilize.js
+
       - name: Run regression tests
         run: |
           node test_v28.js

@@ -29,9 +29,9 @@ test('Offline vendor dependencies are local static assets',()=>{
 });
 
 test('Index and service worker use the final V29 cache identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'v29-mission-ux-20261005-1';"));
+  assert(sw.includes("const CACHE_VERSION = 'v29-mission-map-20261005-2';"));
   assert(index.includes('service-worker.js?v=29-mission-ux-20261005-1'));
-  assert(index.includes('tactical-recon-sw-reload-v29-mission-ux-20261005-1'));
+  assert(index.includes('tactical-recon-sw-reload-v29-mission-map-20261005-2'));
 });
 
 test('Index starts without Leaflet or MGRS CDN dependencies',()=>{
@@ -160,18 +160,26 @@ test('Recorded built-in sites can be field verified without modifying the built-
   assert(stabilize.includes("localIds.has(String(item.id))"));
 });
 
-test('Objective context stays on the map with REF OBJ framing and mission telemetry',()=>{
-  assert(stabilize.includes('function frameObjectiveContext()'));
+test('Objective context becomes a standalone mission map after PLAN is parked',()=>{
+  assert(stabilize.includes('let missionMapMode=false'));
+  assert(stabilize.includes('function returnToMissionMap(options={})'));
+  assert(stabilize.includes("exitTargetMode(false)"));
+  assert(stabilize.includes("document.body.classList.toggle('v29-mission-map',missionMapMode)"));
+  const start=stabilize.indexOf('function syncMissionMapContext()');
+  const end=stabilize.indexOf('function frameObjectiveContext()',start);
+  const block=stabilize.slice(start,end);
+  assert(block.includes("if(!obj?.coords||(!missionMapMode&&!planVisible))return"));
+  assert(block.includes("(plan?.routeSegments||[]).forEach"));
+  assert(block.includes("if(ref?.coords)"));
   assert(stabilize.includes("map.fitBounds(L.latLngBounds([ref.coords,obj.coords])"));
-  assert(stabilize.includes('function syncMissionMapContext()'));
-  assert(stabilize.includes("DIST '+missionDistance(bundle.distanceKm)+' · GRID '"));
-  assert(stabilize.includes('function openMissionObjectiveSheet()'));
-  assert(stabilize.includes("id='v29ObjectiveInfoSheet'"));
+  assert(stabilize.includes("id='v29MissionMapHud'"));
 });
 
-test('Light map is a normal map tool and tile fallback opens it',()=>{
+test('Light map is an explicit standard-light map mode and tile fallback opens it',()=>{
   assert(stabilize.includes("id='v29LightMap'"));
-  assert(stabilize.includes("id='v29LightMapBtn'"));
+  assert(stabilize.includes("standard.id='v29StandardMapBtn'"));
+  assert(stabilize.includes("light.id='v29LightMapBtn'"));
+  assert(stabilize.includes('function syncMapModeButtons()'));
   assert(stabilize.includes('function openLightMap()'));
   assert(stabilize.includes("clone.addEventListener('click',openLightMap)"));
   assert(css.includes('.v29-light-map-canvas'));
@@ -209,12 +217,36 @@ test('Free track label returns to start state after TRACK stop',()=>{
   assert.strictEqual(block.includes("if(!btn)return"),false);
 });
 
-test('Reticle objective change returns to REF OBJ map context',()=>{
+test('Reticle objective change parks PLAN and returns to mission map',()=>{
   const start=stabilize.indexOf('function confirmPicker()');
   const end=stabilize.indexOf('function bindObjectiveReticle()',start);
   const block=stabilize.slice(start,end);
-  assert(block.includes('frameObjectiveContext()'));
-  assert(block.includes('syncMissionHeader()'));
+  assert(block.includes('base.ui.openPlan(next.id)'));
+  assert(block.includes('returnToMissionMap({frame:true})'));
+});
+
+test('Objective detail separates GRID TRUE MAG and exposes reference quality',()=>{
+  assert(stabilize.includes('id="v29ObjTrue"'));
+  assert(stabilize.includes("set('v29ObjTrue',formatDeg(bundle?.trueBearing))"));
+  assert(stabilize.includes('function missionReferenceLabel(ref=currentReference())'));
+  assert(stabilize.includes("ref.type==='LAST_FIX'"));
+  assert(stabilize.includes('accuracyM'));
+});
+
+test('Mission map NAV initializes the PLAN engine only when NAV is requested',()=>{
+  const start=stabilize.indexOf('function startMissionNavigation()');
+  const end=stabilize.indexOf('function ensureMissionObjectiveSheet()',start);
+  const block=stabilize.slice(start,end);
+  assert(block.includes("setMissionMapMode(false,{frame:false})"));
+  assert(block.includes('base.ui.openPlan(plan.id)'));
+  assert(block.includes("if(typeof startTargetNavigation==='function')startTargetNavigation()"));
+});
+
+test('Live GPS refreshes standalone mission map telemetry',()=>{
+  const start=stabilize.indexOf("if(typeof applyGpsPosition==='function'");
+  const end=stabilize.indexOf("if(typeof getReferencePosition==='function'",start);
+  const block=stabilize.slice(start,end);
+  assert(block.includes('if(missionMapMode)syncMissionMapModeUi()'));
 });
 
 

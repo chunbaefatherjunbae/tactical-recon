@@ -5875,7 +5875,7 @@
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-v29-mission-ux-20261005-1';
+        const reloadKey = 'tactical-recon-sw-reload-v29-mission-map-20261005-2';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();

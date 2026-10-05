@@ -351,6 +351,7 @@
       const wrapped=function(pos){
         const out=previous.apply(this,arguments);
         persistLastFix(pos);
+        if(missionMapMode)syncMissionMapModeUi();
         return out;
       };
       wrapped.__v29LastFix=true;
@@ -587,7 +588,7 @@
       });
       if(next){
         base.ui.openPlan(next.id);
-        setTimeout(()=>{installMissionHeader();syncMissionHeader();frameObjectiveContext();},0);
+        setTimeout(()=>{installMissionHeader();returnToMissionMap({frame:true});},0);
       }
       return;
     }
@@ -1121,6 +1122,7 @@
 
   /* ---------- mission-first RECON / OBJECTIVE / MAP UX ---------- */
   let missionLayer=null;
+  let missionMapMode=false;
   let lightMapOpen=false;
   let activeOverlayType='REFERENCE';
   let overlaySeenCount=0;
@@ -1165,6 +1167,20 @@
     return n<1?Math.max(0,Math.round(n*1000))+' M':n.toFixed(n>=100?0:1)+' KM';
   }
 
+  function missionReferenceLabel(ref=currentReference()){
+    if(!ref)return '--';
+    let label=String(ref.type||'REF');
+    if(ref.type==='LAST_FIX'){
+      if(ref.ageMs!==undefined)label+=' · '+formatReferenceAge(ref.ageMs);
+      const accuracy=Number(ref.accuracyM);
+      if(Number.isFinite(accuracy))label+=' · ±'+Math.round(accuracy)+' M';
+    }else if(ref.type==='GPS'){
+      const accuracy=Number(typeof latestGpsPosition!=='undefined'?latestGpsPosition?.coords?.accuracy:NaN);
+      if(Number.isFinite(accuracy))label+=' · ±'+Math.round(accuracy)+' M';
+    }
+    return label;
+  }
+
   function ensureMissionLayer(){
     if(missionLayer||typeof L==='undefined'||typeof map==='undefined')return missionLayer;
     missionLayer=L.layerGroup().addTo(map);
@@ -1175,15 +1191,28 @@
     const layer=ensureMissionLayer();
     if(!layer)return;
     layer.clearLayers();
-    if(typeof targetModeActive==='undefined'||!targetModeActive||typeof targetModePhase==='undefined'||targetModePhase!=='PLAN')return;
+    const planVisible=typeof targetModeActive!=='undefined'&&targetModeActive&&typeof targetModePhase!=='undefined'&&targetModePhase==='PLAN';
     const {ref,obj}=missionMetrics();
-    if(!ref?.coords||!obj?.coords)return;
+    if(!obj?.coords||(!missionMapMode&&!planVisible))return;
     const color=typeof getOpticColor==='function'?getOpticColor():'#93d7a0';
-    const type=String(ref.type||'REF');
-    const dash=type==='LAST_FIX'?'2 8':(type==='TEMP'?'10 5':'6 5');
-    L.polyline([ref.coords,obj.coords],{interactive:false,color,weight:2,opacity:.78,dashArray:dash}).addTo(layer);
-    L.circleMarker(ref.coords,{interactive:false,radius:5,color,weight:2,fill:false,opacity:.9}).addTo(layer);
+    if(missionMapMode){
+      const plan=activePlan();
+      (plan?.routeSegments||[]).forEach(seg=>{
+        const clean=Array.isArray(seg)?seg.filter(validCoords):[];
+        if(clean.length>=2)L.polyline(clean,{interactive:false,color,weight:2,opacity:.78,dashArray:'7 6'}).addTo(layer);
+      });
+      (plan?.overlaySegments||[]).forEach(seg=>{
+        const clean=Array.isArray(seg)?seg.filter(validCoords):[];
+        if(clean.length>=2)L.polyline(clean,{interactive:false,color,weight:2,opacity:.72}).addTo(layer);
+      });
+    }
     L.circleMarker(obj.coords,{interactive:false,radius:7,color,weight:2,fill:false,opacity:1}).addTo(layer);
+    if(ref?.coords){
+      const type=String(ref.type||'REF');
+      const dash=type==='LAST_FIX'?'2 8':(type==='TEMP'?'10 5':'6 5');
+      L.polyline([ref.coords,obj.coords],{interactive:false,color,weight:2,opacity:.78,dashArray:dash}).addTo(layer);
+      L.circleMarker(ref.coords,{interactive:false,radius:5,color,weight:2,fill:false,opacity:.9}).addTo(layer);
+    }
   }
 
   function frameObjectiveContext(){
@@ -1203,6 +1232,103 @@
     syncMissionMapContext();
   }
 
+
+  function ensureMissionMapHud(){
+    let hud=document.getElementById('v29MissionMapHud');
+    if(hud)return hud;
+    hud=document.createElement('section');
+    hud.id='v29MissionMapHud';
+    hud.className='v29-mission-map-hud';
+    hud.hidden=true;
+    hud.innerHTML=
+      '<button class="v29-mission-map-copy" id="v29MissionMapInfo" type="button">'+
+        '<span id="v29MissionMapStatus"></span><strong id="v29MissionMapName"></strong>'+
+        '<small id="v29MissionMapMetrics"></small><small id="v29MissionMapRef"></small>'+
+      '</button>'+
+      '<div class="v29-mission-map-actions">'+
+        '<button class="osb-btn active" id="v29MissionMapNav" type="button"></button>'+
+        '<button class="osb-btn" id="v29MissionMapPlan" type="button"></button>'+
+        '<button class="osb-btn" id="v29MissionMapFit" type="button"></button>'+
+      '</div>';
+    document.body.appendChild(hud);
+    hud.querySelector('#v29MissionMapInfo')?.addEventListener('click',openMissionObjectiveSheet);
+    hud.querySelector('#v29MissionMapNav')?.addEventListener('click',startMissionNavigation);
+    hud.querySelector('#v29MissionMapPlan')?.addEventListener('click',enterMissionPlan);
+    hud.querySelector('#v29MissionMapFit')?.addEventListener('click',frameObjectiveContext);
+    return hud;
+  }
+
+  function renderMissionMapHud(){
+    const hud=ensureMissionMapHud();
+    const {ref,obj,bundle}=missionMetrics();
+    if(!missionMapMode||!obj){hud.hidden=true;return;}
+    const status=hud.querySelector('#v29MissionMapStatus');
+    const name=hud.querySelector('#v29MissionMapName');
+    const metrics=hud.querySelector('#v29MissionMapMetrics');
+    const refLine=hud.querySelector('#v29MissionMapRef');
+    if(status)status.textContent='OBJ · '+missionObjectiveStatus(obj);
+    if(name)name.textContent=obj.name||t('objectiveInfo');
+    if(metrics)metrics.textContent=bundle
+      ? 'DIST '+missionDistance(bundle.distanceKm)+' · GRID '+formatDeg(bundle.gridBearing)+' · TRUE '+formatDeg(bundle.trueBearing)+' · MAG '+formatDeg(bundle.magneticBearing)
+      : t('positionRequired');
+    if(refLine)refLine.textContent='REF '+missionReferenceLabel(ref);
+    const nav=hud.querySelector('#v29MissionMapNav');if(nav)nav.textContent=t('navAction');
+    const plan=hud.querySelector('#v29MissionMapPlan');if(plan)plan.textContent=t('planAction');
+    const fit=hud.querySelector('#v29MissionMapFit');if(fit)fit.textContent=t('mapFit');
+    hud.hidden=false;
+  }
+
+  function syncMissionMapModeUi(){
+    const obj=activeObjective();
+    if(!obj)missionMapMode=false;
+    if(typeof targetModePhase!=='undefined'&&targetModePhase==='NAV')missionMapMode=false;
+    document.body.classList.toggle('v29-mission-map',missionMapMode);
+    const panel=document.getElementById('targetModePanel');
+    if(missionMapMode){
+      panel?.classList.remove('active');
+      document.body.classList.remove('target-mode','route-drawing','route-marking','nav-panel-collapsed');
+    }
+    renderMissionMapHud();
+    syncMissionMapContext();
+    if(lightMapOpen)renderLightMap();
+  }
+
+  function setMissionMapMode(enabled,options={}){
+    missionMapMode=Boolean(enabled&&activeObjective());
+    syncMissionMapModeUi();
+    if(missionMapMode&&options.frame!==false)frameObjectiveContext();
+  }
+
+  function returnToMissionMap(options={}){
+    if(typeof targetModeActive!=='undefined'&&targetModeActive&&typeof targetModePhase!=='undefined'&&targetModePhase==='PLAN'&&typeof exitTargetMode==='function'){
+      exitTargetMode(false);
+    }
+    setMissionMapMode(true,options);
+  }
+
+  function enterMissionPlan(){
+    closeMissionObjectiveSheet();
+    const plan=activePlan();
+    if(!plan)return;
+    setMissionMapMode(false,{frame:false});
+    base.ui.openPlan(plan.id);
+  }
+
+  function openMissionPlans(){
+    closeMissionObjectiveSheet();
+    setMissionMapMode(false,{frame:false});
+    base.ui.openRoutes();
+  }
+
+  function startMissionNavigation(){
+    closeMissionObjectiveSheet();
+    const plan=activePlan();
+    if(!plan?.objective){base.ui.openObjective();return;}
+    setMissionMapMode(false,{frame:false});
+    if(!base.ui.openPlan(plan.id))return;
+    if(typeof startTargetNavigation==='function')startTargetNavigation();
+  }
+
   function ensureMissionObjectiveSheet(){
     let sheet=document.getElementById('v29ObjectiveInfoSheet');
     if(sheet)return sheet;
@@ -1216,8 +1342,9 @@
       '<div class="v29-mission-metrics">'+
         '<div><span>DIST</span><strong id="v29ObjDist">--</strong></div>'+
         '<div><span>GRID</span><strong id="v29ObjGrid">---°</strong></div>'+
+        '<div><span>TRUE</span><strong id="v29ObjTrue">---°</strong></div>'+
         '<div><span>MAG</span><strong id="v29ObjMag">---°</strong></div>'+
-        '<div><span>REF</span><strong id="v29ObjRef">--</strong></div>'+
+        '<div class="v29-mission-ref"><span>REF</span><strong id="v29ObjRef">--</strong></div>'+
       '</div>'+
       '<button class="v29-mission-coords" id="v29ObjCoords" type="button">--</button>'+
       '<div class="v29-mission-actions">'+
@@ -1230,15 +1357,8 @@
     document.body.appendChild(sheet);
     sheet.querySelector('.v29-sheet-x')?.addEventListener('click',closeMissionObjectiveSheet);
     sheet.querySelector('#v29ObjBearing')?.addEventListener('click',openMissionBearing);
-    sheet.querySelector('#v29ObjPlan')?.addEventListener('click',()=>{
-      closeMissionObjectiveSheet();
-      const plan=activePlan();
-      if(plan)base.ui.openPlan(plan.id);
-    });
-    sheet.querySelector('#v29ObjNav')?.addEventListener('click',()=>{
-      closeMissionObjectiveSheet();
-      if(typeof startTargetNavigation==='function')startTargetNavigation();
-    });
+    sheet.querySelector('#v29ObjPlan')?.addEventListener('click',enterMissionPlan);
+    sheet.querySelector('#v29ObjNav')?.addEventListener('click',startMissionNavigation);
     sheet.querySelector('#v29ObjChange')?.addEventListener('click',()=>{
       closeMissionObjectiveSheet();
       base.ui.openObjective();
@@ -1270,10 +1390,9 @@
     set('v29ObjInfoStatus','OBJ · '+missionObjectiveStatus(obj));
     set('v29ObjDist',missionDistance(bundle?.distanceKm));
     set('v29ObjGrid',formatDeg(bundle?.gridBearing));
+    set('v29ObjTrue',formatDeg(bundle?.trueBearing));
     set('v29ObjMag',formatDeg(bundle?.magneticBearing));
-    let refText=ref?.type||'--';
-    if(ref?.ageMs!==undefined)refText+=' · '+formatReferenceAge(ref.ageMs);
-    set('v29ObjRef',refText);
+    set('v29ObjRef',missionReferenceLabel(ref));
     const mgrsText=typeof calcMGRS==='function'?calcMGRS(obj.coords[0],obj.coords[1]):'';
     set('v29ObjCoords',(mgrsText?mgrsText+' · ':'')+obj.coords.map(v=>Number(v).toFixed(5)).join(', '));
     set('v29ObjBearing',t('bearingAction'));
@@ -1297,6 +1416,11 @@
   }
 
   function syncMissionHeader(){
+    if(missionMapMode){
+      syncMissionMapModeUi();
+      if(!document.getElementById('v29ObjectiveInfoSheet')?.hidden)renderMissionObjectiveSheet();
+      return;
+    }
     if(typeof targetModeActive==='undefined'||!targetModeActive||typeof targetModePhase==='undefined'||targetModePhase!=='PLAN'){
       syncMissionMapContext();
       closeMissionObjectiveSheet();
@@ -1358,7 +1482,7 @@
       const previous=enterTargetMode;
       const wrapped=function(){
         const out=previous.apply(this,arguments);
-        setTimeout(()=>{installMissionHeader();syncMissionHeader();frameObjectiveContext();},0);
+        setTimeout(()=>{installMissionHeader();returnToMissionMap({frame:true});},0);
         return out;
       };
       wrapped.__v29MissionFrame=true;
@@ -1376,7 +1500,7 @@
       '<button class="osb-btn v26-primary" id="v29MainMenu" type="button"></button>';
     cluster.querySelector('#v29MainRecon')?.addEventListener('click',()=>openFieldControls('recon'));
     cluster.querySelector('#btnWpCount')?.addEventListener('click',()=>{closeFieldControls();openWpDrawer();});
-    cluster.querySelector('#v29MainPlan')?.addEventListener('click',()=>base.ui.openRoutes());
+    cluster.querySelector('#v29MainPlan')?.addEventListener('click',openMissionPlans);
     cluster.querySelector('#v29MainMenu')?.addEventListener('click',()=>openFieldControls('menu'));
     syncMissionHomebarText();
   }
@@ -1479,13 +1603,25 @@
 
     const mapSection=document.getElementById('control-maptools');
     const mapGrid=mapSection?.querySelector('.field-control-grid');
-    if(mapGrid&&!document.getElementById('v29LightMapBtn')){
-      const light=document.createElement('button');
-      light.className='osb-btn active';
-      light.id='v29LightMapBtn';
-      light.type='button';
-      light.addEventListener('click',()=>{closeFieldControls();openLightMap();});
-      mapGrid.prepend(light);
+    if(mapGrid){
+      let standard=document.getElementById('v29StandardMapBtn');
+      if(!standard){
+        standard=document.createElement('button');
+        standard.className='osb-btn';
+        standard.id='v29StandardMapBtn';
+        standard.type='button';
+        standard.addEventListener('click',()=>{closeFieldControls();closeLightMap();});
+        mapGrid.prepend(standard);
+      }
+      let light=document.getElementById('v29LightMapBtn');
+      if(!light){
+        light=document.createElement('button');
+        light.className='osb-btn';
+        light.id='v29LightMapBtn';
+        light.type='button';
+        light.addEventListener('click',()=>{closeFieldControls();openLightMap();});
+        standard.insertAdjacentElement('afterend',light);
+      }
     }
 
     const system=document.getElementById('control-system');
@@ -1506,10 +1642,17 @@
       '[data-v29-mission-menu="system"]':t('system'),
       '#v29RecordsManage':t('reuse'),
       '#v29FreeTrackMissionBtn':(base.track.state!=='OFF'&&base.state.activePlanId===freePlanId())?t('freeTrackManage'):t('freeTrack'),
+      '#v29StandardMapBtn':t('standardMap'),
       '#v29LightMapBtn':t('lightMap'),
       '#v29LanguageBtn':t('language')
     };
     Object.entries(labels).forEach(([sel,label])=>{const el=document.querySelector(sel);if(el)el.textContent=label;});
+    syncMapModeButtons();
+  }
+
+  function syncMapModeButtons(){
+    document.getElementById('v29StandardMapBtn')?.classList.toggle('active',!lightMapOpen);
+    document.getElementById('v29LightMapBtn')?.classList.toggle('active',lightMapOpen);
   }
 
   function lightMapSites(){
@@ -1584,7 +1727,7 @@
     if(ref?.coords&&obj?.coords)svg+='<line class="direct" x1="'+x(ref.coords[1])+'" y1="'+y(ref.coords[0])+'" x2="'+x(obj.coords[1])+'" y2="'+y(obj.coords[0])+'"/>';
     if(ref?.coords){
       svg+='<circle class="current" cx="'+x(ref.coords[1])+'" cy="'+y(ref.coords[0])+'" r="7"/>';
-      svg+='<text class="tag" x="'+(x(ref.coords[1])+10)+'" y="'+(y(ref.coords[0])-8)+'">REF</text>';
+      svg+='<text class="tag" x="'+(x(ref.coords[1])+10)+'" y="'+(y(ref.coords[0])-8)+'">'+String(ref.type||'REF')+'</text>';
     }
     if(obj?.coords){
       const tx=x(obj.coords[1]),ty=y(obj.coords[0]);
@@ -1596,8 +1739,8 @@
     canvas.innerHTML=svg;
     if(readout){
       readout.textContent=bundle
-        ? 'DIST '+missionDistance(bundle.distanceKm)+' · GRID '+formatDeg(bundle.gridBearing)+' · MAG '+formatDeg(bundle.magneticBearing)+' · REF '+String(ref?.type||'--')
-        : 'REF '+String(ref?.type||'--')+(obj?' · OBJ SET':' · NO OBJ');
+        ? 'DIST '+missionDistance(bundle.distanceKm)+' · GRID '+formatDeg(bundle.gridBearing)+' · TRUE '+formatDeg(bundle.trueBearing)+' · MAG '+formatDeg(bundle.magneticBearing)+' · REF '+missionReferenceLabel(ref)
+        : 'REF '+missionReferenceLabel(ref)+(obj?' · OBJ SET':' · NO OBJ');
     }
   }
 
@@ -1606,6 +1749,7 @@
     const el=ensureLightMap();
     el.hidden=false;
     document.body.classList.add('v29-light-map-open');
+    syncMapModeButtons();
     renderLightMap();
   }
 
@@ -1613,6 +1757,7 @@
     lightMapOpen=false;
     const el=document.getElementById('v29LightMap');if(el)el.hidden=true;
     document.body.classList.remove('v29-light-map-open');
+    syncMapModeButtons();
   }
 
   function installLightMapFallback(){
@@ -1855,7 +2000,41 @@
     }
   }
 
+
+  function installMissionModeNavigationHooks(){
+    if(base.ui.openRoutes&&!base.ui.openRoutes.__v29MissionMode){
+      const previous=base.ui.openRoutes;
+      const wrapped=function(){
+        setMissionMapMode(false,{frame:false});
+        return previous.apply(this,arguments);
+      };
+      wrapped.__v29MissionMode=true;
+      base.ui.openRoutes=wrapped;
+    }
+    if(base.ui.openPlan&&!base.ui.openPlan.__v29MissionMode){
+      const previous=base.ui.openPlan;
+      const wrapped=function(){
+        setMissionMapMode(false,{frame:false});
+        return previous.apply(this,arguments);
+      };
+      wrapped.__v29MissionMode=true;
+      base.ui.openPlan=wrapped;
+    }
+    if(typeof exitTargetMode==='function'&&!exitTargetMode.__v29MissionReturn){
+      const previous=exitTargetMode;
+      const wrapped=function(force=false){
+        const keepMission=!force&&Boolean(activeObjective());
+        const out=previous.apply(this,arguments);
+        setMissionMapMode(keepMission&&Boolean(activeObjective()),{frame:false});
+        return out;
+      };
+      wrapped.__v29MissionReturn=true;
+      exitTargetMode=wrapped;
+    }
+  }
+
   function installMissionUx(){
+    installMissionModeNavigationHooks();
     installMissionHomebar();
     installReconPanel();
     installMissionMenu();
@@ -1866,6 +2045,7 @@
     installMissionFieldControlHooks();
     installLightMapFallback();
     ensureMissionObjectiveSheet();
+    ensureMissionMapHud();
     ensureLightMap();
     syncMissionHomebarText();
     syncMissionMenuText();
@@ -1908,7 +2088,7 @@
 
   /* ---------- language + lifecycle ---------- */
   function syncAllText(){
-    syncMenuText();syncSiteControlsText();refreshBearingPanel();syncPlanHeader();syncMissionHomebarText();syncMissionMenuText();syncReconPanel();syncMissionHeader();
+    syncMenuText();syncSiteControlsText();refreshBearingPanel();syncPlanHeader();syncMissionHomebarText();syncMissionMenuText();syncReconPanel();syncMissionHeader();syncMissionMapModeUi();
     const picker=document.getElementById('v29LocationPicker');
     if(picker&&!picker.hidden){
       picker.querySelector('#v29PickerSearch').textContent=t('pickerSearch');
@@ -1979,6 +2159,7 @@
     openLightMap,
     closeLightMap,
     frameObjectiveContext,
+    openMissionMap:()=>setMissionMapMode(true,{frame:true}),
     openObjectiveInfo:openMissionObjectiveSheet
   };
 
