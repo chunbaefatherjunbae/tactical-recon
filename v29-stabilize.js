@@ -585,7 +585,10 @@
       const next=base.plans.setObjective(plan.id,{
         id:'RETICLE-'+Date.now(),name:lang()==='ko'?'조준점 목표':'RETICLE OBJECTIVE',coords,source:'RETICLE'
       });
-      if(next)base.ui.openPlan(next.id);
+      if(next){
+        base.ui.openPlan(next.id);
+        setTimeout(()=>{installMissionHeader();syncMissionHeader();frameObjectiveContext();},0);
+      }
       return;
     }
     if(mode==='SITE'){
@@ -1683,8 +1686,7 @@
     if(clear&&typeof routeDrawKind!=='undefined'){
       const bucket=routeDrawKind==='MARK'?routeMarkSegments:routeDraftSegments;
       const current=typeof routeCurrentSegment!=='undefined'&&Array.isArray(routeCurrentSegment)&&routeCurrentSegment.length>0;
-      clear.disabled=!(Array.isArray(bucket)&&bucket.length)||false;
-      if(current)clear.disabled=false;
+      clear.disabled=!(Array.isArray(bucket)&&bucket.length>0)&&!current;
     }
   }
 
@@ -1897,10 +1899,9 @@
   }
 
   function syncFreeTrackButton(){
-    const btn=document.getElementById('v29FreeTrackBtn');if(!btn)return;
     const active=base.track.state!=='OFF'&&base.state.activePlanId===freePlanId();
-    btn.textContent=active?t('freeTrackManage'):t('freeTrack');
-    btn.classList.toggle('active',active);
+    const btn=document.getElementById('v29FreeTrackBtn');
+    if(btn){btn.textContent=active?t('freeTrackManage'):t('freeTrack');btn.classList.toggle('active',active);}
     const missionBtn=document.getElementById('v29FreeTrackMissionBtn');
     if(missionBtn){missionBtn.textContent=active?t('freeTrackManage'):t('freeTrack');missionBtn.classList.toggle('active',active);}
   }
