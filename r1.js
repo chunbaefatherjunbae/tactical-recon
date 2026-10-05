@@ -1,5 +1,5 @@
-/* Tactical Recon V29 stabilization
- * Final ownership for field-facing PLAN/NAV/SITES/menu interactions.
+/* Tactical Recon R1.1
+ * Map-first field UI polish and persistent reference rendering.
  * Keeps PlanV1/TrackV2 schemas compatible with V28.
  */
 (() => {
@@ -26,6 +26,7 @@
   let siteStatusFilter='ALL';
   let siteSourceFilter='ALL';
   let navRecoveryInstalled=false;
+  let r11LastFixMarker=null;
 
   const text={
     ko:{
@@ -320,6 +321,49 @@
     };
   }
 
+
+  function r11LastFixIcon(){
+    const svg=typeof gpsMarkerSvg==='function'
+      ? gpsMarkerSvg()
+      : '<svg class="marker-symbol marker-gps" viewBox="0 0 24 24" aria-hidden="true"><circle class="marker-frame" cx="12" cy="12" r="7"></circle><path class="marker-detail" d="M12 3V6M12 18V21M3 12H6M18 12H21"></path><circle class="marker-core" cx="12" cy="12" r="2"></circle></svg>';
+    return L.divIcon({
+      className:'r11-last-fix-hitbox',
+      iconSize:[48,48],
+      iconAnchor:[24,24],
+      html:'<div class="r11-last-fix-visual">'+svg+'<span>'+t('lastFix')+'</span></div>'
+    });
+  }
+
+  function syncPersistentLastFixMarker(){
+    if(typeof map==='undefined'||typeof L==='undefined')return;
+    const ref=persistentLastFix();
+    const liveGps=Boolean(
+      typeof gpsPowerEnabled!=='undefined'&&
+      typeof hasGpsFix!=='undefined'&&
+      gpsPowerEnabled&&hasGpsFix
+    );
+    const legacyVisible=Boolean(document.querySelector('.last-gps-hitbox'));
+    const shouldShow=Boolean(ref?.coords&&!liveGps&&!legacyVisible);
+
+    if(!shouldShow){
+      if(r11LastFixMarker&&map.hasLayer(r11LastFixMarker))map.removeLayer(r11LastFixMarker);
+      return;
+    }
+
+    if(!r11LastFixMarker){
+      r11LastFixMarker=L.marker(ref.coords,{
+        icon:r11LastFixIcon(),
+        keyboard:false,
+        interactive:false,
+        zIndexOffset:81
+      });
+    }else{
+      r11LastFixMarker.setLatLng(ref.coords);
+      r11LastFixMarker.setIcon(r11LastFixIcon());
+    }
+    if(!map.hasLayer(r11LastFixMarker))r11LastFixMarker.addTo(map);
+  }
+
   function formatReferenceAge(ms){
     if(!Number.isFinite(Number(ms)))return '';
     const total=Math.max(0,Number(ms));
@@ -351,6 +395,7 @@
       const wrapped=function(pos){
         const out=previous.apply(this,arguments);
         persistLastFix(pos);
+        syncPersistentLastFixMarker();
         if(missionMapMode)syncMissionMapModeUi();
         return out;
       };
@@ -372,11 +417,23 @@
       const wrapped=function(){
         const out=previous.apply(this,arguments);
         syncPersistentReferenceUi();
+        syncPersistentLastFixMarker();
         return out;
       };
       wrapped.__v29LastFix=true;
       updateGpsDetail=wrapped;
     }
+    if(typeof refreshPositionState==='function'&&!refreshPositionState.__r11LastFixMarker){
+      const previous=refreshPositionState;
+      const wrapped=function(){
+        const out=previous.apply(this,arguments);
+        syncPersistentLastFixMarker();
+        return out;
+      };
+      wrapped.__r11LastFixMarker=true;
+      refreshPositionState=wrapped;
+    }
+    setTimeout(syncPersistentLastFixMarker,0);
   }
 
   /* ---------- PLAN header: objective on top, NAV on lower row ---------- */
@@ -1589,18 +1646,26 @@
     }
   }
 
+  function setR1HomeActive(id){
+    document.querySelectorAll('.v26-main-cluster [data-r1-tab]').forEach(btn=>{
+      const active=btn.dataset.r1Tab===id;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-current',active?'page':'false');
+    });
+  }
+
   function installMissionHomebar(){
     const cluster=document.querySelector('.v26-main-cluster');
     if(!cluster)return;
     cluster.innerHTML=
-      '<button class="osb-btn v26-primary" id="r1MainRecon" type="button"></button>'+
-      '<button class="osb-btn v26-primary" id="btnWpCount" type="button"></button>'+
-      '<button class="osb-btn v26-primary" id="r1MainRecords" type="button"></button>'+
-      '<button class="osb-btn v26-primary" id="r1MainMenu" type="button"></button>';
-    cluster.querySelector('#r1MainRecon')?.addEventListener('click',()=>{closeR1Records();openFieldControls('recon');});
-    cluster.querySelector('#btnWpCount')?.addEventListener('click',()=>{closeR1Records();closeFieldControls();openWpDrawer();});
-    cluster.querySelector('#r1MainRecords')?.addEventListener('click',openR1Records);
-    cluster.querySelector('#r1MainMenu')?.addEventListener('click',()=>{closeR1Records();openFieldControls('menu');});
+      '<button class="osb-btn v26-primary" id="r1MainRecon" data-r1-tab="recon" type="button"></button>'+
+      '<button class="osb-btn v26-primary" id="btnWpCount" data-r1-tab="sites" type="button"></button>'+
+      '<button class="osb-btn v26-primary" id="r1MainRecords" data-r1-tab="records" type="button"></button>'+
+      '<button class="osb-btn v26-primary" id="r1MainMenu" data-r1-tab="menu" type="button"></button>';
+    cluster.querySelector('#r1MainRecon')?.addEventListener('click',()=>{setR1HomeActive('recon');closeR1Records();openFieldControls('recon');});
+    cluster.querySelector('#btnWpCount')?.addEventListener('click',()=>{setR1HomeActive('sites');closeR1Records();closeFieldControls();openWpDrawer();});
+    cluster.querySelector('#r1MainRecords')?.addEventListener('click',()=>{setR1HomeActive('records');openR1Records();});
+    cluster.querySelector('#r1MainMenu')?.addEventListener('click',()=>{setR1HomeActive('menu');closeR1Records();openFieldControls('menu');});
     syncMissionHomebarText();
   }
 
@@ -2270,6 +2335,7 @@
   }
 
   function openR1Records(){
+    setR1HomeActive('records');
     if(typeof closeFieldControls==='function')closeFieldControls();
     if(typeof closeWpDrawer==='function')closeWpDrawer();
     closeR1LocationCard(false);
@@ -2570,8 +2636,8 @@
 
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R1 FIELD TERMINAL';
-    document.body.classList.add('v29-stabilized','r1-runtime');
+    document.title='TACTICAL RECON // R1.1 FIELD TERMINAL';
+    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui');
     installLastFix();
     installUnifiedSearch();
     installSearchCloseReliability();
@@ -2616,7 +2682,11 @@
     }
 
     new MutationObserver(()=>syncAllText()).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
-    document.addEventListener('visibilitychange',()=>{if(document.hidden){stopBearingSensor();persistNavRecovery();}});
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden){stopBearingSensor();persistNavRecovery();}
+      else syncPersistentLastFixMarker();
+    });
+    window.addEventListener('pageshow',()=>syncPersistentLastFixMarker());
     window.addEventListener('pagehide',()=>{stopBearingSensor();persistNavRecovery();});
 
     syncAllText();
