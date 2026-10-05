@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v29-interaction-hotfix-20261005-3';
+const CACHE_VERSION = 'v29-track-context-hotfix-20261005-4';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [

@@ -1333,6 +1333,7 @@
         '<span id="v29MissionMapStatus"></span><strong id="v29MissionMapName"></strong>'+
         '<small id="v29MissionMapMetrics"></small><small id="v29MissionMapRef"></small>'+
       '</button>'+
+      '<button class="v29-mission-map-close" id="v29MissionMapClose" type="button" aria-label="Close mission context">×</button>'+
       '<div class="v29-mission-map-actions">'+
         '<button class="osb-btn active" id="v29MissionMapNav" type="button"></button>'+
         '<button class="osb-btn" id="v29MissionMapPlan" type="button"></button>'+
@@ -1340,6 +1341,7 @@
       '</div>';
     document.body.appendChild(hud);
     hud.querySelector('#v29MissionMapInfo')?.addEventListener('click',openMissionObjectiveSheet);
+    hud.querySelector('#v29MissionMapClose')?.addEventListener('click',dismissMissionContext);
     hud.querySelector('#v29MissionMapNav')?.addEventListener('click',startMissionNavigation);
     hud.querySelector('#v29MissionMapPlan')?.addEventListener('click',enterMissionPlan);
     hud.querySelector('#v29MissionMapFit')?.addEventListener('click',frameObjectiveContext);
@@ -1360,6 +1362,7 @@
       ? 'DIST '+missionDistance(bundle.distanceKm)+' · GRID '+formatDeg(bundle.gridBearing)+' · TRUE '+formatDeg(bundle.trueBearing)+' · MAG '+formatDeg(bundle.magneticBearing)
       : t('positionRequired');
     if(refLine)refLine.textContent='REF '+missionReferenceLabel(ref);
+    const close=hud.querySelector('#v29MissionMapClose');if(close)close.setAttribute('aria-label',lang()==='ko'?'계획 선택 해제':'CLEAR PLAN SELECTION');
     const nav=hud.querySelector('#v29MissionMapNav');if(nav)nav.textContent=t('navAction');
     const plan=hud.querySelector('#v29MissionMapPlan');if(plan)plan.textContent=t('planAction');
     const fit=hud.querySelector('#v29MissionMapFit');if(fit)fit.textContent=t('mapFit');
@@ -1385,6 +1388,14 @@
     missionMapMode=Boolean(enabled&&activeObjective());
     syncMissionMapModeUi();
     if(missionMapMode&&options.frame!==false)frameObjectiveContext();
+  }
+
+  function dismissMissionContext(){
+    closeMissionObjectiveSheet();
+    setMissionMapMode(false,{frame:false});
+    if(base.track?.state==='OFF')base.state.activePlanId=null;
+    syncMissionMapModeUi();
+    base.track?.render?.();
   }
 
   function returnToMissionMap(options={}){
@@ -2249,6 +2260,7 @@
     closeLightMap,
     frameObjectiveContext,
     openMissionMap:()=>setMissionMapMode(true,{frame:true}),
+    dismissMissionContext,
     openObjectiveInfo:openMissionObjectiveSheet
   };
 

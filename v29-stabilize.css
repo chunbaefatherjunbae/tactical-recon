@@ -476,6 +476,20 @@ body.v29-stabilized.route-marking .target-mode-kicker::after {
   color:var(--field-text);
 }
 .v29-mission-map-hud[hidden] { display:none !important; }
+.v29-mission-map-close {
+  position:absolute;
+  top:5px;
+  right:5px;
+  width:44px;
+  height:44px;
+  border:1px solid var(--field-line);
+  background:var(--field-panel-solid,rgba(3,10,6,.96));
+  color:var(--field-dim-readable);
+  font:900 18px/1 var(--font-mono);
+  touch-action:manipulation;
+  z-index:2;
+}
+.v29-mission-map-copy { padding-right:50px !important; }
 body.v29-stabilized.v29-mission-map .mfd-bottom-bar {
   opacity:1 !important;
   pointer-events:auto !important;

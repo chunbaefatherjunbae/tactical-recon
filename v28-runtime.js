@@ -742,9 +742,9 @@
         hud.classList.remove('track-recording');
         hud.classList.add('track-paused');
       } else {
-        hud.setAttribute('aria-label', tRuntime('궤적 기록 끄기', 'STOP TRACK'));
-        hud.title = tRuntime('탭하여 궤적 기록 종료', 'TAP TO STOP TRACK');
-        hud.textContent = tRuntime('궤적 ON · ', 'TRACK ON · ') + m + ' KM';
+        hud.setAttribute('aria-label', tRuntime('궤적 기록 일시정지', 'PAUSE TRACK'));
+        hud.title = tRuntime('탭하여 궤적 기록 일시정지', 'TAP TO PAUSE TRACK');
+        hud.textContent = tRuntime('궤적 기록 중 · ', 'TRACK RECORDING · ') + m + ' KM';
         if (Number(e) > 0) hud.title += tRuntime(' · 추정 ', ' · EST ') + e + ' KM';
         hud.classList.add('track-recording');
         hud.classList.remove('track-paused');
@@ -823,7 +823,7 @@
   function toggleHudTrack() {
     if (session.state === 'OFF') startBrowserTrack();
     else if (session.state === 'PAUSED') resumeBrowserTrack();
-    else stopTrack();
+    else pauseTrack();
     syncBrowserTrackState();
     renderPlanTracks();
     if (document.getElementById('v28TrackSheet')?.classList.contains('open')) renderTrackSheet();

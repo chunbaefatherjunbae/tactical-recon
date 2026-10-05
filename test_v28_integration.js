@@ -21,7 +21,7 @@ function test(name, fn) {
 }
 
 test('PWA cache version is current V29 stabilized cache', () => {
-  assert(sw.includes("const CACHE_VERSION = 'v29-interaction-hotfix-20261005-3';"));
+  assert(sw.includes("const CACHE_VERSION = 'v29-track-context-hotfix-20261005-4';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
@@ -77,7 +77,10 @@ test('NAV keeps position search and HUD track is direct toggle', () => {
   assert(runtime.includes('function toggleHudTrack()'));
   assert(runtime.includes("if (session.state === 'OFF') startBrowserTrack();"));
   assert(runtime.includes("else if (session.state === 'PAUSED') resumeBrowserTrack();"));
-  assert(runtime.includes('else stopTrack();'));
+  assert(runtime.includes('else pauseTrack();'));
+  const toggleStart=runtime.indexOf('function toggleHudTrack()');
+  const toggleEnd=runtime.indexOf('function openTrackSheet()',toggleStart);
+  assert.strictEqual(runtime.slice(toggleStart,toggleEnd).includes('stopTrack()'),false);
   assert(runtime.includes('toggleHudTrack();'));
   assert(runtime.includes("hud.setAttribute('aria-pressed', String(isOn))"));
 });

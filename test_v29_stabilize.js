@@ -32,11 +32,11 @@ test('Offline vendor dependencies are local static assets',()=>{
   assert.strictEqual(sw.includes('VENDOR_ASSETS'),false);
 });
 
-test('Index and service worker use one interaction-hotfix cache identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'v29-interaction-hotfix-20261005-3';"));
-  assert(index.includes('service-worker.js?v=v29-interaction-hotfix-20261005-3'));
-  assert(index.includes('tactical-recon-sw-reload-v29-interaction-hotfix-20261005-3'));
-  assert.strictEqual(index.includes('service-worker.js?v=29-mission-ux-20261005-1'),false);
+test('Index and service worker use one track-context hotfix cache identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'v29-track-context-hotfix-20261005-4';"));
+  assert(index.includes('service-worker.js?v=v29-track-context-hotfix-20261005-4'));
+  assert(index.includes('tactical-recon-sw-reload-v29-track-context-hotfix-20261005-4'));
+  assert.strictEqual(index.includes('service-worker.js?v=v29-interaction-hotfix-20261005-3'),false);
 });
 
 test('Index starts without Leaflet or MGRS CDN dependencies',()=>{
@@ -344,6 +344,33 @@ test('NAV recovery never explicitly starts GPS or bearing sensor',()=>{
   assert(block.includes("gpsFollowEnabled=false"));
   assert.strictEqual(block.includes('startGpsTracking('),false);
   assert.strictEqual(block.includes('startBearingSensor('),false);
+});
+
+
+
+test('NAV track toggle pauses and resumes one session instead of stopping it',()=>{
+  const start=runtime.indexOf('function toggleHudTrack()');
+  const end=runtime.indexOf('function openTrackSheet()',start);
+  assert(start>=0&&end>start);
+  const block=runtime.slice(start,end);
+  assert(block.includes("if (session.state === 'OFF') startBrowserTrack()"));
+  assert(block.includes("else if (session.state === 'PAUSED') resumeBrowserTrack()"));
+  assert(block.includes('else pauseTrack()'));
+  assert.strictEqual(block.includes('stopTrack()'),false);
+  assert(runtime.includes("hud.setAttribute('aria-label', tRuntime('궤적 기록 일시정지', 'PAUSE TRACK'))"));
+});
+
+test('Mission map selection has an explicit non-destructive dismiss action',()=>{
+  assert(stabilize.includes('id="v29MissionMapClose"'));
+  assert(stabilize.includes("function dismissMissionContext()"));
+  const start=stabilize.indexOf('function dismissMissionContext()');
+  const end=stabilize.indexOf('function returnToMissionMap',start);
+  const block=stabilize.slice(start,end);
+  assert(block.includes("setMissionMapMode(false,{frame:false})"));
+  assert(block.includes("if(base.track?.state==='OFF')base.state.activePlanId=null"));
+  assert.strictEqual(block.includes('delete'),false);
+  assert(css.includes('.v29-mission-map-close'));
+  assert(css.includes('width:44px'));
 });
 
 test('Track HUD is start pause resume while STOP remains management action',()=>{
