@@ -23,9 +23,9 @@ test('R1 is the final runtime layer',()=>{
 });
 
 test('PWA cache identity moved to R1',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r1-1-ui-20261005-1';"));
-  assert(index.includes('service-worker.js?v=r1-1-ui-20261005-1'));
-  assert(index.includes('tactical-recon-sw-reload-r1-1-ui-20261005-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r1-2-reticle-20261005-1';"));
+  assert(index.includes('service-worker.js?v=r1-2-reticle-20261005-1'));
+  assert(index.includes('tactical-recon-sw-reload-r1-2-reticle-20261005-1'));
 });
 
 test('Home bar is RECON SITES RECORDS MENU',()=>{
@@ -100,7 +100,31 @@ test('R1.1 field view cleans the optical overlay',()=>{
   assert(r1.includes('data-r1-tab="records"'));
 });
 
-test('R1.1 mobile UI has dedicated map shell cards',()=>{
+test('R1.2 reticle uses live map geometry and one center anchor',()=>{
+  assert(r1.includes('function getR12OverlayBounds()'));
+  assert(r1.includes('reticleX:mapRect.left+(mapRect.width/2)'));
+  assert(r1.includes('reticleY:mapRect.top+(mapRect.height/2)'));
+  assert(r1.includes("rootStyle.setProperty('--r12-frame-top'"));
+  assert(r1.includes('installR12OverlayLayout()'));
+  assert(css.includes('body.r12-ui .bracket::after'));
+  assert(css.includes('content:none !important'));
+  assert(css.includes('top:50% !important'));
+  assert(css.includes('left:50% !important'));
+  assert(css.includes('transform:translate(-50%,-50%) !important'));
+  assert(css.includes('top:var(--r12-frame-top) !important'));
+  assert(css.includes('top:calc(var(--r12-frame-bottom) - 21px) !important'));
+});
+
+test('R1.2 resolves LAST FIX label collision and scale placement',()=>{
+  assert(r1.includes('function resolveR12LastFixLabelCollision(bounds)'));
+  assert(r1.includes("visual.classList.add('r12-label-right')"));
+  assert(css.includes('.r11-last-fix-visual.r12-label-above > span'));
+  assert(css.includes('.r11-last-fix-visual.r12-label-right > span'));
+  assert(css.includes('left:calc(var(--r12-frame-left) + 38px) !important'));
+  assert(css.includes('top:calc(var(--r12-frame-bottom) - 25px) !important'));
+});
+
+test('R1.2 mobile UI has dedicated map shell cards',()=>{
   assert(css.includes('.r1-map-search'));
   assert(css.includes('.r1-location-card'));
   assert(css.includes('.r1-records-sheet'));
