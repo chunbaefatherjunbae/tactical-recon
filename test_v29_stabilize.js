@@ -203,6 +203,18 @@ test('Free track label returns to start state after TRACK stop',()=>{
   assert(stabilize.includes("if(base.track?.stop&&!base.track.stop.__v29MenuSync)"));
   assert(stabilize.includes("setTimeout(()=>{syncFreeTrackButton();syncMissionMenuText();},0)"));
   assert(stabilize.includes("id=\"v29FreeTrackMissionBtn\""));
+  const start=stabilize.indexOf('function syncFreeTrackButton()');
+  const end=stabilize.indexOf('/* ---------- language + lifecycle ---------- */',start);
+  const block=stabilize.slice(start,end);
+  assert.strictEqual(block.includes("if(!btn)return"),false);
+});
+
+test('Reticle objective change returns to REF OBJ map context',()=>{
+  const start=stabilize.indexOf('function confirmPicker()');
+  const end=stabilize.indexOf('function bindObjectiveReticle()',start);
+  const block=stabilize.slice(start,end);
+  assert(block.includes('frameObjectiveContext()'));
+  assert(block.includes('syncMissionHeader()'));
 });
 
 
