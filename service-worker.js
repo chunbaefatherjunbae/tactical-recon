@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v29-track-context-hotfix-20261005-4';
+const CACHE_VERSION = 'r1-structure-20261005-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
@@ -17,8 +17,8 @@ const STATIC_ASSETS = [
   './vendor/mgrs-1.0.0.js',
   './vendor/leaflet-1.9.4.js',
   './vendor/leaflet-1.9.4.css',
-  './v29-stabilize.css',
-  './v29-stabilize.js'
+  './r1.css',
+  './r1.js'
 ];
 
 self.addEventListener('install', event => {
@@ -55,7 +55,9 @@ async function injectStableOverlay(response) {
     .replace(/\s*<link[^>]+href=["']\.\/v27-3\.css["'][^>]*>\s*/g, '\n')
     .replace(/\s*<script[^>]+src=["']\.\/v27-2\.js["'][^>]*><\/script>\s*/g, '\n')
     .replace(/\s*<script[^>]+src=["']\.\/v27-2-1\.js["'][^>]*><\/script>\s*/g, '\n')
-    .replace(/\s*<script[^>]+src=["']\.\/v27-3\.js["'][^>]*><\/script>\s*/g, '\n');
+    .replace(/\s*<script[^>]+src=["']\.\/v27-3\.js["'][^>]*><\/script>\s*/g, '\n')
+    .replace(/\s*<link[^>]+href=["']\.\/v29-stabilize\.css["'][^>]*>\s*/g, '\n')
+    .replace(/\s*<script[^>]+src=["']\.\/v29-stabilize\.js["'][^>]*><\/script>\s*/g, '\n');
 
   if (!html.includes('v27-stable.css')) {
     html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-stable.css" />\n</head>');
@@ -84,11 +86,11 @@ async function injectStableOverlay(response) {
   if (!html.includes('v29-ui.js')) {
     html = html.replace('</body>', '  <script src="./v29-ui.js"></script>\n</body>');
   }
-  if (!html.includes('v29-stabilize.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./v29-stabilize.css" />\n</head>');
+  if (!html.includes('r1.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./r1.css" />\n</head>');
   }
-  if (!html.includes('v29-stabilize.js')) {
-    html = html.replace('</body>', '  <script src="./v29-stabilize.js"></script>\n</body>');
+  if (!html.includes('r1.js')) {
+    html = html.replace('</body>', '  <script src="./r1.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
