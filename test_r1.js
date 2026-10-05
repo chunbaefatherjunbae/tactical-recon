@@ -23,9 +23,9 @@ test('R1 is the final runtime layer',()=>{
 });
 
 test('PWA cache identity moved to R1',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r1-3-field-20261005-1';"));
-  assert(index.includes('service-worker.js?v=r1-3-field-20261005-1'));
-  assert(index.includes('tactical-recon-sw-reload-r1-3-field-20261005-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r1-4-visual-20261006-1';"));
+  assert(index.includes('service-worker.js?v=r1-4-visual-20261006-1'));
+  assert(index.includes('tactical-recon-sw-reload-r1-4-visual-20261006-1'));
 });
 
 test('Home bar is RECON SITES RECORDS MENU',()=>{
@@ -154,6 +154,34 @@ test('R1.3 field shell removes dead viewport space and strengthens optic UI',()=
   assert(css.includes('body.r13-ui .gps-status-osd'));
   assert(css.includes('display:none !important'));
   assert(index.includes('>MGRS</div>'));
+});
+
+test('R1.4 removes fake REC state from the top bar',()=>{
+  assert.strictEqual(index.includes('REC  ●'),false);
+  assert(css.includes('body.r14-ui .top-compass-bar::before'));
+  assert(css.includes('content:none !important'));
+});
+
+test('R1.4 restores V-series reticle visibility',()=>{
+  assert(r1.includes("'r14-ui'"));
+  assert(r1.includes('R1.4 FIELD TERMINAL'));
+  assert(css.includes('body.r14-ui .reticle-container'));
+  assert(css.includes('width:112px !important'));
+  assert(css.includes('height:112px !important'));
+  assert(css.includes('width:40px !important'));
+  assert(css.includes('height:40px !important'));
+  assert(css.includes('background:var(--field-active) !important'));
+});
+
+test('R1.4 corners use screen edges and scale is bottom-center',()=>{
+  assert(css.includes('body.r14-ui .bracket.tl'));
+  assert(css.includes('top:14px !important'));
+  assert(css.includes('left:14px !important'));
+  assert(css.includes('body.r14-ui .bracket.br'));
+  assert(css.includes('right:14px !important'));
+  assert(css.includes('body.r14-ui .map-scale-osd'));
+  assert(css.includes('left:50% !important'));
+  assert(css.includes('transform:translateX(-50%) !important'));
 });
 
 test('R1.3 mobile UI has dedicated map shell cards',()=>{

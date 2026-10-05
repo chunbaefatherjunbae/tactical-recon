@@ -1644,3 +1644,145 @@ body.r13-ui .r11-last-fix-visual > span {
     padding:14px;
   }
 }
+
+
+/* ============================================================
+   R1.4 // VISUAL CORRECTION
+   Restore the strong V-series reticle, return optical corners
+   to the screen edges, and decouple the scale to bottom-center.
+   ============================================================ */
+
+/* Center reticle: restore the clearer V-series geometry. */
+body.r14-ui .reticle-container {
+  width:112px !important;
+  height:112px !important;
+  opacity:1 !important;
+  filter:drop-shadow(0 0 2px var(--accent-glow)) !important;
+}
+body.r14-ui .target-gate {
+  top:50% !important;
+  left:50% !important;
+  width:40px !important;
+  height:40px !important;
+  transform:translate(-50%,-50%) !important;
+  border:1px solid var(--field-active) !important;
+  opacity:.9 !important;
+}
+body.r14-ui .reticle-axis-v {
+  top:0 !important;
+  left:50% !important;
+  width:1px !important;
+  height:100% !important;
+  transform:translateX(-50%) !important;
+  background:var(--field-active) !important;
+  opacity:.78 !important;
+}
+body.r14-ui .reticle-axis-h {
+  top:50% !important;
+  left:0 !important;
+  width:100% !important;
+  height:1px !important;
+  transform:translateY(-50%) !important;
+  background:var(--field-active) !important;
+  opacity:.78 !important;
+}
+body.r14-ui .target-gate::before,
+body.r14-ui .target-gate::after {
+  display:block !important;
+  content:'' !important;
+  position:absolute !important;
+  background:var(--field-active) !important;
+  opacity:1 !important;
+}
+body.r14-ui .target-gate::before {
+  width:8px !important;
+  height:1px !important;
+  left:50% !important;
+  top:50% !important;
+  transform:translate(-50%,-50%) !important;
+}
+body.r14-ui .target-gate::after {
+  width:1px !important;
+  height:8px !important;
+  left:50% !important;
+  top:50% !important;
+  transform:translate(-50%,-50%) !important;
+}
+body.r14-ui.v29-picking-location .reticle-container,
+body.r14-ui.route-drawing .reticle-container,
+body.r14-ui.plan-set-submode .reticle-container {
+  opacity:1 !important;
+  transform:translate(-50%,-50%) !important;
+}
+
+/* Corner accents belong to the screen, not to an inner calculated box. */
+body.r14-ui .bracket {
+  position:fixed !important;
+  width:34px !important;
+  height:34px !important;
+  opacity:.82 !important;
+  border-width:1px !important;
+  border-color:var(--field-line-strong) !important;
+  filter:drop-shadow(0 0 2px var(--accent-glow)) !important;
+}
+body.r14-ui .bracket::before,
+body.r14-ui .bracket::after {
+  display:none !important;
+  content:none !important;
+}
+body.r14-ui .bracket.tl {
+  top:14px !important;
+  left:14px !important;
+  right:auto !important;
+  bottom:auto !important;
+}
+body.r14-ui .bracket.tr {
+  top:14px !important;
+  right:14px !important;
+  left:auto !important;
+  bottom:auto !important;
+}
+body.r14-ui .bracket.bl {
+  left:14px !important;
+  bottom:calc(var(--r13-nav-base) + env(safe-area-inset-bottom) + 14px) !important;
+  top:auto !important;
+  right:auto !important;
+}
+body.r14-ui .bracket.br {
+  right:14px !important;
+  bottom:calc(var(--r13-nav-base) + env(safe-area-inset-bottom) + 14px) !important;
+  top:auto !important;
+  left:auto !important;
+}
+
+/* Scale is an independent measurement readout, centered along the lower field. */
+body.r14-ui .map-scale-osd,
+body.r14-ui:not(.target-mode) .map-scale-osd {
+  left:50% !important;
+  right:auto !important;
+  top:calc(var(--r12-frame-bottom) - 28px) !important;
+  bottom:auto !important;
+  transform:translateX(-50%) !important;
+  padding:0 !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  color:var(--field-active) !important;
+  filter:drop-shadow(0 0 2px var(--accent-glow)) !important;
+}
+body.r14-ui .map-scale-line {
+  height:7px !important;
+  opacity:.9 !important;
+}
+body.r14-ui .map-scale-label {
+  margin:4px 0 0 !important;
+  text-align:center !important;
+  font-size:9px !important;
+  opacity:.96 !important;
+}
+
+/* Fake REC status is forbidden. Actual track state lives in TRACK UI. */
+body.r14-ui .top-compass-bar::before {
+  display:none !important;
+  content:none !important;
+}

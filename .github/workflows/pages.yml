@@ -8,6 +8,7 @@ on:
       - r1.1-ui-polish
       - r1.2-reticle-layout
       - r1.3-field-search
+      - r1.4-visual-correction
   workflow_dispatch:
 
 permissions:
