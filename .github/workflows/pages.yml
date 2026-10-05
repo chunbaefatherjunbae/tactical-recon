@@ -6,6 +6,7 @@ on:
       - main
       - r1-structure-overhaul
       - r1.1-ui-polish
+      - r1.2-reticle-layout
   workflow_dispatch:
 
 permissions:
