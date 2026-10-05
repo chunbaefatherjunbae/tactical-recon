@@ -1,4 +1,4 @@
-/* Tactical Recon R1 canonical UI */
+/* Tactical Recon R1.1 canonical UI */
 
 :root {
   --field-dim-readable:color-mix(in srgb,var(--field-text,var(--text-main)) 62%,var(--field-dim,var(--text-dim)) 38%);
@@ -870,4 +870,355 @@ body.r1-runtime.r1-location-open .v29-mission-map-hud { display:none !important;
   .r1-location-card,
   .r1-records-sheet { left:6px; right:6px; bottom:calc(68px + env(safe-area-inset-bottom)); }
   .r1-location-more { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+
+/* ============================================================
+   R1.1 // FIELD VIEW POLISH
+   Same canonical R runtime, no additional overlay layer.
+   ============================================================ */
+
+:root {
+  --r11-bottom-nav-h:calc(58px + env(safe-area-inset-bottom));
+}
+
+/* Bottom navigation: remove the oversized bezel block and expose state. */
+body.r11-ui .mfd-bottom-bar {
+  position:fixed !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:0 !important;
+  transform:none !important;
+  width:100% !important;
+  max-width:none !important;
+  min-height:var(--r11-bottom-nav-h) !important;
+  height:auto !important;
+  box-sizing:border-box !important;
+  margin:0 !important;
+  padding:5px 8px max(5px,env(safe-area-inset-bottom)) !important;
+  border:0 !important;
+  border-top:1px solid var(--field-line) !important;
+  border-radius:0 !important;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--field-panel-solid,rgba(3,9,5,.97)) 0 56px,
+      rgba(3,9,5,.82) 56px 100%
+    ) !important;
+  box-shadow:0 -5px 18px rgba(0,0,0,.28) !important;
+  display:block !important;
+  overflow:hidden;
+}
+body.r11-ui .mfd-bottom-bar > .osb-cluster:not(.v26-main-cluster) { display:none !important; }
+body.r11-ui .mfd-bottom-bar .v26-main-cluster {
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:2px !important;
+  width:100% !important;
+  height:48px;
+  align-items:stretch;
+}
+body.r11-ui .mfd-bottom-bar .v26-main-cluster .osb-btn {
+  position:relative;
+  min-height:46px !important;
+  height:46px;
+  padding:2px 3px 0 !important;
+  border:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  color:var(--field-dim-readable) !important;
+  font-size:11px !important;
+  letter-spacing:.01em !important;
+}
+body.r11-ui .mfd-bottom-bar .v26-main-cluster .osb-btn.active {
+  color:var(--field-active) !important;
+}
+body.r11-ui .mfd-bottom-bar .v26-main-cluster .osb-btn.active::before {
+  content:'';
+  position:absolute;
+  top:-5px;
+  left:22%;
+  right:22%;
+  height:2px;
+  background:var(--field-active);
+  box-shadow:0 0 6px var(--accent-glow);
+}
+
+/* Optical corner marks: shorter, clearer, and attached to the usable map viewport. */
+body.r11-ui .bracket {
+  width:24px;
+  height:24px;
+  border-width:1px;
+  opacity:.82;
+  filter:drop-shadow(0 0 2px var(--accent-glow));
+}
+body.r11-ui:not(.target-mode) .bracket.bl,
+body.r11-ui:not(.target-mode) .bracket.br {
+  bottom:calc(var(--r11-bottom-nav-h) + 12px) !important;
+}
+
+/* Central reticle becomes a quiet reference until the user is actually picking/drawing. */
+body.r11-ui .reticle-container {
+  width:36px;
+  height:36px;
+  opacity:.54;
+  transition:opacity .14s ease,transform .14s ease;
+}
+body.r11-ui .target-gate {
+  top:10px;
+  left:10px;
+  width:16px;
+  height:16px;
+  border-width:1px;
+  opacity:.78;
+}
+body.r11-ui .reticle-axis-v {
+  top:0;
+  left:17.5px;
+  width:1px;
+  height:36px;
+  opacity:.68;
+}
+body.r11-ui .reticle-axis-h {
+  top:17.5px;
+  left:0;
+  width:36px;
+  height:1px;
+  opacity:.68;
+}
+body.r11-ui.v29-picking-location .reticle-container,
+body.r11-ui.route-drawing .reticle-container,
+body.r11-ui.plan-set-submode .reticle-container {
+  opacity:.96;
+  transform:translate(-50%,-50%) scale(1.08);
+}
+
+/* Scale belongs to the optic overlay, not to another card. */
+body.r11-ui:not(.target-mode) .map-scale-osd {
+  left:16px !important;
+  bottom:calc(var(--r11-bottom-nav-h) + 16px) !important;
+  min-width:0 !important;
+  padding:0 !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  color:var(--field-active) !important;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.75));
+}
+body.r11-ui:not(.target-mode) .map-scale-line {
+  height:7px;
+  border-width:0 1px 1px 1px;
+}
+body.r11-ui:not(.target-mode) .map-scale-label {
+  margin-top:4px;
+  font-size:8.5px;
+  letter-spacing:.55px;
+  text-shadow:0 1px 2px rgba(0,0,0,.85);
+}
+
+/* Persisted LAST FIX marker, intentionally stale-looking and distinct from live GPS. */
+.r11-last-fix-hitbox {
+  background:transparent !important;
+  border:0 !important;
+}
+.r11-last-fix-visual {
+  position:relative;
+  width:48px;
+  height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--field-active,var(--accent));
+  opacity:.68;
+  pointer-events:none;
+}
+.r11-last-fix-visual .marker-symbol {
+  width:27px;
+  height:27px;
+}
+.r11-last-fix-visual .marker-frame {
+  stroke-dasharray:2.2 2.2;
+}
+.r11-last-fix-visual > span {
+  position:absolute;
+  top:36px;
+  left:50%;
+  transform:translateX(-50%);
+  padding:2px 4px;
+  border-left:1px solid currentColor;
+  background:rgba(2,8,4,.68);
+  color:currentColor;
+  white-space:nowrap;
+  font:900 7px/1.1 var(--font-mono);
+  letter-spacing:.05em;
+}
+
+/* Right-side controls have different visual roles instead of three identical bricks. */
+body.r11-ui .global-gps-controls {
+  width:46px;
+  gap:5px;
+}
+body.r11-ui .global-gps-button {
+  width:46px;
+  min-height:34px;
+  border-radius:0;
+  box-shadow:none;
+  font-size:8.5px;
+  letter-spacing:.15px;
+  white-space:nowrap;
+}
+body.r11-ui #gpsPowerBtn {
+  min-height:36px;
+  border-left:2px solid var(--field-line-strong);
+}
+body.r11-ui #gpsPowerBtn.active {
+  border-left-color:var(--field-active);
+}
+body.r11-ui .gps-center-button {
+  min-height:46px;
+  height:46px;
+  border-color:var(--field-line-strong);
+}
+body.r11-ui .global-temp-button {
+  min-height:34px;
+  opacity:.58;
+  border-style:dashed;
+}
+body.r11-ui .global-temp-button.active {
+  opacity:1;
+  border-style:solid;
+}
+
+/* Mobile field view: separate the old HUD from R1 search instead of stacking them. */
+@media (max-width:768px) {
+  body.r11-ui .top-compass-bar {
+    position:fixed;
+    top:calc(env(safe-area-inset-top) + 2px);
+    left:8px;
+    right:8px;
+    transform:none;
+    width:auto;
+    max-width:none;
+    min-height:28px;
+    box-sizing:border-box;
+    padding:3px 7px;
+    border:0;
+    border-bottom:1px solid var(--field-line);
+    border-radius:0;
+    background:rgba(3,9,5,.62);
+    box-shadow:none;
+  }
+  body.r11-ui .compass-tape { gap:5px; font-size:9px; letter-spacing:.08em; }
+  body.r11-ui .compass-label { display:none; }
+  body.r11-ui .compass-center {
+    padding:0;
+    border:0;
+    background:transparent;
+  }
+  body.r11-ui .sys-telemetry { gap:7px; font-size:8.5px; }
+
+  body.r11-ui .r1-map-search {
+    top:calc(env(safe-area-inset-top) + 36px);
+    left:8px;
+    right:8px;
+    transform:none;
+    width:auto;
+    max-width:none;
+    min-height:44px;
+    padding:0 11px;
+    border-color:var(--field-line-strong);
+    background:var(--field-panel-solid,rgba(3,10,6,.92));
+    box-shadow:0 4px 14px rgba(0,0,0,.22);
+  }
+
+  body.r11-ui .telemetry-osd {
+    position:fixed;
+    top:calc(env(safe-area-inset-top) + 86px) !important;
+    left:8px !important;
+    right:62px;
+    width:auto !important;
+    min-height:34px;
+    box-sizing:border-box;
+    padding:4px 7px !important;
+    gap:0;
+    border:0 !important;
+    border-left:1px solid var(--field-active) !important;
+    border-radius:0 !important;
+    background:rgba(3,9,5,.72) !important;
+    box-shadow:none !important;
+  }
+  body.r11-ui .telemetry-osd .osd-head { display:none; }
+  body.r11-ui .telemetry-osd .osd-mgrs-btn {
+    min-height:28px;
+    padding:0;
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    align-items:center;
+    gap:8px;
+    border:0;
+    background:transparent;
+  }
+  body.r11-ui .telemetry-osd .osd-mgrs-btn > div:first-child {
+    margin:0 !important;
+    font-size:7px !important;
+    letter-spacing:.04em;
+  }
+  body.r11-ui .telemetry-osd .osd-mgrs-val {
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:11px;
+    text-align:right;
+  }
+  body.r11-ui .telemetry-osd .osd-subgrid { display:none !important; }
+
+  body.r11-ui .gps-status-osd {
+    position:fixed;
+    top:calc(env(safe-area-inset-top) + 124px) !important;
+    left:8px !important;
+    right:62px;
+    width:auto !important;
+    min-height:28px;
+    box-sizing:border-box;
+    padding:4px 7px !important;
+    border:0 !important;
+    border-left:1px solid var(--field-line-strong) !important;
+    border-radius:0 !important;
+    background:rgba(3,9,5,.60) !important;
+    box-shadow:none !important;
+  }
+  body.r11-ui .gps-status-head {
+    min-height:20px;
+    font-size:8px !important;
+    letter-spacing:.05em;
+  }
+  body.r11-ui .gps-status-osd .gps-status-row { display:none !important; }
+
+  body.r11-ui .global-gps-controls {
+    top:calc(env(safe-area-inset-top) + 86px) !important;
+    right:8px;
+  }
+
+  /* The optical corners now frame the clear map area below the header controls. */
+  body.r11-ui:not(.target-mode) .bracket.tl,
+  body.r11-ui:not(.target-mode) .bracket.tr {
+    top:calc(env(safe-area-inset-top) + 214px) !important;
+  }
+  body.r11-ui:not(.target-mode) .bracket.tl,
+  body.r11-ui:not(.target-mode) .bracket.bl { left:7px !important; }
+  body.r11-ui:not(.target-mode) .bracket.tr,
+  body.r11-ui:not(.target-mode) .bracket.br { right:7px !important; }
+
+  body.r11-ui:not(.target-mode) .map-scale-osd {
+    left:16px !important;
+    bottom:calc(var(--r11-bottom-nav-h) + 14px) !important;
+  }
+
+  body.r11-ui .r1-location-card,
+  body.r11-ui .r1-records-sheet {
+    bottom:calc(var(--r11-bottom-nav-h) + 8px) !important;
+  }
 }
