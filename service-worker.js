@@ -1,3 +1,4 @@
+/* R1.1 deploy retrigger 2026-10-05 */
 const CACHE_VERSION = 'r1-1-ui-20261005-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
