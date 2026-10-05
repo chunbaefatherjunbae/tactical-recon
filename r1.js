@@ -2993,8 +2993,8 @@
 
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R1.3 FIELD TERMINAL';
-    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui','r12-ui','r13-ui');
+    document.title='TACTICAL RECON // R1.4 FIELD TERMINAL';
+    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui','r12-ui','r13-ui','r14-ui');
     installLastFix();
     installUnifiedSearch();
     installSearchCloseReliability();
