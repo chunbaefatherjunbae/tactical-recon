@@ -1614,6 +1614,8 @@
   let lightMapBasePromise=null;
   let lightMapPlaceLayer=null;
   let lightMapBaseRenderer=null;
+  let lightMapLabelRenderer=null;
+  let lightMapAttributionAdded=false;
   let lightMapSuppressedTiles=[];
   let lightMapGuardInstalled=false;
   let lightMapRefreshInstalled=false;
@@ -2304,6 +2306,7 @@
     if(lightMapBaseLayer||!lightMapBaseData||typeof L==='undefined'||typeof map==='undefined')return lightMapBaseLayer;
     ensureLowDataPanes();
     lightMapBaseRenderer=L.canvas({pane:'r16LowDataBasePane',padding:.35});
+    lightMapLabelRenderer=L.canvas({pane:'r16LowDataLabelPane',padding:.35});
     const baseFeatures=(lightMapBaseData.features||[]).filter(f=>f?.properties?.kind!=='place');
     lightMapBaseLayer=L.geoJSON({type:'FeatureCollection',features:baseFeatures},{
       filter:feature=>feature?.properties?.kind!=='place',
@@ -2353,7 +2356,7 @@
       const radius=feature.properties?.class==='city'?2.5:1.8;
       const marker=L.circleMarker([Number(c[1]),Number(c[0])],{
         pane:'r16LowDataLabelPane',
-        renderer:lightMapBaseRenderer,
+        renderer:lightMapLabelRenderer||lightMapBaseRenderer,
         radius,
         weight:.8,
         color,
@@ -2367,7 +2370,8 @@
         direction:'right',
         offset:[4,0],
         opacity:1,
-        className:'r16-low-place-label'
+        className:'r16-low-place-label',
+        pane:'r16LowDataLabelPane'
       });
       marker.addTo(lightMapPlaceLayer);
     });
@@ -2452,7 +2456,10 @@
     document.body.classList.add('r15-light-map','r16-light-map');
     renderLowDataCoordinateGrid();
     loadLowDataBasemap().catch(()=>{});
-    map.attributionControl?.addAttribution(LOW_DATA_ATTRIBUTION);
+    if(!lightMapAttributionAdded&&map.attributionControl){
+      map.attributionControl.addAttribution(LOW_DATA_ATTRIBUTION);
+      lightMapAttributionAdded=true;
+    }
     if(typeof updateMapScale==='function')updateMapScale();
     scheduleR12OverlayLayout();
   }
@@ -2474,7 +2481,10 @@
     if(lightMapGridLayer&&map?.hasLayer?.(lightMapGridLayer))map.removeLayer(lightMapGridLayer);
     if(lightMapBaseLayer&&map?.hasLayer?.(lightMapBaseLayer))map.removeLayer(lightMapBaseLayer);
     if(lightMapPlaceLayer&&map?.hasLayer?.(lightMapPlaceLayer))map.removeLayer(lightMapPlaceLayer);
-    map.attributionControl?.removeAttribution(LOW_DATA_ATTRIBUTION);
+    if(lightMapAttributionAdded&&map.attributionControl){
+      map.attributionControl.removeAttribution(LOW_DATA_ATTRIBUTION);
+      lightMapAttributionAdded=false;
+    }
     const restore=[...lightMapSuppressedTiles];
     lightMapSuppressedTiles=[];
     restore.forEach(layer=>{
