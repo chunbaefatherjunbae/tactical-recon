@@ -147,6 +147,20 @@ jobs:
 
           out.extend(places)
 
+          def quantize(value,digits=5):
+              if isinstance(value,float):
+                  return round(value,digits)
+              if isinstance(value,list):
+                  return [quantize(v,digits) for v in value]
+              if isinstance(value,tuple):
+                  return [quantize(v,digits) for v in value]
+              if isinstance(value,dict):
+                  return {k:quantize(v,digits) for k,v in value.items()}
+              return value
+
+          for feature in out:
+              feature['geometry']=quantize(feature['geometry'],5)
+
           fc={
               'type':'FeatureCollection',
               'name':'TACTICAL RECON South Korea Low Data Basemap',
