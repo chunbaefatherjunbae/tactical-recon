@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'r1-5-map-shell-20261006-1';
+const CACHE_VERSION = 'r1-6-local-map-20261006-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
@@ -18,7 +18,9 @@ const STATIC_ASSETS = [
   './vendor/leaflet-1.9.4.js',
   './vendor/leaflet-1.9.4.css',
   './r1.css',
-  './r1.js'
+  './r1.js',
+  './offline/kr-low.geojson',
+  './offline/NOTICE.txt'
 ];
 
 self.addEventListener('install', event => {
