@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'r2-cleanup-20261006-1';
+const CACHE_VERSION = 'r2-3-viewport-coordinates-20261006-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 
