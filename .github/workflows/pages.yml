@@ -40,6 +40,9 @@ jobs:
           node --check service-worker.js
           node --check test_r1.js
           node --check test_r2.js
+          node --check echo/core.js
+          node --check echo/app.js
+          node --check echo/test_core.js
 
       - name: Test V28
         run: node test_v28.js
@@ -64,6 +67,9 @@ jobs:
 
       - name: Test R2
         run: node test_r2.js
+
+      - name: Test ECHOPOINT core
+        run: node echo/test_core.js
 
   deploy:
     needs: validate
