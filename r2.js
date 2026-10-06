@@ -1,8 +1,8 @@
-/* R2.1 runtime: HUD surface hierarchy, isolated position state, controlled address lookup. */
+/* R2.2 runtime: tactical HUD, compact command controls, unified panel language. */
 (function(root){
   'use strict';
 
-  const VERSION='2.1';
+  const VERSION='2.2';
   const DISPLAY_KEY='tactical_recon_location_display_v2';
   const FORMATS=['MGRS','WGS84','ADDRESS'];
   const DEFAULT_DISPLAY={primary:'MGRS',visible:['MGRS','WGS84','ADDRESS'],order:['MGRS','WGS84','ADDRESS']};
@@ -152,7 +152,7 @@
     sheet.innerHTML=
       '<div class="r2-display-shell">'+
         '<div class="r2-display-head">'+
-          '<div><small>R2.1 // POSITION DISPLAY</small><strong id="r2DisplayTitle"></strong></div>'+
+          '<div><small>R2.2 // POSITION DISPLAY</small><strong id="r2DisplayTitle"></strong></div>'+
           '<button class="r2-display-close" type="button" aria-label="Close">×</button>'+
         '</div>'+
         '<div class="r2-display-body">'+
@@ -259,6 +259,73 @@
     if(btn)btn.textContent=txt('위치 표기','POSITION DISPLAY');
   }
 
+  function ensureR22Hud(){
+    const top=document.querySelector('.top-compass-bar .sys-telemetry');
+    if(top&&!document.getElementById('r22GpsHud')){
+      const item=document.createElement('span');
+      item.id='r22GpsHud';
+      item.innerHTML='GPS <b id="r22GpsHudValue">--</b>';
+      top.appendChild(item);
+    }
+
+    const search=document.getElementById('r1MapSearch');
+    if(search&&!search.dataset.r22Decorated){
+      search.dataset.r22Decorated='1';
+      search.innerHTML=
+        '<span class="r22-search-glyph" aria-hidden="true">⌕</span>'+
+        '<span class="r22-search-copy"><strong></strong><small></small></span>';
+    }
+
+    const osd=document.querySelector('.telemetry-osd');
+    if(osd){
+      const head=osd.querySelector('.osd-head > span:first-child');
+      if(head)head.textContent='RETICLE';
+      const button=osd.querySelector('.osd-mgrs-btn');
+      if(button&&!document.getElementById('r22MgrsSecondary')){
+        const secondary=document.createElement('div');
+        secondary.id='r22MgrsSecondary';
+        secondary.className='r22-mgrs-secondary';
+        secondary.hidden=true;
+        button.insertAdjacentElement('afterend',secondary);
+      }
+    }
+    syncR22Search();
+    syncR22GpsHud();
+  }
+
+  function syncR22Search(){
+    const search=document.getElementById('r1MapSearch');
+    if(!search)return;
+    const title=search.querySelector('.r22-search-copy strong');
+    const meta=search.querySelector('.r22-search-copy small');
+    if(title)title.textContent=txt('위치 검색','SEARCH POSITION');
+    if(meta)meta.textContent='MGRS · ADDR';
+  }
+
+  function syncR22GpsHud(){
+    const value=document.getElementById('r22GpsHudValue');
+    if(!value)return;
+    const power=document.getElementById('gpsPowerBtn');
+    const lock=document.getElementById('gpsLockState');
+    const on=power?.getAttribute('aria-pressed')==='true'||power?.classList.contains('active');
+    const raw=String(lock?.textContent||'').trim().toUpperCase();
+    value.textContent=on?(raw||'ON'):'OFF';
+    value.dataset.state=on?(raw.includes('NO FIX')?'search':'on'):'off';
+  }
+
+  function installR22HudObservers(){
+    const power=document.getElementById('gpsPowerBtn');
+    const lock=document.getElementById('gpsLockState');
+    if(power&&!power.__r22Observed){
+      new MutationObserver(syncR22GpsHud).observe(power,{attributes:true,attributeFilter:['aria-pressed','class']});
+      power.__r22Observed=true;
+    }
+    if(lock&&!lock.__r22Observed){
+      new MutationObserver(syncR22GpsHud).observe(lock,{childList:true,characterData:true,subtree:true});
+      lock.__r22Observed=true;
+    }
+  }
+
   function currentMapCoords(){
     try{
       const c=map.getCenter();
@@ -311,6 +378,12 @@
     if(button){
       button.title=txt('탭하여 이 위치의 작업 열기','TAP TO OPEN ACTIONS FOR THIS POSITION');
       button.setAttribute('aria-label',txt('현재 지도 위치 작업 열기','OPEN MAP POSITION ACTIONS'));
+    }
+    const secondary=document.getElementById('r22MgrsSecondary');
+    if(secondary){
+      const mgrs=formatMgrs(coords);
+      secondary.hidden=settings.primary==='MGRS'||!mgrs;
+      secondary.textContent=mgrs?'MGRS  '+mgrs:'';
     }
     if(settings.primary==='ADDRESS'){
       if(resolve)scheduleHudAddressResolve(coords,value);
@@ -498,6 +571,8 @@
 
   function syncR2Text(){
     syncDisplayMenuText();
+    syncR22Search();
+    syncR22GpsHud();
     const sheet=document.getElementById('r2PositionDisplaySheet');
     if(sheet&&!sheet.hidden)renderDisplaySettings();
     renderReticlePrimary(false);
@@ -505,14 +580,16 @@
   }
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R2.1 FIELD TERMINAL';
+    document.title='TACTICAL RECON // R2.2 FIELD TERMINAL';
     document.body.classList.add('r2-runtime');
     ensureDisplaySettingsSheet();
     if(!installDisplayMenuEntry())setTimeout(installDisplayMenuEntry,80);
+    ensureR22Hud();
+    installR22HudObservers();
     installReticleOwnership();
     installLocationCardOwnership();
     const records=document.querySelector('#r1RecordsSheet .r1-sheet-head small');
-    if(records)records.textContent='TACTICAL RECON // R2.1';
+    if(records)records.textContent='TACTICAL RECON // R2.2';
     new MutationObserver(syncR2Text).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
     root.addEventListener('online',()=>{renderReticlePrimary(true);renderLocationFormats();});
     root.addEventListener('offline',()=>{renderReticlePrimary(false);renderLocationFormats();});
