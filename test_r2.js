@@ -168,9 +168,13 @@ test('Topographic low-data runtime distinguishes field features',()=>{
   assert(r1.includes("className:peak?'r16-low-peak-label':'r16-low-place-label'"));
   assert(r1.includes('lowDataBackgroundColor()'));
   assert(r1.includes('let lightMapContourLayer=null'));
+  assert(r1.includes('let lightMapContourData=null'));
+  assert(r1.includes("const LOW_DATA_CONTOUR_URL='./offline/kr-contours.geojson'"));
+  assert(r1.includes('function loadLowDataContours()'));
   assert(r1.includes('function syncLowDataContourLayer()'));
   assert(r1.includes('const show=map.getZoom()>=10'));
   assert(r1.includes("excludedKinds=new Set(['place','peak','contour_label','contour'])"));
+  assert(r1.includes("fetch(LOW_DATA_CONTOUR_URL,{cache:'force-cache'})"));
 });
 
 test('Topographic low-data builder includes terrain, land, water, road and peak sources',()=>{
@@ -182,8 +186,12 @@ test('Topographic low-data builder includes terrain, land, water, road and peak 
   assert(topoBuilder.includes('"kind": "water_area"'));
   assert(topoBuilder.includes('"kind": "peak"'));
   assert(topoBuilder.includes('"kind": "contour"'));
-  assert(topoBuilder.includes('MAX_OUTPUT_BYTES = 14_000_000'));
+  assert(topoBuilder.includes('MAX_BASE_BYTES = 11_000_000'));
+  assert(topoBuilder.includes('MAX_CONTOUR_BYTES = 8_000_000'));
+  assert(topoBuilder.includes('BASE_OUTPUT = Path("offline/kr-low.geojson")'));
+  assert(topoBuilder.includes('CONTOUR_OUTPUT = Path("offline/kr-contours.geojson")'));
   assert(lowDataWorkflow.includes('scripts/build_lowdata_topo.py'));
+  assert(lowDataWorkflow.includes('offline/kr-contours.geojson'));
   assert(lowDataWorkflow.includes('w/highway=motorway,trunk,primary,secondary'));
   assert(lowDataWorkflow.includes('n/natural=peak'));
 });
