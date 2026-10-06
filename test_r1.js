@@ -24,10 +24,12 @@ test('R1 is the final runtime layer',()=>{
   assert.strictEqual(sw.includes("html.includes('v29-stabilize.js')"),false);
 });
 
-test('PWA cache identity moved to R1',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r1-6-local-map-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r1-6-local-map-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r1-6-local-map-20261006-1'));
+test('R1 remains cached beneath the R2 runtime identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'r2-0-position-actions-20261006-1';"));
+  assert(index.includes('service-worker.js?v=r2-0-position-actions-20261006-1'));
+  assert(index.includes('tactical-recon-sw-reload-r2-0-position-actions-20261006-1'));
+  assert(sw.includes("'./r1.css'"));
+  assert(sw.includes("'./r1.js'"));
 });
 
 test('Home bar is RECON SITES RECORDS MENU',()=>{
