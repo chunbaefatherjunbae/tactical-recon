@@ -1,0 +1,18 @@
+:root{
+  color-scheme:dark;
+  --bg:#0B0F0C;
+  --text:#E3E6D6;
+  --muted:#8E9686;
+  --tactical:#AEBB6C;
+  --active:#D7E58B;
+  --amber:#D1A04C;
+  --danger:#C65B4D;
+  --glass:rgba(11,15,12,.88);
+  --hairline:rgba(227,230,214,.16);
+  --hairline-strong:rgba(215,229,139,.42);
+  --shadow:0 1px 5px rgba(0,0,0,.92);
+  --safe-top:max(12px,env(safe-area-inset-top));
+  --safe-bottom:max(10px,env(safe-area-inset-bottom));
+  --touch:48px;
+  --font:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+}

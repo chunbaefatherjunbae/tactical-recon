@@ -43,6 +43,8 @@ jobs:
           node --check echo/core.js
           node --check echo/app.js
           node --check echo/test_core.js
+          # ECHOPOINT clean modules
+          for f in echopoint/src/*.mjs echopoint/tests/*.mjs; do node --check "$f"; done
 
       - name: Test V28
         run: node test_v28.js
@@ -70,6 +72,9 @@ jobs:
 
       - name: Test ECHOPOINT core
         run: node echo/test_core.js
+
+      - name: Test ECHOPOINT clean domain
+        run: node echopoint/tests/domain.test.mjs
 
   deploy:
     needs: validate
