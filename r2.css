@@ -1,6 +1,6 @@
-/* R2.2 // CURRENT RUNTIME LAYER
+/* R2.3 // CURRENT RUNTIME LAYER
    Clean canonical layer above R1.6.
-   R1 owns legacy behavior; R2 owns current position/HUD/panel behavior. */
+   R1 owns legacy behavior; R2.3 owns the current viewport/HUD/panel behavior. */
 
 body.r2-runtime{
   --r2-font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
