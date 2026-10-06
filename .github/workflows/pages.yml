@@ -27,6 +27,7 @@ jobs:
 
       - name: Syntax check
         run: |
+          python3 -m py_compile scripts/build_lowdata_topo.py
           node --check location-core.js
           node --check app-base.js
           node --check v28.js
