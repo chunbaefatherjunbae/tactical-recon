@@ -360,6 +360,10 @@
   }
 
   function currentCardTarget(){
+    try{
+      const selected=root.r1?.getLocationTarget?.();
+      if(selected&&validCoords(selected.coords))return selected;
+    }catch(e){}
     if(r2CardTarget&&validCoords(r2CardTarget.coords))return r2CardTarget;
     try{
       if(typeof currentActiveTarget!=='undefined'&&currentActiveTarget&&validCoords(currentActiveTarget.coords))return currentActiveTarget;
