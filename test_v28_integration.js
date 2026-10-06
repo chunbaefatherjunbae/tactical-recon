@@ -21,7 +21,7 @@ function test(name, fn) {
 }
 
 test('PWA cache version follows current R2 runtime cache', () => {
-  assert(sw.includes("const CACHE_VERSION = 'r2-2-gev-hud-20261006-1';"));
+  assert(sw.includes("const CACHE_VERSION = 'r2-cleanup-20261006-1';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
@@ -30,11 +30,13 @@ test('PWA static cache includes V28 CSS, foundation and runtime', () => {
   assert(sw.includes("'./v28-runtime.js'"));
 });
 
-test('PWA injects foundation before integrated runtime', () => {
-  const foundation = sw.indexOf("html.includes('v28.js')");
-  const runtimePos = sw.indexOf("html.includes('v28-runtime.js')");
+test('Index loads foundation before integrated runtime', () => {
+  const index = fs.readFileSync('index.html','utf8');
+  const foundation = index.indexOf('src="./v28.js"');
+  const runtimePos = index.indexOf('src="./v28-runtime.js"');
   assert(foundation >= 0);
   assert(runtimePos > foundation);
+  assert.strictEqual(sw.includes('injectStableOverlay'), false);
 });
 
 test('V28 main navigation is PLAN / SITES / MENU', () => {
