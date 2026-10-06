@@ -3315,7 +3315,7 @@
     openObjectiveInfo:openMissionObjectiveSheet
   };
 
-  root.r1={openRecords:openR1Records,openLocation:showR1LocationCard,closeLocation:closeR1LocationCard,setObjective:setR1Objective,refreshLowDataStyle:refreshLowDataBaseStyle};
+  root.r1={openRecords:openR1Records,openLocation:showR1LocationCard,closeLocation:closeR1LocationCard,setObjective:setR1Objective,getLocationTarget:()=>r1LocationTarget,refreshLowDataStyle:refreshLowDataBaseStyle};
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
