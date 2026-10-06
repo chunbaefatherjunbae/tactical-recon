@@ -6,7 +6,8 @@
   const FORMATS=['MGRS','WGS84','ADDRESS'];
   const DEFAULT_DISPLAY={primary:'MGRS',visible:['MGRS','WGS84','ADDRESS'],order:['MGRS','WGS84','ADDRESS']};
   const addressCache=new Map();
-  let addressToken=0;
+  let hudAddressToken=0;
+  let cardAddressToken=0;
   let r2CardTarget=null;
   let installed=false;
 
@@ -84,13 +85,11 @@
     const key=cacheKey(coords);
     if(addressCache.has(key))return {state:'ready',value:addressCache.get(key)};
     if(!navigator.onLine)return {state:'offline',value:txt('오프라인 · 주소 사용 불가','OFFLINE · ADDRESS UNAVAILABLE')};
-    const token=opts.token||0;
     try{
       const url='https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+encodeURIComponent(coords[0])+'&lon='+encodeURIComponent(coords[1])+'&zoom=18&addressdetails=1&accept-language='+(lang()==='ko'?'ko':'en');
       const response=await fetch(url,{headers:{Accept:'application/json'}});
       if(!response.ok)throw new Error('REVERSE_GEOCODE_FAILED');
       const data=await response.json();
-      if(token&&token!==addressToken)return {state:'stale',value:''};
       const fallback=formatLatLon(coords);
       const value=normalizedAddress(data,fallback);
       addressCache.set(key,value);
@@ -278,9 +277,9 @@
       button.setAttribute('aria-label',txt('현재 지도 위치 작업 열기','OPEN MAP POSITION ACTIONS'));
     }
     if(settings.primary==='ADDRESS'&&resolve){
-      const token=++addressToken;
-      reverseAddress(coords,{token}).then(result=>{
-        if(token!==addressToken||!result||result.state==='stale')return;
+      const token=++hudAddressToken;
+      reverseAddress(coords).then(result=>{
+        if(token!==hudAddressToken||!result)return;
         const now=currentMapCoords();
         if(!now||cacheKey(now)!==cacheKey(coords))return;
         value.textContent=result.value;
@@ -354,9 +353,9 @@
   }
   async function resolveCardAddress(target,rowValue){
     const coords=target.coords.slice();
-    const token=++addressToken;
-    const result=await reverseAddress(coords,{token});
-    if(token!==addressToken||!result||result.state==='stale')return;
+    const token=++cardAddressToken;
+    const result=await reverseAddress(coords);
+    if(token!==cardAddressToken||!result)return;
     const current=currentCardTarget();
     if(!current||cacheKey(current.coords)!==cacheKey(coords))return;
     rowValue.textContent=result.value;
