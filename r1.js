@@ -1626,6 +1626,7 @@
   let lightMapOpen=false;
   let lightMapGridLayer=null;
   let lightMapBaseLayer=null;
+  let lightMapContourLayer=null;
   let lightMapBaseData=null;
   let lightMapBasePromise=null;
   let lightMapPlaceLayer=null;
@@ -2364,14 +2365,37 @@
     ensureLowDataPanes();
     lightMapBaseRenderer=L.canvas({pane:'r16LowDataBasePane',padding:.35});
     lightMapLabelRenderer=L.canvas({pane:'r16LowDataLabelPane',padding:.35});
-    const labelKinds=new Set(['place','peak','contour_label']);
-    const baseFeatures=(lightMapBaseData.features||[]).filter(f=>!labelKinds.has(f?.properties?.kind));
+    const excludedKinds=new Set(['place','peak','contour_label','contour']);
+    const baseFeatures=(lightMapBaseData.features||[]).filter(f=>!excludedKinds.has(f?.properties?.kind));
     lightMapBaseLayer=L.geoJSON({type:'FeatureCollection',features:baseFeatures},{
-      filter:feature=>!labelKinds.has(feature?.properties?.kind),
+      filter:feature=>!excludedKinds.has(feature?.properties?.kind),
       style:lowDataFeatureStyle,
       interactive:false
     });
     return lightMapBaseLayer;
+  }
+
+  function ensureLowDataContourLayer(){
+    if(lightMapContourLayer||!lightMapBaseData||typeof L==='undefined'||typeof map==='undefined')return lightMapContourLayer;
+    ensureLowDataPanes();
+    if(!lightMapBaseRenderer)lightMapBaseRenderer=L.canvas({pane:'r16LowDataBasePane',padding:.35});
+    const features=(lightMapBaseData.features||[]).filter(f=>f?.properties?.kind==='contour');
+    lightMapContourLayer=L.geoJSON({type:'FeatureCollection',features},{
+      style:lowDataFeatureStyle,
+      interactive:false
+    });
+    return lightMapContourLayer;
+  }
+
+  function syncLowDataContourLayer(){
+    if(!lightMapOpen||typeof map==='undefined')return;
+    const show=map.getZoom()>=10;
+    if(show){
+      const layer=ensureLowDataContourLayer();
+      if(layer&&!map.hasLayer(layer))layer.addTo(map);
+    }else if(lightMapContourLayer&&map.hasLayer(lightMapContourLayer)){
+      map.removeLayer(lightMapContourLayer);
+    }
   }
 
   function lowDataLabelFeatures(){
@@ -2476,8 +2500,9 @@
   }
 
   function refreshLowDataBaseStyle(){
-    if(!lightMapBaseLayer)return;
-    lightMapBaseLayer.setStyle?.(lowDataFeatureStyle);
+    lightMapBaseLayer?.setStyle?.(lowDataFeatureStyle);
+    lightMapContourLayer?.setStyle?.(lowDataFeatureStyle);
+    syncLowDataContourLayer();
     refreshLowDataPlaces();
   }
 
@@ -2520,6 +2545,7 @@
         lightMapRefreshTimer=null;
         if(!lightMapOpen)return;
         renderLowDataCoordinateGrid();
+        syncLowDataContourLayer();
         refreshLowDataPlaces();
       },48);
     };
@@ -2554,7 +2580,7 @@
     installLowDataRefreshHooks();
     document.body.classList.add('r15-light-map','r16-light-map');
     renderLowDataCoordinateGrid();
-    loadLowDataBasemap().catch(()=>{});
+    loadLowDataBasemap().then(()=>syncLowDataContourLayer()).catch(()=>{});
     if(!lightMapAttributionAdded&&map.attributionControl){
       map.attributionControl.addAttribution(LOW_DATA_ATTRIBUTION);
       lightMapAttributionAdded=true;
@@ -2580,6 +2606,7 @@
     document.body.classList.remove('r15-light-map','r16-light-map');
     if(lightMapGridLayer&&map?.hasLayer?.(lightMapGridLayer))map.removeLayer(lightMapGridLayer);
     if(lightMapBaseLayer&&map?.hasLayer?.(lightMapBaseLayer))map.removeLayer(lightMapBaseLayer);
+    if(lightMapContourLayer&&map?.hasLayer?.(lightMapContourLayer))map.removeLayer(lightMapContourLayer);
     if(lightMapPlaceLayer&&map?.hasLayer?.(lightMapPlaceLayer))map.removeLayer(lightMapPlaceLayer);
     if(lightMapAttributionAdded&&map.attributionControl){
       map.attributionControl.removeAttribution(LOW_DATA_ATTRIBUTION);
