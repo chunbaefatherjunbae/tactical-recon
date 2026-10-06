@@ -7,7 +7,9 @@ const sw=fs.readFileSync('service-worker.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const base=fs.readFileSync('app-base.js','utf8');
 const lowDataPath='offline/kr-low.geojson';
+const contourDataPath='offline/kr-contours.geojson';
 const lowData=JSON.parse(fs.readFileSync(lowDataPath,'utf8'));
+const contourData=JSON.parse(fs.readFileSync(contourDataPath,'utf8'));
 
 function test(name,fn){
   try{fn();console.log('PASS',name);}
@@ -25,9 +27,9 @@ test('R1 loads explicitly after the legacy runtime layers',()=>{
 });
 
 test('R1 remains cached beneath the current runtime identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r2-3-viewport-coordinates-20261006-1';"));
-  assert(base.includes('service-worker.js?v=r2-3-viewport-coordinates-20261006-1'));
-  assert(base.includes('tactical-recon-sw-reload-r2-3-viewport-coordinates-20261006-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r2-3-1-field-polish-topo-20261006-1';"));
+  assert(base.includes('service-worker.js?v=r2-3-1-field-polish-topo-20261006-1'));
+  assert(base.includes('tactical-recon-sw-reload-r2-3-1-field-polish-topo-20261006-1'));
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
 });
@@ -119,13 +121,14 @@ test('R1.2 reticle uses live map geometry and one center anchor',()=>{
   assert(css.includes('top:calc(var(--r12-frame-bottom) - 21px) !important'));
 });
 
-test('R1.2 resolves LAST FIX label collision and scale placement',()=>{
+test('R2.3.1 keeps LAST FIX label on a stable side',()=>{
   assert(r1.includes('function resolveR12LastFixLabelCollision(bounds)'));
-  assert(r1.includes("visual.classList.add('r12-label-right')"));
-  assert(css.includes('.r11-last-fix-visual.r12-label-above > span'));
-  assert(css.includes('.r11-last-fix-visual.r12-label-right > span'));
-  assert(css.includes('left:calc(var(--r12-frame-left) + 38px) !important'));
-  assert(css.includes('top:calc(var(--r12-frame-bottom) - 25px) !important'));
+  const start=r1.indexOf('function resolveR12LastFixLabelCollision(bounds)');
+  const end=r1.indexOf('function syncR12OverlayLayout()',start);
+  const block=r1.slice(start,end);
+  assert(block.includes("visual.classList.remove('r12-label-above','r12-label-right')"));
+  assert.strictEqual(block.includes('Math.hypot'),false);
+  assert.strictEqual(block.includes("classList.add('r12-label"),false);
 });
 
 test('R2.3 working-grid search accepts short MGRS only with a bounded trusted context',()=>{
@@ -218,15 +221,24 @@ test('R1.6 low-data mode keeps one Leaflet map with a local OSM basemap',()=>{
   assert(sw.includes("'./offline/kr-low.geojson'"));
 });
 
-test('R1.6 low-data basemap is compact, truthful and includes real context layers',()=>{
-  assert(fs.statSync(lowDataPath).size<9000000);
+test('R2.3.1 low-data basemap is compact and splits terrain contours on demand',()=>{
+  assert(fs.statSync(lowDataPath).size<11000000);
+  assert(fs.statSync(contourDataPath).size<8000000);
   assert.strictEqual(lowData.type,'FeatureCollection');
-  assert.strictEqual(lowData.source,'OpenStreetMap via Geofabrik');
-  assert.strictEqual(lowData.license,'ODbL 1.0');
+  assert.strictEqual(contourData.type,'FeatureCollection');
+  assert(String(lowData.source).includes('OpenStreetMap'));
+  assert(String(lowData.source).includes('Mapzen Terrain Tiles'));
+  assert.strictEqual(contourData.contourIntervalM,100);
+  assert.strictEqual(contourData.indexContourIntervalM,500);
+  assert.strictEqual(lowData.contourFile,'./kr-contours.geojson');
   const kinds=new Set(lowData.features.map(f=>f?.properties?.kind));
-  ['road','water','coast','boundary','place'].forEach(kind=>assert(kinds.has(kind)));
+  ['land','road','water','water_area','coast','boundary','place','peak'].forEach(kind=>assert(kinds.has(kind),kind));
+  assert.strictEqual(kinds.has('contour'),false);
+  const contourKinds=new Set(contourData.features.map(f=>f?.properties?.kind));
+  ['contour','contour_label'].forEach(kind=>assert(contourKinds.has(kind),kind));
   const roads=lowData.features.filter(f=>f?.properties?.kind==='road').map(f=>f.properties.class).sort();
-  assert.deepStrictEqual(roads,['motorway','primary','trunk']);
+  assert.deepStrictEqual(roads,['motorway','primary','secondary','trunk']);
+  assert(sw.includes("'./offline/kr-contours.geojson'"));
 });
 
 test('R1.6 grid is geographic rather than a decorative tile pattern',()=>{
@@ -240,13 +252,12 @@ test('R1.6 grid is geographic rather than a decorative tile pattern',()=>{
   assert(css.includes('.r16-low-place-label'));
 });
 
-test('R1.5 HUD uses a fixed semantic slot instead of an empty BRG placeholder',()=>{
+test('R2.3.1 HUD keeps the reference semantic slot stable',()=>{
   assert(index.includes('id="hudPrimaryLabel">REF</span>'));
   assert(index.includes('id="hudBearing">NONE</span>'));
   assert(base.includes("hudLabel.innerText = 'REF'"));
-  assert(base.includes("hudLabel.innerText = 'BRG'"));
+  assert.strictEqual(base.includes("hudLabel.innerText = 'BRG'"),false);
   assert(base.includes("ref?.type === 'LAST_FIX' ? 'LAST'"));
-  assert(css.includes('grid-template-columns:30px 76px'));
   assert(css.includes('font-variant-numeric:tabular-nums'));
 });
 

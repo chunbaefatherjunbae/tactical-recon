@@ -1,4 +1,4 @@
-name: Build R1.6 Low Data Basemap
+name: Build Topographic Low Data Basemap
 
 on:
   workflow_dispatch:
@@ -8,15 +8,20 @@ permissions:
 
 jobs:
   build:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
 
-      - name: Install OSM tools
+      - name: Install geodata tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y osmium-tool python3-shapely
+          sudo apt-get install -y osmium-tool gdal-bin
+          python3 -m pip install --disable-pip-version-check numpy pillow shapely rasterio
+
+      - name: Check builder syntax
+        run: python3 -m py_compile scripts/build_lowdata_topo.py
 
       - name: Download South Korea OSM extract
         run: |
@@ -24,188 +29,56 @@ jobs:
             https://download.geofabrik.de/asia/south-korea-latest.osm.pbf \
             -o /tmp/south-korea.osm.pbf
 
-      - name: Extract low-data features
+      - name: Extract field-map OSM features
         run: |
           osmium tags-filter /tmp/south-korea.osm.pbf \
-            w/highway=motorway,trunk,primary \
+            w/highway=motorway,trunk,primary,secondary \
             w/waterway=river,canal \
-            n/place=city,town \
+            n/place=city,town,village \
+            n/natural=peak \
+            w/natural=water \
+            r/natural=water \
+            w/water=reservoir \
+            r/water=reservoir \
             r/admin_level=2 \
             w/natural=coastline \
-            -o /tmp/recon-low.osm.pbf --overwrite
-          osmium export /tmp/recon-low.osm.pbf \
+            -o /tmp/recon-topo.osm.pbf --overwrite
+          osmium export /tmp/recon-topo.osm.pbf \
             -f geojson \
-            -o /tmp/recon-low.raw.geojson \
+            -o /tmp/recon-topo.raw.geojson \
             --overwrite
 
-      - name: Package RECON low-data basemap
+      - name: Build topographic field basemap
+        run: python3 scripts/build_lowdata_topo.py
+
+      - name: Write attribution notice
         run: |
-          mkdir -p offline
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          from shapely.geometry import shape, mapping
-
-          src=Path('/tmp/recon-low.raw.geojson')
-          dst=Path('offline/kr-low.geojson')
-          raw=json.load(src.open(encoding='utf-8'))
-
-          roads={k:[] for k in ('motorway','trunk','primary')}
-          water=[]
-          coast=[]
-          boundary=[]
-          places=[]
-
-          def safe_shape(feature):
-              try:
-                  geom=shape(feature.get('geometry'))
-                  return None if geom.is_empty else geom
-              except Exception:
-                  return None
-
-          for feature in raw.get('features',[]):
-              props=feature.get('properties') or {}
-              geom=safe_shape(feature)
-              if geom is None:
-                  continue
-              highway=props.get('highway')
-              if highway in roads:
-                  roads[highway].append(geom)
-                  continue
-              if props.get('waterway') in {'river','canal'}:
-                  water.append(geom)
-                  continue
-              if props.get('natural')=='coastline':
-                  coast.append(geom)
-                  continue
-              if str(props.get('admin_level',''))=='2':
-                  boundary.append(geom)
-                  continue
-              if props.get('place') in {'city','town'}:
-                  name=props.get('name:ko') or props.get('name') or props.get('name:en') or ''
-                  if not name:
-                      continue
-                  out_props={'kind':'place','class':props.get('place'),'name':name}
-                  try:
-                      if props.get('population') is not None:
-                          out_props['population']=int(str(props.get('population')).replace(',',''))
-                  except Exception:
-                      pass
-                  places.append({
-                      'type':'Feature',
-                      'properties':out_props,
-                      'geometry':mapping(geom)
-                  })
-
-          def collect_lines(geom,tolerance):
-              try:
-                  geom=geom.simplify(tolerance,preserve_topology=False)
-              except Exception:
-                  return []
-              lines=[]
-              def visit(g):
-                  if g is None or g.is_empty:
-                      return
-                  if g.geom_type=='LineString':
-                      coords=list(g.coords)
-                      if len(coords)>=2:
-                          lines.append(coords)
-                  elif g.geom_type in ('MultiLineString','GeometryCollection'):
-                      for part in g.geoms:
-                          visit(part)
-              visit(geom)
-              return lines
-
-          def packed_lines(kind,cls,geoms,tolerance):
-              coords=[]
-              for geom in geoms:
-                  coords.extend(collect_lines(geom,tolerance))
-              if not coords:
-                  return None
-              return {
-                  'type':'Feature',
-                  'properties':{'kind':kind,'class':cls},
-                  'geometry':{'type':'MultiLineString','coordinates':coords}
-              }
-
-          out=[]
-          for cls,tolerance in [('motorway',.0008),('trunk',.0010),('primary',.0015)]:
-              feature=packed_lines('road',cls,roads[cls],tolerance)
-              if feature:
-                  out.append(feature)
-
-          feature=packed_lines('water','river',water,.0020)
-          if feature:
-              out.append(feature)
-
-          feature=packed_lines('coast','coastline',coast,.0015)
-          if feature:
-              out.append(feature)
-
-          boundary_geometries=[]
-          for geom in boundary:
-              try:
-                  simplified=geom.simplify(.0015,preserve_topology=True)
-                  if not simplified.is_empty:
-                      boundary_geometries.append(mapping(simplified))
-              except Exception:
-                  continue
-          if boundary_geometries:
-              out.append({
-                  'type':'Feature',
-                  'properties':{'kind':'boundary','class':'country'},
-                  'geometry':{'type':'GeometryCollection','geometries':boundary_geometries}
-              })
-
-          out.extend(places)
-
-          def quantize(value):
-              if isinstance(value,float):
-                  return round(value,4)
-              if isinstance(value,(list,tuple)):
-                  return [quantize(v) for v in value]
-              if isinstance(value,dict):
-                  return {k:quantize(v) for k,v in value.items()}
-              return value
-
-          for feature in out:
-              feature['geometry']=quantize(feature['geometry'])
-
-          final={
-              'type':'FeatureCollection',
-              'name':'TACTICAL RECON South Korea Low Data Basemap',
-              'source':'OpenStreetMap via Geofabrik',
-              'license':'ODbL 1.0',
-              'features':out
-          }
-          dst.write_text(
-              json.dumps(final,ensure_ascii=False,separators=(',',':')),
-              encoding='utf-8'
-          )
-
-          size=dst.stat().st_size
-          print('features',len(out))
-          print('bytes',size)
-          if size>9_000_000:
-              raise SystemExit('low-data basemap exceeds 9 MB')
-          PY
-
           cat > offline/NOTICE.txt <<'EOF'
-          TACTICAL RECON low-data basemap
+          TACTICAL RECON topographic low-data basemap
+
+          Map / feature data:
           Contains information from OpenStreetMap, available under the Open Database License (ODbL).
           Source extract: Geofabrik South Korea.
           https://www.openstreetmap.org/copyright
           https://download.geofabrik.de/asia/south-korea.html
+
+          Terrain / contour data:
+          Contours are derived from Mapzen Terrain Tiles distributed through the AWS Open Data Registry.
+          Terrain Tiles aggregate multiple regional elevation sources; source-specific attribution applies.
+          https://registry.opendata.aws/terrain-tiles/
+          https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+          https://github.com/tilezen/joerd/blob/master/docs/data-sources.md
           EOF
 
       - name: Commit generated basemap
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add offline/kr-low.geojson offline/NOTICE.txt
+          git add offline/kr-low.geojson offline/kr-contours.geojson offline/NOTICE.txt
           if git diff --cached --quiet; then
             echo "Basemap is already current."
             exit 0
           fi
-          git commit -m "Refresh South Korea low-data basemap"
-          git push origin HEAD:${GITHUB_REF_NAME}
+          git commit -m "Refresh topographic South Korea low-data basemap"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin HEAD:"${GITHUB_REF_NAME}"

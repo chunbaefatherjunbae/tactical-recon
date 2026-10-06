@@ -662,19 +662,17 @@ window.__reconRotateUnavailable = true;
       const hudLabel = document.getElementById('hudPrimaryLabel');
       const ref = getReferencePosition();
       const refShort = ref?.type === 'LAST_FIX' ? 'LAST' : (ref?.type === 'TEMP' ? 'TEMP' : (ref?.type === 'GPS' ? 'GPS' : (ref?.type || 'NONE')));
+      if (hudLabel) hudLabel.innerText = 'REF';
+      if (hudEl) hudEl.innerText = refShort;
       if (!currentActiveTarget || !ref?.coords) {
         if (distEl) distEl.innerText = 'DIST: --';
         if (brgEl) brgEl.innerText = 'BRG: ---° --';
-        if (hudLabel) hudLabel.innerText = 'REF';
-        if (hudEl) hudEl.innerText = refShort;
         return;
       }
       const dist = calcDistanceKm(ref.coords[0], ref.coords[1], currentActiveTarget.coords[0], currentActiveTarget.coords[1]);
       const brg = calcBearing(ref.coords[0], ref.coords[1], currentActiveTarget.coords[0], currentActiveTarget.coords[1]);
       if (distEl) distEl.innerText = `DIST: ${dist} KM · ${referenceLabel(ref.type)}`;
       if (brgEl) brgEl.innerText = `BRG: ${brg}`;
-      if (hudLabel) hudLabel.innerText = 'BRG';
-      if (hudEl) hudEl.innerText = brg;
     }
 
     function cleanLegacyIntelText(value) {
@@ -3821,13 +3819,13 @@ window.__reconRotateUnavailable = true;
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js?v=r2-3-viewport-coordinates-20261006-1', { scope: './', updateViaCache: 'none' })
+        navigator.serviceWorker.register('./service-worker.js?v=r2-3-1-field-polish-topo-20261006-1', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-r2-3-viewport-coordinates-20261006-1';
+        const reloadKey = 'tactical-recon-sw-reload-r2-3-1-field-polish-topo-20261006-1';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();

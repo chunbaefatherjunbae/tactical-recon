@@ -1,5 +1,14 @@
-TACTICAL RECON low-data basemap
+TACTICAL RECON topographic low-data basemap
+
+Map / feature data:
 Contains information from OpenStreetMap, available under the Open Database License (ODbL).
 Source extract: Geofabrik South Korea.
 https://www.openstreetmap.org/copyright
 https://download.geofabrik.de/asia/south-korea.html
+
+Terrain / contour data:
+Contours are derived from Mapzen Terrain Tiles distributed through the AWS Open Data Registry.
+Terrain Tiles aggregate multiple regional elevation sources; source-specific attribution applies.
+https://registry.opendata.aws/terrain-tiles/
+https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+https://github.com/tilezen/joerd/blob/master/docs/data-sources.md
