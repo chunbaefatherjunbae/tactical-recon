@@ -25,9 +25,9 @@ test('R1 loads explicitly after the legacy runtime layers',()=>{
 });
 
 test('R1 remains cached beneath the current runtime identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r2-3-viewport-coordinates-20261006-1';"));
-  assert(base.includes('service-worker.js?v=r2-3-viewport-coordinates-20261006-1'));
-  assert(base.includes('tactical-recon-sw-reload-r2-3-viewport-coordinates-20261006-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r2-3-1-field-polish-topo-20261006-1';"));
+  assert(base.includes('service-worker.js?v=r2-3-1-field-polish-topo-20261006-1'));
+  assert(base.includes('tactical-recon-sw-reload-r2-3-1-field-polish-topo-20261006-1'));
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
 });
