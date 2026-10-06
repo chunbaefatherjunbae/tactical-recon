@@ -23,9 +23,9 @@ test('R1 is the final runtime layer',()=>{
 });
 
 test('PWA cache identity moved to R1',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r1-4-1-reticle-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r1-4-1-reticle-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r1-4-1-reticle-20261006-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r1-5-map-shell-20261006-1';"));
+  assert(index.includes('service-worker.js?v=r1-5-map-shell-20261006-1'));
+  assert(index.includes('tactical-recon-sw-reload-r1-5-map-shell-20261006-1'));
 });
 
 test('Home bar is RECON SITES RECORDS MENU',()=>{
@@ -164,7 +164,8 @@ test('R1.4 removes fake REC state from the top bar',()=>{
 
 test('R1.4 restores V-series reticle visibility',()=>{
   assert(r1.includes("'r14-ui'"));
-  assert(r1.includes('R1.4 FIELD TERMINAL'));
+  assert(r1.includes('R1.5 FIELD TERMINAL'));
+  assert(r1.includes("'r15-ui'"));
   assert(css.includes('body.r14-ui .reticle-container'));
   assert(css.includes('width:112px !important'));
   assert(css.includes('height:112px !important'));
@@ -190,6 +191,35 @@ test('R1.4 corners use screen edges and scale is bottom-center',()=>{
   assert(css.includes('body.r14-ui .map-scale-osd'));
   assert(css.includes('left:50% !important'));
   assert(css.includes('transform:translateX(-50%) !important'));
+});
+
+test('R1.5 low-data mode keeps the Leaflet map and suppresses only network tiles',()=>{
+  assert(r1.includes('function isNetworkTileLayer(layer)'));
+  assert(r1.includes('function ensureLightMapGridLayer()'));
+  assert(r1.includes('function suppressLightMapNetworkTiles()'));
+  assert(r1.includes("document.body.classList.add('r15-light-map')"));
+  assert(r1.includes("document.body.classList.remove('r15-light-map')"));
+  assert.strictEqual(r1.includes("id='v29LightMap'"),false);
+  assert(css.includes('.r15-low-data-tile'));
+  assert(css.includes('body.r15-light-map #map'));
+});
+
+test('R1.5 HUD uses a fixed semantic slot instead of an empty BRG placeholder',()=>{
+  assert(index.includes('id="hudPrimaryLabel">REF</span>'));
+  assert(index.includes('id="hudBearing">NONE</span>'));
+  assert(index.includes("hudLabel.innerText = 'REF'"));
+  assert(index.includes("hudLabel.innerText = 'BRG'"));
+  assert(index.includes("ref?.type === 'LAST_FIX' ? 'LAST'"));
+  assert(css.includes('grid-template-columns:30px 76px'));
+  assert(css.includes('font-variant-numeric:tabular-nums'));
+});
+
+test('R1.5 reticle keeps V dimensions but opens the center gate',()=>{
+  assert(css.includes('body.r15-ui .target-gate'));
+  assert(css.includes('border:0 !important'));
+  assert(css.includes('left top/10px 1px no-repeat'));
+  assert(css.includes('right bottom/1px 10px no-repeat'));
+  assert(css.includes('body.r15-ui.v29-picking-location .target-gate'));
 });
 
 test('R1.3 mobile UI has dedicated map shell cards',()=>{
