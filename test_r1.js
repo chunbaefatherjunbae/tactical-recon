@@ -7,7 +7,9 @@ const sw=fs.readFileSync('service-worker.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const base=fs.readFileSync('app-base.js','utf8');
 const lowDataPath='offline/kr-low.geojson';
+const contourDataPath='offline/kr-contours.geojson';
 const lowData=JSON.parse(fs.readFileSync(lowDataPath,'utf8'));
+const contourData=JSON.parse(fs.readFileSync(contourDataPath,'utf8'));
 
 function test(name,fn){
   try{fn();console.log('PASS',name);}
@@ -219,17 +221,24 @@ test('R1.6 low-data mode keeps one Leaflet map with a local OSM basemap',()=>{
   assert(sw.includes("'./offline/kr-low.geojson'"));
 });
 
-test('R2.3.1 low-data basemap is compact topographic field data',()=>{
-  assert(fs.statSync(lowDataPath).size<14000000);
+test('R2.3.1 low-data basemap is compact and splits terrain contours on demand',()=>{
+  assert(fs.statSync(lowDataPath).size<11000000);
+  assert(fs.statSync(contourDataPath).size<8000000);
   assert.strictEqual(lowData.type,'FeatureCollection');
+  assert.strictEqual(contourData.type,'FeatureCollection');
   assert(String(lowData.source).includes('OpenStreetMap'));
   assert(String(lowData.source).includes('Mapzen Terrain Tiles'));
-  assert.strictEqual(lowData.contourIntervalM,100);
-  assert.strictEqual(lowData.indexContourIntervalM,500);
+  assert.strictEqual(contourData.contourIntervalM,100);
+  assert.strictEqual(contourData.indexContourIntervalM,500);
+  assert.strictEqual(lowData.contourFile,'./kr-contours.geojson');
   const kinds=new Set(lowData.features.map(f=>f?.properties?.kind));
-  ['land','road','water','water_area','coast','boundary','place','peak','contour'].forEach(kind=>assert(kinds.has(kind),kind));
+  ['land','road','water','water_area','coast','boundary','place','peak'].forEach(kind=>assert(kinds.has(kind),kind));
+  assert.strictEqual(kinds.has('contour'),false);
+  const contourKinds=new Set(contourData.features.map(f=>f?.properties?.kind));
+  ['contour','contour_label'].forEach(kind=>assert(contourKinds.has(kind),kind));
   const roads=lowData.features.filter(f=>f?.properties?.kind==='road').map(f=>f.properties.class).sort();
   assert.deepStrictEqual(roads,['motorway','primary','secondary','trunk']);
+  assert(sw.includes("'./offline/kr-contours.geojson'"));
 });
 
 test('R1.6 grid is geographic rather than a decorative tile pattern',()=>{
