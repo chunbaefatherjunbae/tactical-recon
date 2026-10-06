@@ -1491,6 +1491,12 @@
     }
 
   </style>
+  <!-- Runtime layers: explicit order, no service-worker HTML rewriting. -->
+  <link rel="stylesheet" href="./v27-stable.css" />
+  <link rel="stylesheet" href="./v28.css" />
+  <link rel="stylesheet" href="./v29.css" />
+  <link rel="stylesheet" href="./r1.css" />
+  <link rel="stylesheet" href="./r2.css" />
 </head>
 <body class="theme-nvg-green">
 
@@ -4378,44 +4384,7 @@
       if (targetModeActive) updateTargetModePanel();
     }
 
-    function locateUser() {
-      if (!navigator.geolocation) {
-        pendingNavStart = false;
-        pendingTrackStart = false;
-        gpsLockState = 'NO FIX';
-        updateGpsTelemetry();
-        updateTargetModePanel();
-        alert('브라우저가 GPS 수신을 지원하지 않습니다.');
-        return;
-      }
-
-      // 이미 FIX가 있으면 GPS 버튼은 FOLLOW 재활성화/현재 위치 복귀 역할을 한다.
-      if (hasGpsFix) {
-        if (pendingNavStart && targetModeActive) activateTargetNavigation();
-        else recenterPrimary();
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(pos => {
-        applyGpsPosition(pos, !targetModeActive);
-        if (gpsWatchId === null) {
-          gpsWatchId = navigator.geolocation.watchPosition(
-            nextPos => applyGpsPosition(nextPos, false),
-            () => { gpsLockState = 'SIGNAL LOST'; updateGpsTelemetry(); },
-            { enableHighAccuracy:true, maximumAge:5000, timeout:15000 }
-          );
-        }
-      }, () => {
-        pendingNavStart = false;
-        pendingTrackStart = false;
-        gpsLockState = 'NO FIX';
-        gpsFollowEnabled = false;
-        updateGpsTelemetry();
-        updateTargetModePanel();
-        alert('GPS 수신 실패. 기기 위치 권한을 확인하십시오.');
-      }, { enableHighAccuracy:true, maximumAge:0, timeout:15000 });
-    }
-
+    /* GPS entry point is defined once in the power-managed GPS section below. */
     function openWpDrawer() {
       const drawer = document.getElementById('wpDrawer');
       if (!drawer) return;
@@ -5866,18 +5835,27 @@
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js?v=r2-2-gev-hud-20261006-1', { scope: './', updateViaCache: 'none' })
+        navigator.serviceWorker.register('./service-worker.js?v=r2-cleanup-20261006-1', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-r2-2-gev-hud-20261006-1';
+        const reloadKey = 'tactical-recon-sw-reload-r2-cleanup-20261006-1';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();
       });
     }
   </script>
+  <!-- Runtime layers: legacy foundations first, current R runtime last. -->
+  <script src="./v27-stable.js"></script>
+  <script src="./v28.js"></script>
+  <script src="./v29-storage.js"></script>
+  <script src="./v28-runtime.js"></script>
+  <script src="./v29.js"></script>
+  <script src="./v29-ui.js"></script>
+  <script src="./r1.js"></script>
+  <script src="./r2.js"></script>
 </body>
 </html>
