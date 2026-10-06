@@ -4,15 +4,9 @@ on:
   push:
     branches:
       - main
-      - r1-structure-overhaul
-      - r1.1-ui-polish
-      - r1.2-reticle-layout
-      - r1.3-field-search
-      - r1.4-visual-correction
-      - r1.4.1-mobile-reticle
-      - r1.5-map-hud-reticle
-      - r1.6-local-basemap-grid
-      - r2-position-actions
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -33,28 +27,38 @@ jobs:
 
       - name: Syntax check
         run: |
+          node --check app-base.js
           node --check v28.js
           node --check v28-runtime.js
           node --check v29.js
           node --check v29-ui.js
           node --check v29-storage.js
-          node --check v29-stabilize.js
           node --check r1.js
           node --check r2.js
           node --check service-worker.js
-          node --check test_v29_stabilize.js
           node --check test_r1.js
           node --check test_r2.js
 
-      - name: Run regression tests
-        run: |
-          node test_v28.js
-          node test_v28_runtime.js
-          node test_v28_integration.js
-          node test_v29.js
-          node test_v29_integration.js
-          node test_r1.js
-          node test_r2.js
+      - name: Test V28
+        run: node test_v28.js
+
+      - name: Test V28 runtime
+        run: node test_v28_runtime.js
+
+      - name: Test V28 integration
+        run: node test_v28_integration.js
+
+      - name: Test V29
+        run: node test_v29.js
+
+      - name: Test V29 integration
+        run: node test_v29_integration.js
+
+      - name: Test R1
+        run: node test_r1.js
+
+      - name: Test R2
+        run: node test_r2.js
 
   deploy:
     needs: validate

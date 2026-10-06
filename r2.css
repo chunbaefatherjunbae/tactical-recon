@@ -1,143 +1,15 @@
-/* R2.2 // MAP + POSITION + ACTION
-   Canonical R2 surface layer above R1.6.
-   Permanent map telemetry stays HUD-like; interactive work stays in panels. */
+/* R2.2 // CURRENT RUNTIME LAYER
+   Clean canonical layer above R1.6.
+   R1 owns legacy behavior; R2 owns current position/HUD/panel behavior. */
 
-:root{
+body.r2-runtime{
   --r2-font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --r2-state-active:var(--field-active,var(--accent));
   --r2-state-warning:var(--field-warning,#d5b35a);
   --r2-state-danger:#d66f6f;
   --r2-state-muted:var(--field-dim,var(--text-dim));
-  --r2-top-control-y:calc(env(safe-area-inset-top,0px) + 38px);
 }
 
-/* Permanent HUD has no card surface. */
-body.r2-runtime .top-compass-bar{
-  background:transparent !important;
-  border:0 !important;
-  box-shadow:none !important;
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
-  text-shadow:0 1px 2px var(--bg-base);
-}
-body.r2-runtime .telemetry-osd{
-  width:min(232px,calc(100vw - 82px)) !important;
-  padding:0 !important;
-  gap:0 !important;
-  border:0 !important;
-  border-radius:0 !important;
-  background:transparent !important;
-  box-shadow:none !important;
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
-  filter:drop-shadow(0 1px 2px var(--bg-base));
-}
-body.r2-runtime .telemetry-osd .osd-head{
-  display:none !important;
-}
-body.r2-runtime .telemetry-osd #currentOpticLabel{
-  display:none !important;
-}
-body.r2-runtime .telemetry-osd .osd-mgrs-btn{
-  min-height:44px;
-  display:flex !important;
-  flex-direction:column;
-  justify-content:center;
-  gap:2px;
-  padding:3px 0 !important;
-  border:0 !important;
-  background:transparent !important;
-  cursor:pointer;
-}
-body.r2-runtime .telemetry-osd .osd-mgrs-btn > div:first-child{
-  display:block !important;
-  margin:0 !important;
-  color:var(--r2-state-muted) !important;
-  font:800 9px/1 var(--font-mono) !important;
-  letter-spacing:.08em !important;
-}
-body.r2-runtime .telemetry-osd .osd-mgrs-val{
-  max-width:100%;
-  overflow:hidden;
-  color:var(--field-text,var(--text-main));
-  font-size:12px !important;
-  font-weight:850;
-  letter-spacing:.025em;
-  line-height:1.2;
-  text-align:left !important;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-body.r2-runtime .telemetry-osd .osd-subgrid,
-body.r2-runtime .gps-status-osd,
-body.r2-runtime .r2-legacy-coords{
-  display:none !important;
-}
-body.r2-runtime #hudLinkState{
-  color:var(--r2-state-muted) !important;
-}
-body.r2-runtime #hudLinkState[data-state="online"]{
-  color:var(--r2-state-active) !important;
-}
-body.r2-runtime #hudLinkState[data-state="offline"]{
-  color:var(--r2-state-warning) !important;
-}
-
-/* Two-stage reticle: quiet reference by default, full instrument when center is an input. */
-body.r2-runtime .reticle-container{
-  width:52px !important;
-  height:52px !important;
-  opacity:.46 !important;
-  transition:width .14s ease,height .14s ease,opacity .14s ease,transform .14s ease !important;
-}
-body.r2-runtime .target-gate{
-  width:24px !important;
-  height:24px !important;
-  opacity:.68 !important;
-  background:
-    linear-gradient(currentColor,currentColor) left top/7px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) left top/1px 7px no-repeat,
-    linear-gradient(currentColor,currentColor) right top/7px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) right top/1px 7px no-repeat,
-    linear-gradient(currentColor,currentColor) left bottom/7px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) left bottom/1px 7px no-repeat,
-    linear-gradient(currentColor,currentColor) right bottom/7px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) right bottom/1px 7px no-repeat !important;
-}
-body.r2-runtime.v29-picking-location .reticle-container,
-body.r2-runtime.route-drawing .reticle-container,
-body.r2-runtime.plan-set-submode .reticle-container,
-body.r2-runtime.plan-draw-submode .reticle-container{
-  width:144px !important;
-  height:94px !important;
-  opacity:1 !important;
-}
-body.r2-runtime.v29-picking-location .target-gate,
-body.r2-runtime.route-drawing .target-gate,
-body.r2-runtime.plan-set-submode .target-gate,
-body.r2-runtime.plan-draw-submode .target-gate{
-  width:34px !important;
-  height:34px !important;
-  opacity:1 !important;
-  background:
-    linear-gradient(currentColor,currentColor) left top/10px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) left top/1px 10px no-repeat,
-    linear-gradient(currentColor,currentColor) right top/10px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) right top/1px 10px no-repeat,
-    linear-gradient(currentColor,currentColor) left bottom/10px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) left bottom/1px 10px no-repeat,
-    linear-gradient(currentColor,currentColor) right bottom/10px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) right bottom/1px 10px no-repeat !important;
-}
-body.r2-runtime .bracket{
-  width:30px !important;
-  height:30px !important;
-  opacity:.7 !important;
-}
-body.r2-runtime .bracket.tl{top:calc(env(safe-area-inset-top,0px) + 8px) !important;left:8px !important;}
-body.r2-runtime .bracket.tr{top:calc(env(safe-area-inset-top,0px) + 8px) !important;right:8px !important;}
-body.r2-runtime .bracket.bl{left:8px !important;}
-body.r2-runtime .bracket.br{right:8px !important;}
 
 /* Prevent a network tile from painting for one frame while LOW DATA owns the map. */
 body.r2-runtime.r16-light-map .leaflet-tile-pane{
@@ -357,16 +229,6 @@ body.r2-runtime .r1-location-more .osb-btn{
 body.r2-display-open{overflow:hidden;}
 
 @media (max-width:768px){
-  body.r2-runtime .telemetry-osd{
-    top:var(--r2-top-control-y) !important;
-    left:10px !important;
-    right:66px !important;
-    width:auto !important;
-  }
-  body.r2-runtime .global-gps-controls{
-    top:var(--r2-top-control-y) !important;
-    right:8px !important;
-  }
   .r2-display-sheet{
     padding-left:0;
     padding-right:0;
@@ -384,17 +246,6 @@ body.r2-display-open{overflow:hidden;}
   }
 }
 
-@media (min-width:769px){
-  body.r2-runtime.v29-picking-location .reticle-container,
-  body.r2-runtime.route-drawing .reticle-container,
-  body.r2-runtime.plan-set-submode .reticle-container,
-  body.r2-runtime.plan-draw-submode .reticle-container{
-    width:112px !important;
-    height:112px !important;
-  }
-}
-
-
 
 /* ============================================================
    R2.2 // GOD'S EYE-INSPIRED FIELD VISUAL SYSTEM
@@ -402,7 +253,7 @@ body.r2-display-open{overflow:hidden;}
    compact controls, strong reticle geometry and coherent surfaces.
    ============================================================ */
 
-:root{
+body.r2-runtime{
   --r22-font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --r22-line-soft:color-mix(in srgb,var(--field-active,var(--accent)) 18%,transparent);
   --r22-line:color-mix(in srgb,var(--field-active,var(--accent)) 34%,transparent);
@@ -475,6 +326,13 @@ body.r2-runtime .sys-telemetry b{
   font-weight:900;
   letter-spacing:.05em;
   text-shadow:0 0 7px var(--r22-glow);
+}
+body.r2-runtime #hudLinkState[data-state="online"]{
+  color:var(--r2-state-active) !important;
+}
+body.r2-runtime #hudLinkState[data-state="offline"]{
+  color:var(--r2-state-warning) !important;
+  text-shadow:none;
 }
 body.r2-runtime #r22GpsHudValue[data-state="off"]{
   color:var(--r2-state-muted) !important;

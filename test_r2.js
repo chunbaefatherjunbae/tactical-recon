@@ -6,6 +6,7 @@ const r2=fs.readFileSync('r2.js','utf8');
 const css=fs.readFileSync('r2.css','utf8');
 const sw=fs.readFileSync('service-worker.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
+const base=fs.readFileSync('app-base.js','utf8');
 const workflow=fs.readFileSync('.github/workflows/pages.yml','utf8');
 
 function test(name,fn){
@@ -13,19 +14,20 @@ function test(name,fn){
   catch(e){console.error('FAIL',name);throw e;}
 }
 
-test('R2 is the final runtime layer above R1',()=>{
+test('R2 is the final explicit runtime layer above R1',()=>{
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
   assert(sw.includes("'./r2.css'"));
   assert(sw.includes("'./r2.js'"));
-  assert(sw.indexOf("html.includes('r2.css')")>sw.indexOf("html.includes('r1.css')"));
-  assert(sw.indexOf("html.includes('r2.js')")>sw.indexOf("html.includes('r1.js')"));
+  assert(index.indexOf('href="./r2.css"')>index.indexOf('href="./r1.css"'));
+  assert(index.indexOf('src="./r2.js"')>index.indexOf('src="./r1.js"'));
+  assert.strictEqual(sw.includes('injectStableOverlay'),false);
 });
 
-test('R2.2 uses a new cache identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r2-2-gev-hud-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r2-2-gev-hud-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r2-2-gev-hud-20261006-1'));
+test('Cleanup runtime uses a new cache identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'r2-cleanup-20261006-1';"));
+  assert(base.includes('service-worker.js?v=r2-cleanup-20261006-1'));
+  assert(base.includes('tactical-recon-sw-reload-r2-cleanup-20261006-1'));
 });
 
 test('R2 location display preferences separate primary, visibility and order',()=>{
@@ -57,13 +59,13 @@ test('Map selection is separate from the legacy active target until objective ac
   assert(r2.indexOf("if(r2CardTarget&&validCoords(r2CardTarget.coords))return r2CardTarget")<r2.indexOf("if(typeof currentActiveTarget!=='undefined'"));
 });
 
-test('Permanent map HUD is surface-free and safe-area aligned',()=>{
-  assert(css.includes('Permanent HUD has no card surface'));
-  assert(css.includes('background:transparent !important'));
-  assert(css.includes('body.r2-runtime .gps-status-osd'));
-  assert(css.includes('display:none !important'));
-  assert(css.includes('--r2-top-control-y:calc(env(safe-area-inset-top,0px) + 38px)'));
-  assert(css.includes('body.r2-runtime .global-gps-controls'));
+test('R2 CSS has one canonical current HUD layer',()=>{
+  assert(css.includes('R2.2 // CURRENT RUNTIME LAYER'));
+  assert.strictEqual((css.match(/GOD'S EYE-INSPIRED FIELD VISUAL SYSTEM/g)||[]).length,1);
+  assert.strictEqual(css.includes('--r2-top-control-y'),false);
+  assert.strictEqual(css.includes('Two-stage reticle'),false);
+  assert.strictEqual(css.includes('width:52px !important'),false);
+  assert.strictEqual(css.includes('width:144px !important'),false);
 });
 
 test('POINT detail uses one parent surface with divider rows',()=>{
@@ -74,12 +76,12 @@ test('POINT detail uses one parent surface with divider rows',()=>{
   assert(r2.includes('COPY ALL POSITION DATA'));
 });
 
-test('Reticle has quiet and active input states',()=>{
-  assert(css.includes('Two-stage reticle'));
+test('Reticle has one current geometry definition',()=>{
+  assert(css.includes('The reticle is a measuring instrument, not decoration'));
   assert(css.includes('body.r2-runtime .reticle-container'));
-  assert(css.includes('width:52px !important'));
-  assert(css.includes('body.r2-runtime.v29-picking-location .reticle-container'));
-  assert(css.includes('width:94px !important'));
+  assert(css.includes('width:96px !important'));
+  assert(css.includes('height:96px !important'));
+  assert.strictEqual(css.includes('width:144px !important'),false);
 });
 
 test('Address HUD requests are debounced, abortable and card requests are deduplicated',()=>{
@@ -111,7 +113,7 @@ test('Low-data grid and place overlays are swapped instead of cleared live',()=>
 
 test('Network status is named NET and exposes truthful online/offline state styling',()=>{
   assert(index.includes('<span>NET <b id="hudLinkState"'));
-  assert(index.includes("el.dataset.state = online ? 'online' : 'offline'"));
+  assert(base.includes("el.dataset.state = online ? 'online' : 'offline'"));
   assert(css.includes('#hudLinkState[data-state="offline"]'));
 });
 
@@ -120,6 +122,14 @@ test('R2.2 identifies itself as the new baseline',()=>{
   assert(r2.includes("document.title='TACTICAL RECON // R2.2 FIELD TERMINAL'"));
   assert(index.includes('<title>TACTICAL RECON // R2.2 FIELD TERMINAL</title>'));
   assert(r2.includes("document.body.classList.add('r2-runtime')"));
+});
+
+test('Theme-derived R2 tokens resolve on the themed body',()=>{
+  assert(css.includes('body.r2-runtime{\n  --r2-font-ui'));
+  assert(css.includes('body.r2-runtime{\n  --r22-font-ui'));
+  assert(css.includes('--r2-state-active:var(--field-active,var(--accent))'));
+  assert(css.includes('--r22-line:color-mix(in srgb,var(--field-active,var(--accent)) 34%,transparent)'));
+  assert.strictEqual(css.includes(':root{\n  --r22-font-ui'),false);
 });
 
 test('R2.2 keeps military coordinate telemetry visible in the HUD',()=>{

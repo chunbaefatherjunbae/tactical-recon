@@ -5,6 +5,7 @@ const r1=fs.readFileSync('r1.js','utf8');
 const css=fs.readFileSync('r1.css','utf8');
 const sw=fs.readFileSync('service-worker.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
+const base=fs.readFileSync('app-base.js','utf8');
 const lowDataPath='offline/kr-low.geojson';
 const lowData=JSON.parse(fs.readFileSync(lowDataPath,'utf8'));
 
@@ -13,21 +14,20 @@ function test(name,fn){
   catch(e){console.error('FAIL',name);throw e;}
 }
 
-test('R1 is the final runtime layer',()=>{
+test('R1 loads explicitly after the legacy runtime layers',()=>{
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
-  assert(sw.includes("html.includes('r1.css')"));
-  assert(sw.includes("html.includes('r1.js')"));
-  assert(sw.includes("v29-stabilize\\.css"));
-  assert(sw.includes("v29-stabilize\\.js"));
-  assert.strictEqual(sw.includes("html.includes('v29-stabilize.css')"),false);
-  assert.strictEqual(sw.includes("html.includes('v29-stabilize.js')"),false);
+  assert(index.includes('href="./r1.css"'));
+  assert(index.includes('src="./r1.js"'));
+  assert(index.indexOf('href="./r1.css"')>index.indexOf('href="./v29.css"'));
+  assert(index.indexOf('src="./r1.js"')>index.indexOf('src="./v29-ui.js"'));
+  assert.strictEqual(sw.includes('injectStableOverlay'),false);
 });
 
-test('R1 remains cached beneath the R2 runtime identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r2-2-gev-hud-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r2-2-gev-hud-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r2-2-gev-hud-20261006-1'));
+test('R1 remains cached beneath the current runtime identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'r2-cleanup-20261006-1';"));
+  assert(base.includes('service-worker.js?v=r2-cleanup-20261006-1'));
+  assert(base.includes('tactical-recon-sw-reload-r2-cleanup-20261006-1'));
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
 });
@@ -237,9 +237,9 @@ test('R1.6 grid is geographic rather than a decorative tile pattern',()=>{
 test('R1.5 HUD uses a fixed semantic slot instead of an empty BRG placeholder',()=>{
   assert(index.includes('id="hudPrimaryLabel">REF</span>'));
   assert(index.includes('id="hudBearing">NONE</span>'));
-  assert(index.includes("hudLabel.innerText = 'REF'"));
-  assert(index.includes("hudLabel.innerText = 'BRG'"));
-  assert(index.includes("ref?.type === 'LAST_FIX' ? 'LAST'"));
+  assert(base.includes("hudLabel.innerText = 'REF'"));
+  assert(base.includes("hudLabel.innerText = 'BRG'"));
+  assert(base.includes("ref?.type === 'LAST_FIX' ? 'LAST'"));
   assert(css.includes('grid-template-columns:30px 76px'));
   assert(css.includes('font-variant-numeric:tabular-nums'));
 });

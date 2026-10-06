@@ -1,0 +1,1474 @@
+/* Tactical Recon legacy/base stylesheet.
+   Stable foundation only. Current UI overrides live in v27+ / R1 / R2 layers. */
+/* ============================================================
+       01. 4단 전술 테마 시스템 (단색화 모노크롬 완벽 교정)
+       ============================================================ */
+    :root {
+      --bg-base: #07090d;
+      --bg-osd: rgba(10, 14, 20, 0.9);
+      --bg-panel: rgba(14, 19, 28, 0.96);
+      --text-main: #e2e8f0;
+      --text-dim: #64748b;
+      --accent: #ff8800; /* Tactical Amber */
+      --accent-glow: rgba(255, 136, 0, 0.35);
+      --border: #1e293b;
+      --border-accent: rgba(255, 136, 0, 0.5);
+      --map-filter: grayscale(88%) brightness(55%) contrast(96%) saturate(34%);
+      --scanline-color: rgba(0, 0, 0, 0.4);
+      --scanline-opacity: 0.08;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+    }
+
+    /* 표준 관측 모드 — 중성 회색 계열 */
+    body.theme-stealth {
+      --bg-base: #07090d;
+      --bg-osd: rgba(10, 14, 20, 0.92);
+      --bg-panel: rgba(14, 19, 28, 0.97);
+      --text-main: #d7dde5;
+      --text-dim: #697586;
+      --accent: #e2e8f0;
+      --accent-glow: rgba(215, 221, 229, 0.28);
+      --border: #28313d;
+      --border-accent: rgba(215, 221, 229, 0.46);
+      --map-filter: grayscale(88%) brightness(55%) contrast(96%) saturate(34%);
+      --scanline-opacity: 0.06;
+    }
+
+    /* 클래식 NVG 그린 (P43 Green Phosphor) */
+    body.theme-nvg-green {
+      --bg-base: #020904;
+      --bg-osd: rgba(3, 16, 7, 0.92);
+      --bg-panel: rgba(4, 24, 10, 0.97);
+      --text-main: #22ff66;
+      --text-dim: #137735;
+      --accent: #9de3a4;
+      --accent-glow: rgba(0, 255, 65, 0.45);
+      --border: #0d3816;
+      --border-accent: rgba(0, 255, 65, 0.5);
+      --map-filter: grayscale(64%) sepia(26%) hue-rotate(76deg) saturate(105%) brightness(52%) contrast(98%);
+      --scanline-opacity: 0.18;
+    }
+
+    /* 특수전 NVG 화이트 포스퍼 (P45 Ice Blue / Cyan) */
+    body.theme-nvg-white {
+      --bg-base: #02080f;
+      --bg-osd: rgba(4, 14, 24, 0.92);
+      --bg-panel: rgba(6, 22, 38, 0.97);
+      --text-main: #b8e2f2;
+      --text-dim: #3b6e8c;
+      --accent: #a9ddf5;
+      --accent-glow: rgba(56, 189, 248, 0.45);
+      --border: #0f354f;
+      --border-accent: rgba(56, 189, 248, 0.55);
+      --map-filter: grayscale(66%) sepia(18%) hue-rotate(145deg) saturate(96%) brightness(54%) contrast(98%);
+      --scanline-opacity: 0.12;
+    }
+
+    /* 클래식 FLIR 열화상 / 호박색 CRT */
+    body.theme-flir {
+      --bg-base: #0c0802;
+      --bg-osd: rgba(20, 13, 3, 0.92);
+      --bg-panel: rgba(28, 18, 4, 0.97);
+      --text-main: #ffb733;
+      --text-dim: #8c560d;
+      --accent: #ffc45c;
+      --accent-glow: rgba(255, 166, 0, 0.45);
+      --border: #422906;
+      --border-accent: rgba(255, 166, 0, 0.55);
+      --map-filter: grayscale(68%) sepia(30%) hue-rotate(350deg) saturate(110%) brightness(52%) contrast(100%);
+      --scanline-opacity: 0.14;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      user-select: none;
+    }
+
+    body::after {
+      content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, var(--scanline-color) 50%);
+      background-size: 100% 4px; pointer-events: none; z-index: 9999;
+      opacity: var(--scanline-opacity); transition: opacity 0.3s;
+    }
+
+    #map {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      z-index: 1;
+    }
+    .leaflet-tile-pane .leaflet-tile { filter: var(--map-filter); }
+
+    /* ============================================================
+       02. 광학 화각 프레임 & 상단 HUD
+       ============================================================ */
+    .viewfinder-frame {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 850; padding: 12px;
+    }
+    .bracket { position: absolute; width: 22px; height: 22px; border: 2px solid var(--accent); opacity: 0.65; }
+    .bracket.tl { top: 12px; left: 12px; border-right: none; border-bottom: none; }
+    .bracket.tr { top: 12px; right: 12px; border-left: none; border-bottom: none; }
+    .bracket.bl { bottom: 12px; left: 12px; border-right: none; border-top: none; }
+    .bracket.br { bottom: 12px; right: 12px; border-left: none; border-top: none; }
+
+    .top-compass-bar {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      width: calc(100% - 24px); max-width: 680px;
+      background: var(--bg-osd); border: 1px solid var(--border);
+      border-radius: 4px; padding: 6px 12px; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+    .compass-tape {
+      font-size: 11px; font-weight: 800; letter-spacing: 2px; color: var(--text-dim);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .compass-center {
+      color: var(--accent); font-weight: 900; background: rgba(0,0,0,0.45);
+      padding: 2px 6px; border: 1px solid var(--border-accent); border-radius: 3px;
+    }
+    .sys-telemetry {
+      font-size: 10px; font-weight: 800; color: var(--text-dim); display: flex; gap: 10px;
+    }
+    .sys-telemetry span b { color: var(--accent); }
+
+    /* ============================================================
+       03. 실시간 조준점 제원창 (Telemetry OSD)
+       ============================================================ */
+    .telemetry-osd {
+      position: absolute; top: 52px; left: 14px;
+      background: var(--bg-osd); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent); border-radius: 4px;
+      padding: 8px 12px; z-index: 1000;
+      width: 220px; /* 고정 너비 설정 */
+      font-variant-numeric: tabular-nums; /* 숫자 자폭 일치 */
+      display: flex; flex-direction: column; gap: 5px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    }
+    .osd-head {
+      font-size: 9px; font-weight: 900; color: var(--text-dim); letter-spacing: 1px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .osd-mgrs-btn {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+      border-radius: 3px; padding: 6px 8px; cursor: pointer; transition: 0.15s;
+    }
+    .osd-mgrs-btn:hover { border-color: var(--accent); }
+    .osd-mgrs-val { font-size: 13px; font-weight: 900; color: var(--accent); letter-spacing: 0.5px; }
+    .osd-subgrid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px; color: var(--text-dim);
+    }
+    .osd-subgrid div b { color: var(--text-main); font-weight: 700; }
+    .osd-subgrid div { white-space: nowrap; min-width: 0; }
+    .osd-subgrid div b { white-space: nowrap; }
+    .gps-status-osd {
+      position:absolute; top:190px; left:14px; width:220px; box-sizing:border-box;
+      background:var(--bg-osd); border:1px solid var(--border); border-left:3px solid var(--accent);
+      border-radius:4px; padding:6px 10px; z-index:1000;
+      box-shadow:0 6px 20px rgba(0,0,0,.45);
+      font-variant-numeric:tabular-nums;
+    }
+    .gps-status-head, .gps-status-row {
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      white-space:nowrap;
+    }
+    .gps-status-head { font-size:8px; font-weight:900; color:var(--text-dim); letter-spacing:1px; }
+    .gps-status-head b { color:var(--accent); font-weight:900; }
+    .gps-status-row { margin-top:4px; padding-top:4px; border-top:1px solid var(--border); font-size:9px; color:var(--text-dim); letter-spacing:.6px; }
+    .gps-status-row b { color:var(--text-main); font-weight:800; white-space:nowrap; }
+    .wp-filter-bar {
+      display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px;
+      padding:8px 10px; border-bottom:1px solid var(--border);
+    }
+    .wp-filter-btn {
+      min-height:36px; padding:0 4px; background:transparent; border:1px solid var(--border);
+      color:var(--text-dim); font:800 9px var(--font-mono); letter-spacing:.2px; cursor:pointer;
+      touch-action:manipulation;
+    }
+    .wp-filter-btn.active { background:var(--accent); color:#000; border-color:var(--accent); }
+    .wp-group { border:1px solid var(--border); background:rgba(0,0,0,.16); }
+    .wp-group-head {
+      width:100%; min-height:42px; padding:0 10px; display:flex; align-items:center; gap:8px;
+      background:rgba(255,255,255,.02); border:0; border-bottom:1px solid var(--border);
+      color:var(--text-main); font:800 10px var(--font-mono); text-align:left; cursor:pointer;
+      touch-action:manipulation;
+    }
+    .wp-group-head:active { background:rgba(255,255,255,.05); }
+    .wp-group-chevron { width:12px; color:var(--accent); font-size:11px; }
+    .wp-group-name { flex:1; letter-spacing:.4px; }
+    .wp-group-count { color:var(--text-dim); font-size:9px; }
+    .wp-group-body { display:flex; flex-direction:column; gap:6px; padding:6px; }
+    .wp-item {
+      background:rgba(0,0,0,.3); border:1px solid var(--border); border-radius:2px;
+      padding:9px; cursor:pointer; touch-action:manipulation;
+    }
+    .wp-item:active { border-color:var(--accent); background:rgba(255,255,255,.03); }
+    .wp-item-meta { display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:9px; font-weight:900; }
+    .wp-item-status { color:var(--accent); letter-spacing:.3px; }
+    .wp-item-delete { background:transparent; border:1px solid transparent; color:#ef4444; font-size:10px; cursor:pointer; padding:7px 6px; min-width:40px; min-height:34px; }
+    .wp-item-name { font-size:12px; font-weight:800; color:var(--text-main); margin:2px 0 4px; line-height:1.35; }
+    .wp-item-coords { font-size:10px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .leaflet-marker-pane { z-index:700 !important; }
+
+
+    /* ============================================================
+       04. 중앙 TGP 레티클
+       ============================================================ */
+    .reticle-container {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px; height: 44px;
+      pointer-events: none; z-index: 900;
+    }
+    .target-gate {
+      position: absolute; top: 12px; left: 12px; width: 20px; height: 20px;
+      border: 1px solid var(--accent); opacity: 0.85;
+    }
+    .reticle-axis-v {
+      position: absolute; top: 0; left: 21px; width: 2px; height: 44px;
+      background: linear-gradient(to bottom, var(--accent) 0%, transparent 42%, transparent 58%, var(--accent) 100%);
+      opacity: 0.75;
+    }
+    .reticle-axis-h {
+      position: absolute; top: 21px; left: 0; width: 44px; height: 2px;
+      background: linear-gradient(to right, var(--accent) 0%, transparent 42%, transparent 58%, var(--accent) 100%);
+      opacity: 0.75;
+    }
+
+    /* ============================================================
+       05. POINT INFO 브리핑 패널
+       ============================================================ */
+    .sitrep-panel {
+      position: absolute; top: 52px; right: 14px; width: 320px;
+      background: var(--bg-panel); border: 1px solid var(--border);
+      border-right: 3px solid var(--accent); border-radius: 4px;
+      padding: 14px; z-index: 1001; display: none; flex-direction: column; gap: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 16px var(--accent-glow);
+    }
+    .sitrep-head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      border-bottom: 1px dashed var(--border); padding-bottom: 8px;
+    }
+    .sitrep-code { font-size: 10px; font-weight: 800; color: var(--accent); letter-spacing: 0.8px; }
+    .sitrep-title { font-size: 15px; font-weight: 900; margin-top: 2px; color: var(--text-main); }
+    .sitrep-status {
+      font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 3px;
+      border: 1px solid var(--border-accent); color: var(--accent);
+    }
+
+    .sitrep-status[data-status="UNEXPLORED"] { border-style:dashed; }
+    .sitrep-status[data-status="SECURED"] { border-style:double; border-width:3px; padding:1px 5px; }
+    .sitrep-status[data-status="REGISTERED"] { border-style:solid; }
+
+    .btn-close-osd {
+      background: transparent; border: none; color: var(--text-dim);
+      font-size: 18px; cursor: pointer; padding: 4px 6px; line-height: 1;
+    }
+    .sitrep-coords {
+      background: rgba(0,0,0,0.45); border: 1px solid var(--border); border-radius: 4px;
+      padding: 8px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .coord-row { display: flex; justify-content: space-between; font-size: 11px; align-items: center; }
+    .coord-val { font-weight: 800; color: var(--text-main); }
+
+    .sitrep-intel {
+      background: rgba(0,0,0,0.3); border-left: 2px solid var(--accent);
+      padding: 8px; border-radius: 0 4px 4px 0; font-size: 11px; line-height: 1.45;
+    }
+    .sitrep-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); }
+
+    .sitrep-actions { display: flex; flex-direction: column; gap: 6px; border-top: 1px dashed var(--border); padding-top: 8px; }
+    .btn-promote {
+      width: 100%; min-height: 44px; background: var(--accent); color: #000;
+      border: none; border-radius: 3px; font-size: 11px; font-weight: 900;
+      cursor: pointer; transition: 0.15s; font-family: var(--font-mono);
+      display: none; align-items: center; justify-content: center;
+    }
+    .btn-promote:active { transform: scale(0.98); }
+    .btn-target-set {
+      width:100%; min-height:42px; display:none; align-items:center; justify-content:center;
+      border:1px solid var(--border-accent); background:transparent; color:var(--accent);
+      font-family:var(--font-mono); font-size:10px; font-weight:900; letter-spacing:.5px;
+      cursor:pointer;
+    }
+    .btn-target-set:active { background:rgba(255,255,255,.05); }
+
+    /* TARGET MODE / ROUTE PLANNING */
+    .target-mode-panel {
+      position:absolute; left:8px; right:8px; bottom:62px; z-index:1320;
+      display:none; background:rgba(4,10,6,.97); border:1px solid var(--field-line-strong);
+      color:var(--field-text); padding:9px; font-family:var(--font-mono);
+    }
+    .target-mode-panel.active { display:block; }
+    .target-mode-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding-bottom:7px; border-bottom:1px solid var(--field-line); }
+    .target-mode-head-right { display:flex; align-items:flex-start; gap:7px; flex-shrink:0; }
+    .target-panel-collapse {
+      display:none; min-width:48px; min-height:30px; padding:0 7px; border:1px solid var(--field-line);
+      background:rgba(255,255,255,.025); color:var(--field-dim); font:800 8px/1 var(--font-mono);
+      letter-spacing:.6px; cursor:pointer;
+    }
+    body.target-nav .target-panel-collapse { display:flex; align-items:center; justify-content:center; }
+    body.target-nav .target-panel-collapse:active { border-color:var(--field-active); color:var(--field-active); }
+    .target-mode-kicker { font-size:8px; color:var(--field-dim); letter-spacing:1.3px; }
+    .target-mode-name { margin-top:2px; color:var(--field-active); font-size:11px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:min(64vw,520px); }
+    .target-mode-stats { flex-shrink:0; text-align:right; font-size:8px; line-height:1.45; color:var(--field-dim); }
+    .nav-riding-hud { display:none; }
+    body.target-nav .target-mode-head { display:none; }
+    body.target-nav .nav-riding-hud { display:block; }
+    .nav-hud-topline { display:flex; align-items:center; gap:8px; min-width:0; }
+    .nav-hud-target { flex:1; min-width:0; color:var(--field-active); font-size:12px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.25px; }
+    .nav-hud-orient { flex-shrink:0; color:var(--field-dim); font-size:9px; font-weight:900; letter-spacing:.8px; }
+    .nav-hud-mainline { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-top:5px; padding-top:6px; border-top:1px solid var(--field-line); }
+    .nav-hud-distance-block { min-width:0; }
+    .nav-hud-distance { color:var(--field-active); font-size:32px; line-height:.9; font-weight:950; letter-spacing:-1.2px; font-variant-numeric:tabular-nums; }
+    .nav-hud-unit { margin-left:5px; color:var(--field-active); font-size:13px; font-weight:900; letter-spacing:.5px; }
+    .nav-hud-distance-label { margin-top:4px; color:var(--field-dim); font-size:8px; font-weight:900; letter-spacing:1.15px; }
+    .nav-hud-side { display:flex; flex-direction:column; align-items:flex-end; gap:3px; color:var(--field-dim); font-size:9px; line-height:1.15; white-space:nowrap; }
+    .nav-hud-side strong { color:var(--field-text); font-size:17px; font-weight:950; letter-spacing:.35px; }
+    #navHudTrack.track-recording { color:var(--field-active); font-weight:900; }
+    .target-mode-actions { display:grid; grid-template-columns:repeat(8,1fr); gap:4px; margin-top:8px; }
+    .target-mode-actions .osb-btn { border:1px solid var(--field-line); min-height:40px; }
+    .target-mode-actions .osb-btn.active { border-color:var(--field-active); color:var(--field-active); background:rgba(255,255,255,.04); }
+    .target-mode-actions .route-save-dirty::after { content:' *'; color:var(--field-active); }
+    .target-mode-actions .nav-only { display:none; }
+    body.target-nav .target-mode-actions { grid-template-columns:repeat(3,1fr); }
+    body.target-nav .target-mode-actions .plan-only { display:none; }
+    body.target-nav .target-mode-actions .nav-only { display:flex; }
+    body.target-nav .target-mode-panel { border-color:var(--field-active); }
+    body.target-nav.nav-panel-collapsed .target-mode-panel {
+      left:50%; right:auto; width:min(94vw,620px); transform:translateX(-50%); padding:6px 8px;
+    }
+    body.target-nav.nav-panel-collapsed .target-mode-actions { display:none !important; }
+    body.target-nav.nav-panel-collapsed .nav-hud-mainline { align-items:center; margin-top:3px; padding-top:4px; gap:10px; }
+    body.target-nav.nav-panel-collapsed .nav-hud-target { font-size:9px; max-width:34vw; }
+    body.target-nav.nav-panel-collapsed .nav-hud-orient { font-size:7px; }
+    body.target-nav.nav-panel-collapsed .nav-hud-distance { font-size:24px; letter-spacing:-.7px; }
+    body.target-nav.nav-panel-collapsed .nav-hud-unit { font-size:10px; margin-left:3px; }
+    body.target-nav.nav-panel-collapsed .nav-hud-distance-label { display:none; }
+    body.target-nav.nav-panel-collapsed .nav-hud-side { font-size:7px; }
+    body.target-nav.nav-panel-collapsed .nav-hud-side strong { font-size:13px; }
+    body.target-nav.nav-panel-collapsed #navHudGps,
+    body.target-nav.nav-panel-collapsed #navHudTrack { display:none; }
+    body.target-nav.nav-panel-collapsed .target-panel-collapse { min-width:50px; min-height:28px; }
+    body.target-mode .mfd-bottom-bar { opacity:.28; pointer-events:none; }
+    body.target-mode .field-control-tray { display:none !important; }
+    #map.route-draw-active { cursor:crosshair; touch-action:none !important; }
+    body.route-drawing .reticle-container { opacity:.35; }
+    body.route-drawing .target-mode-kicker::after { content:' · 1F DRAW / 2F PAN-ZOOM'; color:var(--field-active); }
+    body.target-nav.track-recording .target-mode-panel { box-shadow:0 0 0 1px var(--field-active) inset, 0 -8px 30px rgba(0,0,0,.32); }
+    .route-via-icon {
+      width:24px; height:24px; color:var(--accent); display:flex; align-items:center; justify-content:center;
+      filter:drop-shadow(0 0 4px var(--accent-glow));
+    }
+    .route-via-icon svg { width:24px; height:24px; overflow:visible; }
+    .route-via-label {
+      position:absolute; left:50%; top:22px; transform:translateX(-50%);
+      white-space:nowrap; font:800 8px/1 var(--font-mono); letter-spacing:.35px; color:var(--accent);
+      background:rgba(2,7,4,.82); border:1px solid var(--border); padding:3px 4px; pointer-events:none;
+    }
+    .route-locate-hint { font-size:9px; line-height:1.55; color:var(--text-dim); }
+    .route-locate-readout {
+      display:grid; gap:5px; margin-top:8px; padding:8px; background:rgba(0,0,0,.28); border:1px solid var(--border);
+    }
+    .route-locate-readout div { display:flex; justify-content:space-between; gap:10px; font-size:9px; color:var(--text-dim); }
+    .route-locate-readout strong { color:var(--text-main); text-align:right; overflow-wrap:anywhere; }
+
+    @media (max-width:768px) {
+      .target-mode-panel { bottom:calc(58px + env(safe-area-inset-bottom)); }
+      .target-mode-actions { grid-template-columns:repeat(3,1fr); }
+      .target-mode-name { max-width:58vw; }
+    }
+    
+    .nav-button-grid { display: flex; gap: 6px; }
+    .btn-osb-nav {
+      flex: 1; min-height: 42px; display: flex; align-items: center; justify-content: center;
+      text-decoration: none; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      border-radius: 3px; color: var(--text-main); font-size: 11px; font-weight: 800;
+      transition: 0.15s;
+    }
+    .btn-osb-nav:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ============================================================
+       06. 하단 MFD 베젤 스위치 바
+       ============================================================ */
+    .mfd-bottom-bar {
+      position: absolute; bottom: max(10px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+      width: calc(100% - 20px); max-width: 960px;
+      background: var(--bg-panel); border: 1px solid var(--border);
+      border-radius: 4px; padding: 6px 10px; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+    }
+    .osb-cluster { display: flex; align-items: center; gap: 4px; }
+    .osb-label { font-size: 10px; font-weight: 800; color: var(--text-dim); margin-right: 3px; }
+
+    .osb-btn {
+      min-height: 42px; padding: 0 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      color: var(--text-dim); border-radius: 3px;
+      font-size: 11px; font-family: var(--font-mono); font-weight: 800;
+      cursor: pointer; transition: 0.15s; display: flex; align-items: center; justify-content: center;
+    }
+    .osb-btn:active { transform: scale(0.96); }
+    .osb-btn.active {
+      background: var(--accent); color: #000; border-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .osb-btn.action-primary {
+      background: rgba(255,255,255,0.04); border-color: var(--accent); color: var(--accent);
+    }
+    .btn-gps-sync { width: 44px; flex-shrink: 0; }
+    .btn-gps-sync svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    /* 장비식 지도 심볼 — 공통 24×24 좌표계 */
+    .tactical-pin-wrapper,
+    .gps-position-wrapper {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent !important; border: none !important;
+      color: var(--accent);
+    }
+    .marker-symbol {
+      width: 24px; height: 24px; display: block;
+      overflow: visible;
+      color: var(--accent);
+      filter: drop-shadow(0 0 2px var(--accent-glow));
+    }
+    .marker-symbol .marker-frame,
+    .marker-symbol .marker-detail {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: square;
+      stroke-linejoin: miter;
+      vector-effect: non-scaling-stroke;
+    }
+    .marker-symbol .marker-detail { stroke-width: 1.2; }
+    .marker-symbol .marker-core { fill: currentColor; stroke: none; }
+    .marker-symbol .marker-bg {
+      fill: rgba(0,0,0,.58);
+      stroke: none;
+    }
+    .marker-unexplored .marker-frame {
+      stroke-dasharray: 5.6 5.7;
+      stroke-dashoffset: 1.4;
+    }
+    .marker-gps {
+      filter: drop-shadow(0 0 3px var(--accent-glow));
+    }
+    .marker-gps .marker-frame { stroke-width: 1.6; }
+    .marker-gps .marker-detail { stroke-width: 1.35; }
+
+    /* 모바일 반응형 */
+
+    /* 지도 거리 스케일 — 현재 줌/위도에 맞춰 실제 거리를 동적으로 표시 */
+    .map-scale-osd {
+      position:absolute; left:12px; bottom:78px; z-index:930; pointer-events:none;
+      min-width:54px; padding:5px 7px 4px;
+      background:rgba(2,8,4,.78); border:1px solid var(--border);
+      font-family:var(--font-mono); color:var(--accent);
+      backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+    }
+    .map-scale-line {
+      position:relative; height:7px; width:90px;
+      border-left:1px solid currentColor; border-right:1px solid currentColor; border-bottom:1px solid currentColor;
+      box-sizing:border-box; transition:width .12s linear;
+    }
+    .map-scale-label {
+      margin-top:3px; text-align:center; font-size:8px; font-weight:900; letter-spacing:.7px;
+      color:currentColor; white-space:nowrap;
+    }
+    body.target-mode .map-scale-osd { bottom:154px; }
+    body.target-nav:not(.nav-panel-collapsed) .map-scale-osd { bottom:224px; }
+    body.target-nav.nav-panel-collapsed .map-scale-osd { bottom:118px; }
+    @media (max-width:768px) {
+      .map-scale-osd { left:8px; bottom:calc(68px + env(safe-area-inset-bottom)); padding:4px 6px 3px; }
+      body.target-mode .map-scale-osd { bottom:calc(154px + env(safe-area-inset-bottom)); }
+      body.target-nav:not(.nav-panel-collapsed) .map-scale-osd { bottom:calc(228px + env(safe-area-inset-bottom)); }
+      body.target-nav.nav-panel-collapsed .map-scale-osd { bottom:calc(116px + env(safe-area-inset-bottom)); }
+    }
+
+    /* 주소 검색 결과 */
+    .address-search-results {
+      display:flex; flex-direction:column; gap:6px; margin-top:8px;
+      max-height:240px; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    }
+    .address-search-empty {
+      padding:12px 10px; border:1px dashed var(--border); color:var(--text-dim);
+      font-size:10px; line-height:1.5; text-align:center;
+    }
+    .address-search-item {
+      width:100%; text-align:left; padding:9px 10px; border:1px solid var(--border);
+      border-radius:3px; background:rgba(255,255,255,.025); color:var(--text-main);
+      font-family:var(--font-mono); cursor:pointer;
+    }
+    .address-search-item:active, .address-search-item.selected {
+      border-color:var(--accent); background:var(--accent-soft);
+    }
+    .address-search-name { display:block; color:var(--text-main); font-size:11px; font-weight:800; line-height:1.35; }
+    .address-search-coords { display:block; color:var(--text-dim); font-size:8px; margin-top:4px; }
+    .gps-follow-state { color:var(--accent); }
+
+    @media (max-width: 768px) {
+      .top-compass-bar { width: calc(100% - 16px); padding: 4px 8px; }
+      .telemetry-osd {
+        top: 48px; left: 8px;
+        width: 200px; /* 모바일에서도 고정 폭 유지 */
+        font-variant-numeric: tabular-nums;
+        padding: 6px 8px;
+      }
+      .osd-mgrs-val { font-size: 11px; }
+
+
+      .sitrep-panel {
+        top: auto; bottom: 68px; left: 8px; right: 8px;
+        width: auto; max-height: 48vh; overflow-y: auto;
+        border-right: 1px solid var(--border);
+        border-top: 3px solid var(--accent);
+      }
+
+      .mfd-bottom-bar {
+        width: 100%; border-radius: 0; bottom: 0; left: 0; transform: none;
+        padding: 6px 8px; justify-content: space-around;
+      }
+      .osb-label { display: none; }
+      .osb-btn { min-height: 44px; padding: 0 8px; font-size: 10px; }
+    }
+
+    /* 모달 & 서랍 */
+    .promo-modal-backdrop {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      height:100dvh;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+      z-index: 4000; display: none; align-items: center; justify-content: center;
+      touch-action: manipulation; overscroll-behavior: contain;
+    }
+    .promo-modal {
+      width: calc(100% - 32px); max-width: 440px; background: var(--bg-panel);
+      border: 1px solid var(--accent); border-radius: 6px; padding: 18px;
+      display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+      touch-action: manipulation; overscroll-behavior: contain;
+    }
+    .promo-title { font-size: 14px; font-weight: 900; color: var(--accent); }
+    .promo-input {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+      border-radius: 4px; padding: 10px; color: var(--text-main);
+      font-family: var(--font-mono); font-size: 12px; outline: none;
+    }
+    .promo-input:focus { border-color: var(--accent); }
+    .promo-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+    .wp-drawer {
+      position: absolute; top: 0; right: 0; width: 320px; height: 100vh; height: 100dvh;
+      background: var(--bg-panel); border-left: 1px solid var(--border);
+      z-index: 3000; display: flex; flex-direction: column;
+      transform: translate3d(100%,0,0);
+      visibility: hidden; pointer-events: none;
+      transition: transform .22s ease, visibility 0s linear .22s;
+      will-change: transform; contain: layout paint;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+    }
+    .wp-drawer.open {
+      transform: translate3d(0,0,0);
+      visibility: visible; pointer-events: auto;
+      transition: transform .22s ease, visibility 0s linear 0s;
+    }
+    .drawer-head {
+      padding: 14px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+
+    /* ============================================================
+       90. FIELD TERMINAL UI — 야전 관측 단말 모드
+       장식보다 판독성과 장비성을 우선한다.
+       ============================================================ */
+    :root {
+      --field-black: #050806;
+      --field-panel: rgba(5, 10, 7, 0.86);
+      --field-panel-solid: #07100a;
+      --field-line: rgba(76, 138, 92, 0.42);
+      --field-line-strong: rgba(102, 176, 115, 0.72);
+      --field-text: #b8cbb9;
+      --field-dim: #66806b;
+      --field-active: #9de3a4;
+      --field-warning: #d5b35a;
+    }
+
+    /* DISPLAY 모드가 바뀌면 야전 단말 UI 전체가 같은 계열로 따라간다. */
+    body.theme-stealth {
+      --field-panel: rgba(8, 10, 12, 0.90);
+      --field-panel-solid: #0a0c0f;
+      --field-line: rgba(148, 163, 184, 0.28);
+      --field-line-strong: rgba(203, 213, 225, 0.52);
+      --field-text: #cbd5e1;
+      --field-dim: #64748b;
+      --field-active: #e2e8f0;
+    }
+    body.theme-nvg-green {
+      --field-panel: rgba(3, 11, 6, 0.90);
+      --field-panel-solid: #061008;
+      --field-line: rgba(61, 135, 77, 0.40);
+      --field-line-strong: rgba(91, 174, 105, 0.64);
+      --field-text: #b8cbb9;
+      --field-dim: #66806b;
+      --field-active: #9de3a4;
+    }
+    body.theme-nvg-white {
+      --field-panel: rgba(4, 11, 17, 0.90);
+      --field-panel-solid: #07111a;
+      --field-line: rgba(72, 137, 166, 0.40);
+      --field-line-strong: rgba(88, 176, 215, 0.64);
+      --field-text: #c5dce8;
+      --field-dim: #64879b;
+      --field-active: #a9ddf5;
+    }
+    body.theme-flir {
+      --field-panel: rgba(13, 9, 3, 0.90);
+      --field-panel-solid: #120b03;
+      --field-line: rgba(167, 112, 32, 0.42);
+      --field-line-strong: rgba(225, 158, 49, 0.66);
+      --field-text: #e2c78e;
+      --field-dim: #9b7330;
+      --field-active: #ffc45c;
+    }
+
+    body::after {
+      opacity: 0.05 !important;
+      background-size: 100% 4px;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse at center, transparent 48%, rgba(0,0,0,.28) 100%),
+        linear-gradient(rgba(255,255,255,.012), rgba(255,255,255,0));
+    }
+
+    #map { z-index: 1; }
+    /* Filter individual tiles, not the translated/scaled pane (Safari compositing). */
+    .leaflet-tile-pane { filter:none; }
+    .leaflet-control-zoom { display:none !important; }
+
+    .viewfinder-frame {
+      z-index: 850;
+      padding: 0;
+    }
+    .bracket {
+      width: 34px;
+      height: 34px;
+      border-width: 1px;
+      border-color: var(--field-line-strong);
+      opacity: .78;
+    }
+    .bracket.tl { top: 14px; left: 14px; }
+    .bracket.tr { top: 14px; right: 14px; }
+    .bracket.bl { bottom: 76px; left: 14px; }
+    .bracket.br { bottom: 76px; right: 14px; }
+    .bracket::after {
+      content:"";
+      position:absolute;
+      background:var(--field-line-strong);
+      opacity:.55;
+    }
+    .bracket.tl::after,.bracket.tr::after { width:70px;height:1px;top:-1px; }
+    .bracket.bl::after,.bracket.br::after { width:70px;height:1px;bottom:-1px; }
+    .bracket.tl::after,.bracket.bl::after { left:-1px; }
+    .bracket.tr::after,.bracket.br::after { right:-1px; }
+
+    .top-compass-bar {
+      top: 8px;
+      width: calc(100% - 88px);
+      max-width: 900px;
+      min-height: 34px;
+      padding: 4px 8px;
+      background: transparent;
+      border: 0;
+      border-bottom: 1px solid var(--field-line);
+      border-radius: 0;
+      box-shadow: none;
+      z-index: 1000;
+    }
+    .compass-tape {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--field-dim);
+      gap: 8px;
+    }
+    .compass-label {
+      color: var(--field-dim);
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+    .compass-center {
+      color: var(--field-active);
+      background: transparent;
+      padding: 0 8px;
+      border: 0;
+      border-left: 1px solid var(--field-line);
+      border-right: 1px solid var(--field-line);
+      border-radius: 0;
+    }
+    .sys-telemetry { font-size:9px; gap:8px; color:var(--field-dim); }
+    .sys-telemetry span b { color:var(--field-active) !important; font-weight:600; }
+
+    .telemetry-osd {
+      top: 54px;
+      left: 18px;
+      width: 184px;
+      background: rgba(3,8,5,.68);
+      border: 0;
+      border-left: 1px solid var(--field-line-strong);
+      border-radius: 0;
+      padding: 7px 10px;
+      gap: 4px;
+      box-shadow: none;
+      z-index: 1000;
+    }
+    .osd-head { font-size:8px; letter-spacing:1.2px; color:var(--field-dim); }
+    .osd-mgrs-btn {
+      background:transparent;
+      border:0;
+      border-top:1px solid var(--field-line);
+      border-bottom:1px solid var(--field-line);
+      border-radius:0;
+      padding:5px 0;
+    }
+    .osd-mgrs-val { font-size:12px; color:var(--field-active); letter-spacing:.2px; }
+    .osd-subgrid { grid-template-columns:1fr 1fr; gap:2px 8px; font-size:9px; color:var(--field-dim); }
+    .osd-subgrid div b { color:var(--field-text); font-weight:500; }
+
+    .reticle-container {
+      width: 112px;
+      height: 112px;
+      z-index: 900;
+    }
+    .reticle-container::before,
+    .reticle-container::after { display:none; }
+    .target-gate {
+      top:50%; left:50%; width:40px; height:40px;
+      transform:translate(-50%,-50%);
+      border:1px solid var(--field-active);
+      opacity:.9;
+    }
+    .reticle-axis-v {
+      left:50%; top:0; width:1px; height:100%;
+      transform:translateX(-50%);
+      opacity:.78;
+      background:var(--field-active);
+    }
+    .reticle-axis-h {
+      left:0; top:50%; width:100%; height:1px;
+      transform:translateY(-50%);
+      opacity:.78;
+      background:var(--field-active);
+    }
+
+    .reticle-container .target-gate::before,
+    .reticle-container .target-gate::after {
+      content:""; position:absolute; background:var(--field-active);
+    }
+    .reticle-container .target-gate::before { width:8px;height:1px;left:50%;top:50%;transform:translate(-50%,-50%); }
+    .reticle-container .target-gate::after { width:1px;height:8px;left:50%;top:50%;transform:translate(-50%,-50%); }
+
+    .mfd-bottom-bar {
+      width:100%;
+      left:0;
+      bottom:0;
+      transform:none;
+      max-width:none;
+      border:0;
+      border-top:1px solid var(--field-line-strong);
+      border-radius:0;
+      background:rgba(3,8,5,.93);
+      padding:5px 8px max(5px, env(safe-area-inset-bottom));
+      box-shadow:none;
+      z-index:1200;
+      gap:0;
+      flex-wrap:nowrap;
+    }
+    .mfd-bottom-bar > .osb-cluster { display:none; }
+    .mfd-bottom-bar > .osb-cluster:last-child { display:flex; flex:1; justify-content:space-around; }
+    .btn-gps-sync {
+      width:54px;
+      margin-right:4px;
+      color:var(--field-text);
+      border:0;
+      border-right:1px solid var(--field-line);
+      border-radius:0;
+      background:transparent;
+    }
+    .osb-btn {
+      min-height:42px;
+      border:0;
+      border-radius:0;
+      background:transparent;
+      color:var(--field-dim);
+      font-size:10px;
+      letter-spacing:.5px;
+    }
+    .osb-btn:hover { border:0; color:var(--field-text); }
+    .osb-btn.active { background:transparent; color:var(--field-active); box-shadow:none; }
+    .osb-btn.action-primary { background:transparent; border:0; color:var(--field-text); }
+    .osb-btn.action-primary::before { content:""; }
+
+    .field-control-tray {
+      position:absolute;
+      left:8px; right:8px;
+      bottom:62px;
+      z-index:1250;
+      display:none;
+      background:rgba(4,10,6,.96);
+      border:1px solid var(--field-line-strong);
+      border-bottom:0;
+      padding:10px;
+      box-shadow:none;
+    }
+    .field-control-tray.open { display:block; }
+    .field-control-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding-bottom:7px; margin-bottom:7px;
+      border-bottom:1px solid var(--field-line);
+      color:var(--field-active); font-size:9px; letter-spacing:1.2px;
+    }
+    .field-control-section { display:none; }
+    .field-control-section.active { display:block; }
+    .field-control-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+    .field-control-grid .osb-btn { border:1px solid var(--field-line); min-height:40px; }
+    .field-control-grid .osb-btn.active { border-color:var(--field-line-strong); background:rgba(255,255,255,.05); }
+
+    .sitrep-panel {
+      background:rgba(4,10,6,.97);
+      border:1px solid var(--field-line-strong);
+      border-radius:0;
+      box-shadow:none;
+    }
+    .sitrep-head { border-bottom:1px solid var(--field-line); }
+    .sitrep-code { color:var(--field-active); }
+    .sitrep-coords { background:transparent; border:1px solid var(--field-line); border-radius:0; }
+    .sitrep-intel { background:rgba(0,0,0,.18); border-left:1px solid var(--field-line-strong); border-radius:0; }
+    .nav-button-grid .btn-osb-nav { border:1px solid var(--field-line); border-radius:0; background:transparent; }
+
+    .sitrep-address {
+      width:100%; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:9px;
+      margin-top:6px; padding:8px 9px; text-align:left; cursor:pointer;
+      color:var(--field-text); background:transparent; border:1px solid var(--field-line); border-radius:0;
+      font:inherit;
+    }
+    .sitrep-address:active { background:rgba(255,255,255,.035); }
+    .address-label { color:var(--field-dim); font-size:8px; letter-spacing:1px; white-space:nowrap; }
+    .address-value { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--field-text); font-size:10px; line-height:1.4; }
+    .address-copy { color:var(--field-active); font-size:8px; letter-spacing:1px; white-space:nowrap; }
+
+
+    .leaflet-control-attribution { background:rgba(0,0,0,.35) !important; color:#536458 !important; font-size:8px !important; }
+    .leaflet-control-attribution a { color:#718a75 !important; }
+
+    @media (max-width:768px) {
+      .top-compass-bar { width:calc(100% - 72px); top:7px; }
+      .top-compass-bar::before { left:-34px; }
+      .telemetry-osd { top:50px; left:10px; width:176px; }
+      .reticle-container { width:94px; height:94px; }
+      .target-gate { width:34px; height:34px; }
+      .field-control-tray { bottom:58px; }
+      .field-control-grid { grid-template-columns:repeat(4,1fr); }
+      .bracket.bl,.bracket.br { bottom:64px; }
+    }
+
+    .point-readout {
+      display:flex; flex-direction:column; gap:6px; padding:9px 10px;
+      border:1px solid var(--border); background:rgba(0,0,0,.22);
+      font-size:10px; color:var(--text-dim);
+    }
+    .point-readout div { display:flex; justify-content:space-between; gap:10px; }
+    .point-readout span { color:var(--field-dim); letter-spacing:.08em; }
+    .point-readout strong { color:var(--text-main); font-weight:800; text-align:right; max-width:70%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* ============================================================
+       95. MOBILE FIELD TERMINAL V5
+       iPhone Safe Area / bottom controls / drawer touch target
+       ============================================================ */
+    :root { --mobile-bottom-ui: calc(52px + env(safe-area-inset-bottom)); }
+
+    .btn-close-osd {
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 44px;
+      padding: 0;
+      position: relative;
+      z-index: 10;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .wp-drawer {
+      z-index: 3000;
+      height: 100dvh;
+      max-height: 100dvh;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      box-sizing: border-box;
+      background: var(--field-panel-solid, var(--bg-panel));
+    }
+    .wp-drawer .drawer-head {
+      min-height: 58px;
+      box-sizing: border-box;
+      padding: 7px 10px 7px 14px;
+      flex: 0 0 auto;
+    }
+    .wp-drawer .drawer-head > div {
+      padding-right: 8px;
+    }
+    .wp-drawer .btn-close-osd {
+      color: var(--field-active, var(--accent));
+      border: 1px solid var(--field-line, var(--border));
+      background: rgba(255,255,255,.025);
+    }
+
+    @media (max-width:768px) {
+      /* 하단 메뉴가 실제 차지하는 영역만큼 지도 UI를 위로 띄운다. */
+      .mfd-bottom-bar {
+        bottom: 0;
+        min-height: var(--mobile-bottom-ui);
+        height: auto;
+        box-sizing: border-box;
+        padding: 5px 8px env(safe-area-inset-bottom);
+        padding-bottom: max(5px, env(safe-area-inset-bottom));
+        z-index: 2200;
+        isolation: isolate;
+      }
+      .mfd-bottom-bar > .osb-cluster:last-child {
+        min-width: 0;
+      }
+      .mfd-bottom-bar .osb-btn {
+        min-height: 42px;
+        min-width: 0;
+        flex: 1 1 0;
+        padding: 0 5px;
+        font-size: 9px;
+        letter-spacing: .2px;
+        touch-action: manipulation;
+      }
+      .mfd-bottom-bar .btn-gps-sync {
+        width: 50px;
+        min-width: 50px;
+        flex: 0 0 50px;
+        margin-right: 4px;
+      }
+      .mfd-bottom-bar > .osb-cluster:last-child {
+        display: flex;
+        flex: 1 1 auto;
+        justify-content: stretch;
+      }
+
+      /* 모서리 프레임은 하단 메뉴 위에서 끝나도록 분리 */
+      .bracket.bl,
+      .bracket.br {
+        bottom: calc(var(--mobile-bottom-ui) + 8px);
+      }
+
+      /* 펼침 메뉴도 하단 메뉴와 안전영역을 정확히 피한다. */
+      .field-control-tray {
+        left: 8px;
+        right: 8px;
+        bottom: calc(var(--mobile-bottom-ui) + 2px);
+        z-index: 2250;
+        max-height: min(34vh, 270px);
+        overflow-y: auto;
+        padding: 10px;
+      }
+      .field-control-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .field-control-grid .osb-btn {
+        min-height: 44px;
+        touch-action: manipulation;
+      }
+
+      /* POINT INFO은 하단 메뉴 위에서 독립적으로 닫을 수 있게 한다. */
+      .sitrep-panel {
+        left: 8px;
+        right: 8px;
+        bottom: calc(var(--mobile-bottom-ui) + 8px);
+        top: auto;
+        width: auto;
+        max-height: min(42vh, 390px);
+        overflow-y: auto;
+        z-index: 2400;
+        padding: 10px;
+        padding-bottom: 12px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .sitrep-head {
+        min-height: 52px;
+        align-items: center;
+      }
+      .sitrep-head > div:last-child {
+        flex: 0 0 auto;
+      }
+      .sitrep-head .btn-close-osd {
+        color: var(--field-active);
+        border: 1px solid var(--field-line);
+        background: rgba(255,255,255,.025);
+      }
+
+      /* Telemetry는 아이폰 14 폭에서 지도 시야를 덜 가리도록 축소 */
+      .telemetry-osd {
+        top: 50px;
+        left: 10px;
+        width: 176px;
+        padding: 6px 8px;
+        box-sizing: border-box;
+      }
+      .osd-subgrid { gap: 2px 5px; }
+      .gps-status-osd { top:145px; left:10px; width:176px; padding:6px 8px; }
+      .gps-status-head { font-size:7px; }
+      .gps-status-row { font-size:8px; }
+      .nav-hud-distance { font-size:34px; }
+      .nav-hud-side strong { font-size:18px; }
+      .nav-hud-target { font-size:11px; }
+      body.target-nav .target-mode-actions { grid-template-columns:repeat(3,1fr); }
+      body.target-nav .target-mode-actions .osb-btn { min-height:44px; font-size:8px; padding:0 4px; }
+      body.target-nav.nav-panel-collapsed .nav-hud-distance { font-size:25px; }
+      .wp-filter-bar { grid-template-columns:repeat(5,minmax(0,1fr)); padding:7px 8px; gap:3px; }
+      .wp-filter-btn { min-height:40px; font-size:7px; letter-spacing:0; }
+
+      /* 기록부는 모바일에서 우측 슬라이드 패널이 아니라 전체 화면 패널 */
+      .wp-drawer {
+        top: 0;
+        right: 0;
+        width: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
+        border-left: 0;
+        box-shadow: none;
+        transform: translate3d(100%,0,0);
+      }
+      .wp-drawer.open { transform: translate3d(0,0,0); }
+      .wp-drawer .drawer-head {
+        min-height: 60px;
+        padding-left: 14px;
+        padding-right: 8px;
+      }
+      .wp-drawer .drawer-head .btn-close-osd {
+        width: 44px;
+        height: 44px;
+      }
+      .wp-drawer #wpListContainer {
+        min-height: 0;
+      }
+      .wp-drawer > div:last-child {
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+      }
+
+      /* 포인트/개척 모달도 홈 인디케이터와 겹치지 않게 */
+      .promo-modal-backdrop {
+        z-index: 4000;
+        padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
+        box-sizing: border-box;
+      }
+      .promo-modal {
+        max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
+
+    .route-file-input {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+      opacity: 0.001 !important;
+    }
+
+
+    /* ============================================================
+       V26 // FIELD UX REORGANIZATION
+       ============================================================ */
+    .v26-hidden { display:none !important; }
+    .v26-menu-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+    .v26-menu-grid .osb-btn { min-height:42px; }
+    .v26-menu-note { margin-top:7px; font-size:8px; line-height:1.45; color:var(--field-dim); }
+    .v26-state { color:var(--field-active); font-weight:900; }
+
+    .mfd-bottom-bar { flex-wrap:nowrap; }
+    .mfd-bottom-bar .v26-primary { flex:1; min-width:0; min-height:44px; }
+    .mfd-bottom-bar .v26-primary span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .mfd-bottom-bar .osb-cluster.v26-main-cluster { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); flex:4; width:auto; gap:5px; }
+
+    .target-mode-actions.v26-plan-actions { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    body.target-nav .target-mode-actions.v26-plan-actions { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .target-mode-actions .v26-secondary { color:var(--field-dim); }
+    .draw-kind-btn.active { border-color:var(--field-active) !important; color:var(--field-active) !important; }
+    body.route-marking .target-mode-kicker::after { content:' · OVERLAY SOLID'; color:var(--field-active); }
+    body.route-drawing:not(.route-marking) .target-mode-kicker::after { content:' · ROUTE DASHED · 1F DRAW / 2F PAN-ZOOM'; color:var(--field-active); }
+
+    .nav-hud-elapsed { color:var(--field-dim); font-size:9px; font-weight:900; letter-spacing:.4px; }
+    .nav-hud-leg { color:var(--field-active); font-size:8px; font-weight:900; letter-spacing:.8px; }
+    .nav-hud-ref { color:var(--field-dim); font-size:8px; }
+    body.target-nav.nav-panel-collapsed .nav-hud-elapsed,
+    body.target-nav.nav-panel-collapsed .nav-hud-ref { display:none; }
+
+    .route-point-grid { display:grid; gap:7px; margin-top:8px; }
+    .route-point-row { border:1px solid var(--border); background:rgba(0,0,0,.24); padding:8px; }
+    .route-point-head { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:9px; color:var(--text-dim); }
+    .route-point-head strong { color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .route-point-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin-top:6px; }
+
+    .gps-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; margin-top:8px; border:1px solid var(--border); background:var(--border); }
+    .gps-detail-cell { background:rgba(4,10,6,.98); padding:8px; min-width:0; }
+    .gps-detail-cell span { display:block; color:var(--text-dim); font-size:8px; margin-bottom:3px; }
+    .gps-detail-cell strong { display:block; color:var(--text-main); font-size:10px; overflow-wrap:anywhere; }
+    .gps-detail-wide { grid-column:1 / -1; }
+
+    .temp-marker, .home-marker, .route-end-marker, .route-start-marker {
+      position:relative; width:26px; height:26px; color:var(--accent); filter:drop-shadow(0 0 4px var(--accent-glow));
+    }
+    .temp-marker::before { content:''; position:absolute; inset:5px; border:1.5px dashed currentColor; transform:rotate(45deg); }
+    .temp-marker::after { content:''; position:absolute; left:12px; top:3px; width:1px; height:20px; background:currentColor; box-shadow:0 0 0 currentColor; }
+    .home-marker::before { content:'H'; position:absolute; inset:3px; border:1.5px solid currentColor; display:flex; align-items:center; justify-content:center; font:900 10px var(--font-mono); background:rgba(0,0,0,.55); }
+    .route-start-marker::before, .route-end-marker::before { position:absolute; inset:3px; border:1.5px solid currentColor; display:flex; align-items:center; justify-content:center; font:900 9px var(--font-mono); background:rgba(0,0,0,.58); }
+    .route-start-marker::before { content:'S'; border-radius:50%; }
+    .route-end-marker::before { content:'E'; }
+    .v26-map-label { position:absolute; top:26px; left:50%; transform:translateX(-50%); white-space:nowrap; font:800 8px var(--font-mono); color:var(--accent); background:rgba(2,7,4,.84); border:1px solid var(--border); padding:2px 4px; }
+
+    .road-boost-tiles { mix-blend-mode:screen; }
+    .road-boost-tiles .leaflet-tile { filter:grayscale(100%) contrast(155%) brightness(72%); }
+    body.theme-nvg-green .road-boost-tiles .leaflet-tile { filter:grayscale(100%) sepia(35%) hue-rotate(70deg) saturate(130%) contrast(155%) brightness(66%); }
+    body.theme-nvg-white .road-boost-tiles .leaflet-tile { filter:grayscale(100%) sepia(18%) hue-rotate(150deg) saturate(110%) contrast(155%) brightness(68%); }
+    body.theme-flir .road-boost-tiles .leaflet-tile { filter:grayscale(100%) sepia(34%) hue-rotate(350deg) saturate(125%) contrast(155%) brightness(66%); }
+
+    .offline-badge { font-size:8px; color:var(--field-dim); }
+    .offline-badge.active { color:var(--field-active); }
+
+    @media (max-width:768px) {
+      .mfd-bottom-bar { padding:5px 5px max(5px, env(safe-area-inset-bottom)); gap:4px; }
+      .mfd-bottom-bar .v26-primary { min-height:43px; font-size:9px; padding:0 4px; }
+      .mfd-bottom-bar .osb-cluster.v26-main-cluster { gap:4px; }
+      .target-mode-actions.v26-plan-actions,
+      body.target-nav .target-mode-actions.v26-plan-actions { grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .gps-detail-grid { grid-template-columns:1fr; }
+      .gps-detail-wide { grid-column:auto; }
+      .field-control-tray { max-height:min(42vh,360px); }
+      .bracket.bl, .bracket.br { bottom:calc(76px + env(safe-area-inset-bottom)); }
+    }
+
+    .coord-copy { border:0; background:transparent; color:var(--accent); font:inherit; text-align:right; min-height:44px; touch-action:manipulation; cursor:pointer; }
+    .coord-copy-feedback { display:block; min-height:12px; font-size:8px; color:var(--text-dim); }
+
+
+    /* ============================================================
+       V27.1 // COMPACT FIELD WORKFLOW
+       mode-specific bottom bar + global GPS + bottom sheets
+       ============================================================ */
+    :root { --v271-toolbar-h: calc(54px + env(safe-area-inset-bottom)); }
+
+    button:disabled,
+    .osb-btn:disabled,
+    .global-gps-button:disabled {
+      opacity:.28 !important;
+      color:var(--field-dim) !important;
+      border-color:var(--field-line) !important;
+      background:transparent !important;
+      box-shadow:none !important;
+      cursor:default !important;
+      pointer-events:none !important;
+      filter:grayscale(1);
+    }
+
+    .global-gps-controls {
+      position:fixed;
+      top:max(50px, calc(env(safe-area-inset-top) + 44px));
+      right:8px;
+      z-index:2550;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      width:48px;
+    }
+    .global-gps-button {
+      width:48px;
+      min-height:38px;
+      padding:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid var(--field-line);
+      background:rgba(3,8,5,.88);
+      color:var(--field-dim);
+      font:900 9px/1 var(--font-mono);
+      letter-spacing:.7px;
+      cursor:pointer;
+      backdrop-filter:blur(2px);
+      -webkit-backdrop-filter:blur(2px);
+    }
+    .global-gps-button.active {
+      color:var(--field-active);
+      border-color:var(--field-line-strong);
+      box-shadow:0 0 10px rgba(0,0,0,.35);
+    }
+    .gps-center-button svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.5; }
+    .gps-center-button .gps-center-core { fill:currentColor; stroke:none; }
+
+    @media (min-width:769px) {
+      .sitrep-panel { right:70px; }
+    }
+
+    body.target-mode .mfd-bottom-bar { display:none !important; }
+    .target-mode-panel {
+      left:8px !important;
+      right:8px !important;
+      bottom:var(--v271-toolbar-h) !important;
+      width:auto !important;
+      transform:none !important;
+      padding:9px 10px !important;
+      border-bottom:0;
+      z-index:2320;
+    }
+    .target-mode-head {
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:5px 10px;
+      align-items:start;
+      padding:2px 1px 0;
+      border-bottom:0;
+      cursor:pointer;
+      touch-action:manipulation;
+    }
+    .target-mode-head.nav-unavailable { cursor:default; }
+    .target-mode-copy { min-width:0; }
+    .target-mode-name { max-width:none !important; }
+    .target-mode-stats { align-self:start; }
+    .plan-nav-hint {
+      grid-column:1 / -1;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-top:4px;
+      padding-top:6px;
+      border-top:1px solid var(--field-line);
+      color:var(--field-active);
+      font-size:8px;
+      font-weight:900;
+      letter-spacing:.9px;
+    }
+    .target-mode-head.nav-unavailable #planNavHint { color:var(--field-dim); }
+    .plan-share-inline {
+      min-width:48px;
+      min-height:24px;
+      padding:0 6px;
+      border:1px solid var(--field-line);
+      background:transparent;
+      color:var(--field-dim);
+      font:900 8px var(--font-mono);
+      cursor:pointer;
+    }
+
+    .target-mode-actions.v271-mode-toolbar {
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:2360;
+      margin:0 !important;
+      padding:5px 6px max(5px, env(safe-area-inset-bottom));
+      min-height:var(--v271-toolbar-h);
+      background:rgba(3,8,5,.96);
+      border:0;
+      border-top:1px solid var(--field-line-strong);
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+      gap:4px;
+    }
+    .target-mode-actions.v271-mode-toolbar .osb-btn {
+      min-width:0;
+      min-height:42px;
+      padding:0 3px;
+      border:0;
+      border-right:1px solid var(--field-line);
+      font-size:9px;
+    }
+    .target-mode-actions.v271-mode-toolbar .osb-btn:last-child { border-right:0; }
+    .set-only,.draw-only,.nav-only { display:none !important; }
+    body.plan-set-submode .target-mode-actions.v271-mode-toolbar,
+    body.plan-draw-submode .target-mode-actions.v271-mode-toolbar { grid-template-columns:repeat(4,minmax(0,1fr)) !important; }
+    body.plan-set-submode .target-mode-actions .plan-main-only,
+    body.plan-draw-submode .target-mode-actions .plan-main-only { display:none !important; }
+    body.plan-set-submode .target-mode-actions .set-only { display:flex !important; }
+    body.plan-draw-submode .target-mode-actions .draw-only { display:flex !important; }
+    body.target-nav .target-mode-actions.v271-mode-toolbar { grid-template-columns:repeat(5,minmax(0,1fr)) !important; }
+    body.target-nav .target-mode-actions .plan-main-only,
+    body.target-nav .target-mode-actions .set-only,
+    body.target-nav .target-mode-actions .draw-only { display:none !important; }
+    body.target-nav .target-mode-actions .nav-only { display:flex !important; }
+
+    .nav-riding-hud { padding:0; }
+    .nav-hud-topline { gap:8px; }
+    .nav-hud-target { max-width:none !important; flex:1 1 auto; }
+    .nav-hud-orient { margin-left:auto; flex:0 0 auto; }
+    .target-panel-collapse { flex:0 0 50px; }
+    .nav-hud-elapsed { font-variant-numeric:tabular-nums; }
+    .nav-collapsed-actions { display:none; }
+
+    body.target-nav.nav-panel-collapsed .target-mode-panel {
+      left:0 !important;
+      right:0 !important;
+      bottom:0 !important;
+      width:auto !important;
+      transform:none !important;
+      padding:7px 8px max(7px, env(safe-area-inset-bottom)) !important;
+      border-left:0;
+      border-right:0;
+      border-bottom:0;
+    }
+    body.target-nav.nav-panel-collapsed .target-mode-actions { display:none !important; }
+    body.target-nav.nav-panel-collapsed .nav-hud-topline { gap:7px; }
+    body.target-nav.nav-panel-collapsed .nav-hud-target {
+      max-width:none !important;
+      font-size:10px !important;
+      flex:1 1 auto;
+    }
+    body.target-nav.nav-panel-collapsed .nav-hud-orient {
+      font-size:8px !important;
+      margin-left:auto;
+    }
+    body.target-nav.nav-panel-collapsed .target-panel-collapse {
+      min-width:48px;
+      min-height:28px;
+      flex:0 0 48px;
+    }
+    body.target-nav.nav-panel-collapsed .nav-hud-mainline {
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
+      align-items:center;
+      gap:8px;
+      margin-top:4px;
+      padding-top:5px;
+    }
+    body.target-nav.nav-panel-collapsed .nav-hud-distance { font-size:24px !important; }
+    body.target-nav.nav-panel-collapsed .nav-hud-unit { font-size:10px !important; }
+    body.target-nav.nav-panel-collapsed .nav-hud-side {
+      min-width:0;
+      align-items:flex-end;
+      gap:2px;
+      font-size:7px;
+    }
+    body.target-nav.nav-panel-collapsed .nav-hud-side strong { font-size:13px !important; }
+    body.target-nav.nav-panel-collapsed .nav-hud-elapsed {
+      display:block !important;
+      font-size:7px;
+      white-space:nowrap;
+    }
+    body.target-nav.nav-panel-collapsed .nav-hud-ref,
+    body.target-nav.nav-panel-collapsed #navHudGps,
+    body.target-nav.nav-panel-collapsed #navHudTrack,
+    body.target-nav.nav-panel-collapsed .nav-hud-distance-label { display:none !important; }
+    body.target-nav.nav-panel-collapsed .nav-collapsed-actions {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:4px;
+      margin-top:5px;
+      padding-top:5px;
+      border-top:1px solid var(--field-line);
+    }
+    body.target-nav.nav-panel-collapsed .nav-collapsed-actions .osb-btn { min-height:34px; font-size:8px; }
+
+    .v271-bottom-sheet {
+      position:fixed;
+      left:8px;
+      right:8px;
+      bottom:var(--v271-toolbar-h);
+      z-index:2700;
+      display:none;
+      flex-direction:column;
+      gap:8px;
+      max-height:min(58vh,520px);
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      padding:10px;
+      background:rgba(4,10,6,.985);
+      border:1px solid var(--field-line-strong);
+      border-bottom:0;
+      color:var(--field-text);
+      box-shadow:0 -10px 30px rgba(0,0,0,.28);
+    }
+    .v271-bottom-sheet.open { display:flex; }
+    .v271-sheet-head { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:34px; border-bottom:1px solid var(--field-line); padding-bottom:6px; color:var(--field-active); font-size:10px; font-weight:900; letter-spacing:1px; }
+    .v271-sheet-close { width:36px; height:32px; border:0; background:transparent; color:var(--field-active); font:900 18px/1 var(--font-mono); cursor:pointer; }
+    .v271-search-row { display:flex; gap:5px; }
+    .v271-search-row .promo-input { flex:1; min-width:0; margin:0; }
+    .v271-search-row .osb-btn { flex:0 0 72px; }
+    .v271-search-results { max-height:180px; margin-top:0; }
+    .v271-sheet-section { display:flex; flex-direction:column; gap:5px; }
+    .v271-sheet-label { color:var(--field-dim); font-size:8px; font-weight:900; letter-spacing:1px; }
+    .v271-quick-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+    .v271-via-list { display:flex; flex-direction:column; gap:4px; max-height:150px; overflow-y:auto; }
+    .v271-via-list .osb-btn { justify-content:flex-start; min-height:36px; text-align:left; }
+    .v271-via-empty { padding:7px; border:1px dashed var(--field-line); color:var(--field-dim); font-size:8px; text-align:center; }
+    .v271-point-name { display:block; margin-top:2px; color:var(--field-active); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .v271-copy-row { width:100%; min-height:42px; display:grid; grid-template-columns:auto minmax(0,1fr); gap:12px; align-items:center; border:1px solid var(--field-line); background:transparent; color:var(--field-dim); font:800 9px var(--font-mono); text-align:left; cursor:pointer; }
+    .v271-copy-row strong { color:var(--field-text); text-align:right; overflow-wrap:anywhere; }
+    .v271-point-address { padding:7px 8px; border-left:1px solid var(--field-line); color:var(--field-dim); font-size:8px; line-height:1.4; }
+    .v271-delete-button { color:#ef7777 !important; border-color:rgba(239,119,119,.35) !important; }
+    .v271-more-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+
+    .v271-toast {
+      position:fixed;
+      left:50%;
+      bottom:calc(var(--v271-toolbar-h) + 18px);
+      transform:translate(-50%,8px);
+      z-index:5000;
+      opacity:0;
+      pointer-events:none;
+      padding:7px 12px;
+      background:rgba(2,8,4,.96);
+      border:1px solid var(--field-line-strong);
+      color:var(--field-active);
+      font:900 9px var(--font-mono);
+      letter-spacing:1px;
+      transition:opacity .12s, transform .12s;
+    }
+    .v271-toast.show { opacity:1; transform:translate(-50%,0); }
+    .coord-copy-feedback:not(:empty) { color:var(--field-active) !important; font-weight:900; font-size:9px; }
+
+    body.target-mode .map-scale-osd { bottom:calc(148px + env(safe-area-inset-bottom)) !important; }
+    body.target-nav:not(.nav-panel-collapsed) .map-scale-osd { bottom:calc(210px + env(safe-area-inset-bottom)) !important; }
+    body.target-nav.nav-panel-collapsed .map-scale-osd { bottom:calc(142px + env(safe-area-inset-bottom)) !important; }
+
+    #map.route-draw-active { touch-action:none !important; }
+    body.plan-draw-submode .target-mode-head { opacity:.78; }
+
+    @media (max-width:768px) {
+      .global-gps-controls { right:7px; width:46px; }
+      .global-gps-button { width:46px; min-height:37px; }
+      .target-mode-panel { left:0 !important; right:0 !important; }
+      .target-mode-name { font-size:10px; }
+      .target-mode-stats { font-size:7px; }
+      .plan-nav-hint { font-size:7px; }
+      .target-mode-actions.v271-mode-toolbar { padding-left:4px; padding-right:4px; gap:2px; }
+      .target-mode-actions.v271-mode-toolbar .osb-btn { font-size:8px; padding:0 2px; }
+      .v271-bottom-sheet { left:0; right:0; padding:9px 8px; }
+    }

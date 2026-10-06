@@ -1095,7 +1095,7 @@
 
       if (localStorage.getItem(ROAD_KEY) === '1' && !roadBoostEnabled) {
         roadBoostEnabled = true;
-        if (!map.hasLayer(roadBoostLayer)) roadBoostLayer.addTo(map);
+        if (typeof syncNetworkBasemap === 'function') syncNetworkBasemap();
         document.getElementById('roadBoostBtn')?.classList.add('active');
       }
     } catch (e) {}
