@@ -1946,11 +1946,12 @@ body.r16-light-map .r15-low-data-tile {
   white-space:nowrap;
   opacity:.68;
   text-shadow:0 0 3px var(--bg-base);
+  transform-origin:left top;
 }
-.r16-grid-label-lon {
+.r16-grid-label-lon span {
   transform:translate(-50%,-100%);
 }
-.r16-grid-label-lat {
+.r16-grid-label-lat span {
   transform:translate(0,-50%);
 }
 
