@@ -34,7 +34,7 @@ jobs:
       - name: Extract low-data features
         run: |
           osmium tags-filter /tmp/south-korea.osm.pbf \
-            w/highway=motorway,trunk,primary,secondary \
+            w/highway=motorway,trunk,primary \
             w/waterway=river,canal \
             n/place=city,town \
             r/admin_level=2 \
@@ -58,7 +58,7 @@ jobs:
           dst=Path('offline/kr-low.geojson')
           raw=json.load(src.open(encoding='utf-8'))
 
-          road_classes=('motorway','trunk','primary','secondary')
+          road_classes=('motorway','trunk','primary')
           roads={k:[] for k in road_classes}
           waters=[]
           coasts=[]
@@ -125,7 +125,6 @@ jobs:
               'motorway':0.0007,
               'trunk':0.0009,
               'primary':0.0013,
-              'secondary':0.0022,
           }
           for cls in road_classes:
               feature=merged_line_feature('road',cls,roads[cls],tolerances[cls])
@@ -159,7 +158,7 @@ jobs:
               return value
 
           for feature in out:
-              feature['geometry']=quantize(feature['geometry'],5)
+              feature['geometry']=quantize(feature['geometry'],4)
 
           fc={
               'type':'FeatureCollection',
@@ -174,7 +173,6 @@ jobs:
               'motorway':len(roads['motorway']),
               'trunk':len(roads['trunk']),
               'primary':len(roads['primary']),
-              'secondary':len(roads['secondary']),
               'water':len(waters),
               'coast':len(coasts),
               'boundary':len(boundaries),
