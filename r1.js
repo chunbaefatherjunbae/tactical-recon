@@ -1627,6 +1627,8 @@
   let lightMapGridLayer=null;
   let lightMapBaseLayer=null;
   let lightMapContourLayer=null;
+  let lightMapContourData=null;
+  let lightMapContourPromise=null;
   let lightMapBaseData=null;
   let lightMapBasePromise=null;
   let lightMapPlaceLayer=null;
@@ -1638,6 +1640,7 @@
   let lightMapRefreshInstalled=false;
   let lightMapRefreshTimer=null;
   const LOW_DATA_MAP_URL='./offline/kr-low.geojson';
+  const LOW_DATA_CONTOUR_URL='./offline/kr-contours.geojson';
   const LOW_DATA_ATTRIBUTION='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · Terrain <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen/AWS</a>';
   let activeOverlayType='REFERENCE';
   let overlaySeenCount=0;
@@ -2376,10 +2379,10 @@
   }
 
   function ensureLowDataContourLayer(){
-    if(lightMapContourLayer||!lightMapBaseData||typeof L==='undefined'||typeof map==='undefined')return lightMapContourLayer;
+    if(lightMapContourLayer||!lightMapContourData||typeof L==='undefined'||typeof map==='undefined')return lightMapContourLayer;
     ensureLowDataPanes();
     if(!lightMapBaseRenderer)lightMapBaseRenderer=L.canvas({pane:'r16LowDataBasePane',padding:.35});
-    const features=(lightMapBaseData.features||[]).filter(f=>f?.properties?.kind==='contour');
+    const features=(lightMapContourData.features||[]).filter(f=>f?.properties?.kind==='contour');
     lightMapContourLayer=L.geoJSON({type:'FeatureCollection',features},{
       style:lowDataFeatureStyle,
       interactive:false
@@ -2387,22 +2390,55 @@
     return lightMapContourLayer;
   }
 
+  function loadLowDataContours(){
+    if(lightMapContourData)return Promise.resolve(lightMapContourData);
+    if(lightMapContourPromise)return lightMapContourPromise;
+    lightMapContourPromise=fetch(LOW_DATA_CONTOUR_URL,{cache:'force-cache'})
+      .then(response=>{
+        if(!response.ok)throw new Error('LOW_DATA_CONTOUR_HTTP_'+response.status);
+        return response.json();
+      })
+      .then(data=>{
+        if(!data||data.type!=='FeatureCollection'||!Array.isArray(data.features))throw new Error('LOW_DATA_CONTOUR_INVALID');
+        lightMapContourData=data;
+        return data;
+      })
+      .catch(error=>{
+        lightMapContourPromise=null;
+        throw error;
+      });
+    return lightMapContourPromise;
+  }
+
   function syncLowDataContourLayer(){
     if(!lightMapOpen||typeof map==='undefined')return;
     const show=map.getZoom()>=10;
-    if(show){
-      const layer=ensureLowDataContourLayer();
-      if(layer&&!map.hasLayer(layer))layer.addTo(map);
-    }else if(lightMapContourLayer&&map.hasLayer(lightMapContourLayer)){
-      map.removeLayer(lightMapContourLayer);
+    if(!show){
+      if(lightMapContourLayer&&map.hasLayer(lightMapContourLayer))map.removeLayer(lightMapContourLayer);
+      return;
     }
+    if(!lightMapContourData){
+      loadLowDataContours().then(()=>{
+        if(!lightMapOpen||map.getZoom()<10)return;
+        const layer=ensureLowDataContourLayer();
+        if(layer&&!map.hasLayer(layer))layer.addTo(map);
+        refreshLowDataPlaces();
+      }).catch(()=>{});
+      return;
+    }
+    const layer=ensureLowDataContourLayer();
+    if(layer&&!map.hasLayer(layer))layer.addTo(map);
   }
 
   function lowDataLabelFeatures(){
-    return (lightMapBaseData?.features||[]).filter(feature=>{
+    const base=(lightMapBaseData?.features||[]).filter(feature=>{
       const kind=feature?.properties?.kind;
-      return ['place','peak','contour_label'].includes(kind)&&feature?.geometry?.type==='Point';
+      return ['place','peak'].includes(kind)&&feature?.geometry?.type==='Point';
     });
+    const contours=(lightMapContourData?.features||[]).filter(feature=>
+      feature?.properties?.kind==='contour_label'&&feature?.geometry?.type==='Point'
+    );
+    return base.concat(contours);
   }
 
   function refreshLowDataPlaces(){
