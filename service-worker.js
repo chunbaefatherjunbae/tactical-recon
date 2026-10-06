@@ -26,6 +26,7 @@ const STATIC_ASSETS = [
   './r2.css',
   './r2.js',
   './offline/kr-low.geojson',
+  './offline/kr-contours.geojson',
   './offline/NOTICE.txt'
 ];
 
