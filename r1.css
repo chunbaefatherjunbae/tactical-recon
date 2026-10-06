@@ -1914,3 +1914,76 @@ body.r15-ui .v29-light-map {
     max-width:70px !important;
   }
 }
+
+
+/* ============================================================
+   R1.6 // LOCAL LOW-DATA BASEMAP + TRUE COORDINATE GRID
+   ============================================================ */
+body.r16-light-map #map,
+body.r16-light-map .leaflet-container {
+  background:var(--field-panel-solid,#050a07) !important;
+}
+body.r16-light-map .r15-low-data-tile {
+  display:none !important;
+}
+
+.r16-grid-label {
+  width:auto !important;
+  height:auto !important;
+  margin:0 !important;
+  border:0 !important;
+  background:transparent !important;
+  pointer-events:none !important;
+}
+.r16-grid-label span {
+  display:inline-block;
+  padding:1px 3px;
+  border:0;
+  background:rgba(2,8,4,.48);
+  color:var(--field-dim-readable);
+  font:700 7.5px/1.15 var(--font-mono);
+  letter-spacing:.025em;
+  white-space:nowrap;
+  opacity:.68;
+  text-shadow:0 0 3px var(--bg-base);
+}
+.r16-grid-label-lon {
+  transform:translate(-50%,-100%);
+}
+.r16-grid-label-lat {
+  transform:translate(0,-50%);
+}
+
+.leaflet-tooltip.r16-low-place-label {
+  padding:0 2px !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:rgba(2,8,4,.34) !important;
+  box-shadow:none !important;
+  color:var(--field-dim-readable) !important;
+  font:700 7.5px/1.15 var(--font-mono) !important;
+  letter-spacing:.02em !important;
+  white-space:nowrap !important;
+  opacity:.72 !important;
+  pointer-events:none !important;
+}
+.leaflet-tooltip.r16-low-place-label::before {
+  display:none !important;
+}
+
+body.r16-light-map .leaflet-control-attribution {
+  background:rgba(2,8,4,.38) !important;
+  color:var(--field-dim-readable) !important;
+  font:600 7px/1.2 var(--font-mono) !important;
+  opacity:.52;
+}
+body.r16-light-map .leaflet-control-attribution a {
+  color:inherit !important;
+}
+
+@media (max-width:768px) {
+  .r16-grid-label span,
+  .leaflet-tooltip.r16-low-place-label {
+    font-size:7px !important;
+  }
+}
