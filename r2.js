@@ -1,12 +1,15 @@
 (function(root){
   'use strict';
 
-  const VERSION='2.0';
+  const VERSION='2.1';
   const DISPLAY_KEY='tactical_recon_location_display_v2';
   const FORMATS=['MGRS','WGS84','ADDRESS'];
   const DEFAULT_DISPLAY={primary:'MGRS',visible:['MGRS','WGS84','ADDRESS'],order:['MGRS','WGS84','ADDRESS']};
   const addressCache=new Map();
+  const addressInFlight=new Map();
   let hudAddressToken=0;
+  let hudAddressTimer=null;
+  let hudAddressController=null;
   let cardAddressToken=0;
   let r2CardTarget=null;
   let installed=false;
@@ -85,19 +88,29 @@
     const key=cacheKey(coords);
     if(addressCache.has(key))return {state:'ready',value:addressCache.get(key)};
     if(!navigator.onLine)return {state:'offline',value:txt('오프라인 · 주소 사용 불가','OFFLINE · ADDRESS UNAVAILABLE')};
-    try{
-      const url='https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+encodeURIComponent(coords[0])+'&lon='+encodeURIComponent(coords[1])+'&zoom=18&addressdetails=1&accept-language='+(lang()==='ko'?'ko':'en');
-      const response=await fetch(url,{headers:{Accept:'application/json'}});
-      if(!response.ok)throw new Error('REVERSE_GEOCODE_FAILED');
-      const data=await response.json();
-      const fallback=formatLatLon(coords);
-      const value=normalizedAddress(data,fallback);
-      addressCache.set(key,value);
-      return {state:'ready',value};
-    }catch(e){
-      return {state:'error',value:txt('주소 확인 실패','ADDRESS UNAVAILABLE')};
-    }
+    if(!opts.signal&&addressInFlight.has(key))return addressInFlight.get(key);
+
+    const request=(async()=>{
+      try{
+        const url='https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+encodeURIComponent(coords[0])+'&lon='+encodeURIComponent(coords[1])+'&zoom=18&addressdetails=1&accept-language='+(lang()==='ko'?'ko':'en');
+        const response=await fetch(url,{headers:{Accept:'application/json'},signal:opts.signal});
+        if(!response.ok)throw new Error('REVERSE_GEOCODE_FAILED');
+        const data=await response.json();
+        const fallback=formatLatLon(coords);
+        const value=normalizedAddress(data,fallback);
+        addressCache.set(key,value);
+        return {state:'ready',value};
+      }catch(e){
+        if(e&&e.name==='AbortError')return {state:'aborted',value:''};
+        return {state:'error',value:txt('주소 확인 실패','ADDRESS UNAVAILABLE')};
+      }finally{
+        if(!opts.signal)addressInFlight.delete(key);
+      }
+    })();
+    if(!opts.signal)addressInFlight.set(key,request);
+    return request;
   }
+
   function copyText(value){
     const text=String(value||'').trim();
     if(!text)return Promise.resolve(false);
@@ -138,7 +151,7 @@
     sheet.innerHTML=
       '<div class="r2-display-shell">'+
         '<div class="r2-display-head">'+
-          '<div><small>R2.0 // POSITION DISPLAY</small><strong id="r2DisplayTitle"></strong></div>'+
+          '<div><small>R2.1 // POSITION DISPLAY</small><strong id="r2DisplayTitle"></strong></div>'+
           '<button class="r2-display-close" type="button" aria-label="Close">×</button>'+
         '</div>'+
         '<div class="r2-display-body">'+
@@ -259,6 +272,28 @@
     if(cached)return cached;
     return navigator.onLine?txt('주소 확인…','RESOLVING ADDRESS…'):txt('오프라인 · 주소 사용 불가','OFFLINE · ADDRESS UNAVAILABLE');
   }
+  function cancelHudAddressResolve(){
+    if(hudAddressTimer){clearTimeout(hudAddressTimer);hudAddressTimer=null;}
+    if(hudAddressController){hudAddressController.abort();hudAddressController=null;}
+  }
+  function scheduleHudAddressResolve(coords,value){
+    cancelHudAddressResolve();
+    const token=++hudAddressToken;
+    const key=cacheKey(coords);
+    hudAddressTimer=setTimeout(()=>{
+      hudAddressTimer=null;
+      const controller=typeof AbortController==='function'?new AbortController():null;
+      hudAddressController=controller;
+      reverseAddress(coords,{signal:controller?.signal}).then(result=>{
+        if(token!==hudAddressToken||!result||result.state==='aborted')return;
+        const now=currentMapCoords();
+        if(!now||cacheKey(now)!==key)return;
+        value.textContent=result.value;
+      }).finally(()=>{
+        if(hudAddressController===controller)hudAddressController=null;
+      });
+    },220);
+  }
   function renderReticlePrimary(resolve){
     const coords=currentMapCoords();
     const value=document.getElementById('reticleMgrs');
@@ -276,14 +311,11 @@
       button.title=txt('탭하여 이 위치의 작업 열기','TAP TO OPEN ACTIONS FOR THIS POSITION');
       button.setAttribute('aria-label',txt('현재 지도 위치 작업 열기','OPEN MAP POSITION ACTIONS'));
     }
-    if(settings.primary==='ADDRESS'&&resolve){
-      const token=++hudAddressToken;
-      reverseAddress(coords).then(result=>{
-        if(token!==hudAddressToken||!result)return;
-        const now=currentMapCoords();
-        if(!now||cacheKey(now)!==cacheKey(coords))return;
-        value.textContent=result.value;
-      });
+    if(settings.primary==='ADDRESS'){
+      if(resolve)scheduleHudAddressResolve(coords,value);
+      else cancelHudAddressResolve();
+    }else{
+      cancelHudAddressResolve();
     }
   }
   function openMapPositionActions(){
@@ -296,7 +328,7 @@
       source:'MAP'
     };
     r2CardTarget=target;
-    root.r1.openLocation(target,'LOCATION');
+    root.r1.openLocation(target,'LOCATION',{activateLegacyTarget:false});
     setTimeout(renderLocationFormats,0);
   }
   function installReticleOwnership(){
@@ -328,10 +360,11 @@
   }
 
   function currentCardTarget(){
+    if(r2CardTarget&&validCoords(r2CardTarget.coords))return r2CardTarget;
     try{
       if(typeof currentActiveTarget!=='undefined'&&currentActiveTarget&&validCoords(currentActiveTarget.coords))return currentActiveTarget;
     }catch(e){}
-    return r2CardTarget&&validCoords(r2CardTarget.coords)?r2CardTarget:null;
+    return null;
   }
   function ensureLocationFormats(){
     const card=document.getElementById('r1LocationCard');
@@ -467,14 +500,14 @@
   }
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R2.0 FIELD TERMINAL';
+    document.title='TACTICAL RECON // R2.1 FIELD TERMINAL';
     document.body.classList.add('r2-runtime');
     ensureDisplaySettingsSheet();
     if(!installDisplayMenuEntry())setTimeout(installDisplayMenuEntry,80);
     installReticleOwnership();
     installLocationCardOwnership();
     const records=document.querySelector('#r1RecordsSheet .r1-sheet-head small');
-    if(records)records.textContent='TACTICAL RECON // R2.0';
+    if(records)records.textContent='TACTICAL RECON // R2.1';
     new MutationObserver(syncR2Text).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
     root.addEventListener('online',()=>{renderReticlePrimary(true);renderLocationFormats();});
     root.addEventListener('offline',()=>{renderReticlePrimary(false);renderLocationFormats();});
