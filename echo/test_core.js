@@ -1,0 +1,15 @@
+const assert=require('assert');
+const C=require('./core.js');
+const s=C.createState();
+C.setTemp(s,{lat:37,lon:127,at:1000});
+s.gps.lastFix={lat:36,lon:126,source:'GPS',at:900,createdAt:900};
+assert.equal(C.getReference(s).referenceKind,'TEMP');
+s.gps.enabled=true;C.setGpsFix(s,{lat:38,lon:128,at:1100});
+assert.equal(C.getReference(s).referenceKind,'GPS');
+const dest=C.point({lat:39,lon:129,name:'D'});const p=C.createPlan(dest,C.getReference(s));
+assert.equal(p.points.length,2);C.addPlanPoint(p,{lat:38.5,lon:128.5,name:'V'},1);assert.deepEqual(p.points.map(x=>x.name),['현재위치','V','D']);
+C.movePlanPoint(p,2,0);assert.deepEqual(p.points.map(x=>x.name),['D','현재위치','V']);
+const m=C.startMission(p);assert.equal(m.nextIndex,1);C.stepMission(m,1);assert.equal(m.nextIndex,2);
+assert.equal(C.trackTap(s),C.TRACK.RECORDING);assert.equal(s.track.missionId,null);C.addTrackPoint(s,{lat:38,lon:128});assert.equal(s.track.points.length,1);assert.equal(C.trackTap(s),C.TRACK.PAUSED);assert(C.trackStop(s));assert.equal(s.track.state,C.TRACK.OFF);
+assert(Math.abs(C.bearingDeg({lat:0,lon:0},{lat:1,lon:0})-0)<0.01);
+console.log('ECHOPOINT core tests passed');
