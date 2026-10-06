@@ -657,19 +657,9 @@
 
   function resolveR12LastFixLabelCollision(bounds){
     const visual=document.querySelector('.r11-last-fix-visual');
-    if(!visual||!bounds||!r11LastFixMarker||typeof map==='undefined')return;
+    if(!visual)return;
+    /* LAST FIX is a stable reference label. Never flip its side while the map moves. */
     visual.classList.remove('r12-label-above','r12-label-right');
-    try{
-      const point=map.latLngToContainerPoint(r11LastFixMarker.getLatLng());
-      const mapRect=bounds.mapRect;
-      const x=mapRect.left+point.x;
-      const y=mapRect.top+point.y;
-      const dx=x-bounds.reticleX;
-      const dy=y-bounds.reticleY;
-      if(Math.hypot(dx,dy)>82)return;
-      if(Math.abs(dx)>=Math.abs(dy))visual.classList.add('r12-label-above');
-      else visual.classList.add('r12-label-right');
-    }catch(e){}
   }
 
   function syncR12OverlayLayout(){
@@ -1801,7 +1791,7 @@
     const close=hud.querySelector('#v29MissionMapClose');if(close)close.setAttribute('aria-label',lang()==='ko'?'계획 선택 해제':'CLEAR PLAN SELECTION');
     const nav=hud.querySelector('#v29MissionMapNav');if(nav)nav.textContent=t('navAction');
     const plan=hud.querySelector('#v29MissionMapPlan');if(plan)plan.textContent=t('planAction');
-    const fit=hud.querySelector('#v29MissionMapFit');if(fit)fit.textContent=t('mapFit');
+    const fit=hud.querySelector('#v29MissionMapFit');if(fit){fit.textContent=lang()==='ko'?'전체보기':'FIT';fit.title=lang()==='ko'?'기준 위치와 목표를 함께 보기':'FRAME REFERENCE AND OBJECTIVE';}
     hud.hidden=false;
   }
 
@@ -2974,8 +2964,7 @@
     card.className='r1-location-card';
     card.hidden=true;
     card.innerHTML=
-      '<button class="r1-location-close" type="button" aria-label="Close">×</button>'+
-      '<div class="r1-location-head"><span id="r1LocationStatus"></span><strong id="r1LocationName"></strong></div>'+
+      '<div class="r1-location-head"><div class="r1-location-head-copy"><span id="r1LocationStatus"></span><strong id="r1LocationName"></strong></div><button class="r1-location-close" type="button" aria-label="Close">×</button></div>'+
       '<button class="r1-location-coords" id="r1LocationCoords" type="button"></button>'+
       '<div class="r1-location-meta" id="r1LocationMeta"></div>'+
       '<div class="r1-location-actions">'+
