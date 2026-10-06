@@ -13,21 +13,20 @@ function test(name,fn){
   catch(e){console.error('FAIL',name);throw e;}
 }
 
-test('R1 is the final runtime layer',()=>{
+test('R1 loads explicitly after the legacy runtime layers',()=>{
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
-  assert(sw.includes("html.includes('r1.css')"));
-  assert(sw.includes("html.includes('r1.js')"));
-  assert(sw.includes("v29-stabilize\\.css"));
-  assert(sw.includes("v29-stabilize\\.js"));
-  assert.strictEqual(sw.includes("html.includes('v29-stabilize.css')"),false);
-  assert.strictEqual(sw.includes("html.includes('v29-stabilize.js')"),false);
+  assert(index.includes('href="./r1.css"'));
+  assert(index.includes('src="./r1.js"'));
+  assert(index.indexOf('href="./r1.css"')>index.indexOf('href="./v29.css"'));
+  assert(index.indexOf('src="./r1.js"')>index.indexOf('src="./v29-ui.js"'));
+  assert.strictEqual(sw.includes('injectStableOverlay'),false);
 });
 
-test('R1 remains cached beneath the R2 runtime identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r2-2-gev-hud-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r2-2-gev-hud-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r2-2-gev-hud-20261006-1'));
+test('R1 remains cached beneath the current runtime identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'r2-cleanup-20261006-1';"));
+  assert(index.includes('service-worker.js?v=r2-cleanup-20261006-1'));
+  assert(index.includes('tactical-recon-sw-reload-r2-cleanup-20261006-1'));
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
 });
