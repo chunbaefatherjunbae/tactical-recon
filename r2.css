@@ -327,6 +327,13 @@ body.r2-runtime .sys-telemetry b{
   letter-spacing:.05em;
   text-shadow:0 0 7px var(--r22-glow);
 }
+body.r2-runtime #hudLinkState[data-state="online"]{
+  color:var(--r2-state-active) !important;
+}
+body.r2-runtime #hudLinkState[data-state="offline"]{
+  color:var(--r2-state-warning) !important;
+  text-shadow:none;
+}
 body.r2-runtime #r22GpsHudValue[data-state="off"]{
   color:var(--r2-state-muted) !important;
   text-shadow:none;
