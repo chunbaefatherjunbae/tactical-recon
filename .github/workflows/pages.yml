@@ -32,11 +32,9 @@ jobs:
           node --check v29.js
           node --check v29-ui.js
           node --check v29-storage.js
-          node --check v29-stabilize.js
           node --check r1.js
           node --check r2.js
           node --check service-worker.js
-          node --check test_v29_stabilize.js
           node --check test_r1.js
           node --check test_r2.js
 
