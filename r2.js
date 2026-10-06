@@ -1,8 +1,8 @@
-/* R2.3 runtime: canonical tactical viewport, vertical field controls, hardened position UX. */
+/* R2.3.1 runtime: stable field HUD, corner optic frame, topographic low-data map. */
 (function(root){
   'use strict';
 
-  const VERSION='2.3';
+  const VERSION='2.3.1';
   const DISPLAY_KEY='tactical_recon_location_display_v2';
   const FORMATS=['MGRS','WGS84','ADDRESS'];
   const DEFAULT_DISPLAY={primary:'MGRS',visible:['MGRS','WGS84','ADDRESS'],order:['MGRS','WGS84','ADDRESS']};
@@ -152,7 +152,7 @@
     sheet.innerHTML=
       '<div class="r2-display-shell">'+
         '<div class="r2-display-head">'+
-          '<div><small>R2.3 // POSITION DISPLAY</small><strong id="r2DisplayTitle"></strong></div>'+
+          '<div><small>R2.3.1 // POSITION DISPLAY</small><strong id="r2DisplayTitle"></strong></div>'+
           '<button class="r2-display-close" type="button" aria-label="Close">×</button>'+
         '</div>'+
         '<div class="r2-display-body">'+
@@ -608,7 +608,7 @@
   }
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R2.3 FIELD TERMINAL';
+    document.title='TACTICAL RECON // R2.3.1 FIELD TERMINAL';
     document.body.classList.add('r2-runtime','r23-ui');
     ensureDisplaySettingsSheet();
     if(!installDisplayMenuEntry())setTimeout(installDisplayMenuEntry,80);
@@ -618,7 +618,7 @@
     installReticleOwnership();
     installLocationCardOwnership();
     const records=document.querySelector('#r1RecordsSheet .r1-sheet-head small');
-    if(records)records.textContent='TACTICAL RECON // R2.3';
+    if(records)records.textContent='TACTICAL RECON // R2.3.1';
     new MutationObserver(syncR2Text).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
     root.addEventListener('online',()=>{renderReticlePrimary(true);renderLocationFormats();});
     root.addEventListener('offline',()=>{renderReticlePrimary(false);renderLocationFormats();});
