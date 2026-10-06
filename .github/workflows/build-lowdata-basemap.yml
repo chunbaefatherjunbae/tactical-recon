@@ -1,11 +1,6 @@
 name: Build R1.6 Low Data Basemap
 
 on:
-  push:
-    branches:
-      - r1.6-local-basemap-grid
-    paths:
-      - '.github/workflows/build-lowdata-basemap.yml'
   workflow_dispatch:
 
 permissions:
@@ -15,10 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout branch
+      - name: Checkout selected ref
         uses: actions/checkout@v6
-        with:
-          ref: r1.6-local-basemap-grid
 
       - name: Install OSM tools
         run: |
@@ -45,143 +38,156 @@ jobs:
             -o /tmp/recon-low.raw.geojson \
             --overwrite
 
-      - name: Simplify and package RECON basemap
+      - name: Package RECON low-data basemap
         run: |
           mkdir -p offline
           python3 - <<'PY'
           import json
           from pathlib import Path
           from shapely.geometry import shape, mapping
-          from shapely.ops import unary_union, linemerge
 
           src=Path('/tmp/recon-low.raw.geojson')
           dst=Path('offline/kr-low.geojson')
           raw=json.load(src.open(encoding='utf-8'))
 
-          road_classes=('motorway','trunk','primary')
-          roads={k:[] for k in road_classes}
-          waters=[]
-          coasts=[]
-          boundaries=[]
+          roads={k:[] for k in ('motorway','trunk','primary')}
+          water=[]
+          coast=[]
+          boundary=[]
           places=[]
 
           def safe_shape(feature):
               try:
-                  g=shape(feature.get('geometry'))
-                  return None if g.is_empty else g
+                  geom=shape(feature.get('geometry'))
+                  return None if geom.is_empty else geom
               except Exception:
                   return None
 
-          for f in raw.get('features',[]):
-              p=f.get('properties') or {}
-              g=safe_shape(f)
-              if g is None:
+          for feature in raw.get('features',[]):
+              props=feature.get('properties') or {}
+              geom=safe_shape(feature)
+              if geom is None:
                   continue
-              h=p.get('highway')
-              if h in roads:
-                  roads[h].append(g)
+              highway=props.get('highway')
+              if highway in roads:
+                  roads[highway].append(geom)
                   continue
-              if p.get('waterway') in {'river','canal'}:
-                  waters.append(g)
+              if props.get('waterway') in {'river','canal'}:
+                  water.append(geom)
                   continue
-              if p.get('natural')=='coastline':
-                  coasts.append(g)
+              if props.get('natural')=='coastline':
+                  coast.append(geom)
                   continue
-              if str(p.get('admin_level',''))=='2':
-                  boundaries.append(g)
+              if str(props.get('admin_level',''))=='2':
+                  boundary.append(geom)
                   continue
-              if p.get('place') in {'city','town'}:
-                  name=p.get('name:ko') or p.get('name') or p.get('name:en') or ''
+              if props.get('place') in {'city','town'}:
+                  name=props.get('name:ko') or props.get('name') or props.get('name:en') or ''
                   if not name:
                       continue
-                  props={'kind':'place','class':p.get('place'),'name':name}
+                  out_props={'kind':'place','class':props.get('place'),'name':name}
                   try:
-                      if p.get('population') is not None:
-                          props['population']=int(str(p.get('population')).replace(',',''))
+                      if props.get('population') is not None:
+                          out_props['population']=int(str(props.get('population')).replace(',',''))
                   except Exception:
                       pass
-                  places.append({'type':'Feature','properties':props,'geometry':mapping(g)})
+                  places.append({
+                      'type':'Feature',
+                      'properties':out_props,
+                      'geometry':mapping(geom)
+                  })
 
-          def merged_line_feature(kind,cls,geoms,tolerance):
-              if not geoms:
-                  return None
-              merged=unary_union(geoms)
+          def collect_lines(geom,tolerance):
               try:
-                  if merged.geom_type in ('MultiLineString','GeometryCollection'):
-                      merged=linemerge(merged)
+                  geom=geom.simplify(tolerance,preserve_topology=False)
               except Exception:
-                  pass
-              merged=merged.simplify(tolerance,preserve_topology=False)
-              if merged.is_empty:
+                  return []
+              lines=[]
+              def visit(g):
+                  if g is None or g.is_empty:
+                      return
+                  if g.geom_type=='LineString':
+                      coords=list(g.coords)
+                      if len(coords)>=2:
+                          lines.append(coords)
+                  elif g.geom_type in ('MultiLineString','GeometryCollection'):
+                      for part in g.geoms:
+                          visit(part)
+              visit(geom)
+              return lines
+
+          def packed_lines(kind,cls,geoms,tolerance):
+              coords=[]
+              for geom in geoms:
+                  coords.extend(collect_lines(geom,tolerance))
+              if not coords:
                   return None
               return {
                   'type':'Feature',
                   'properties':{'kind':kind,'class':cls},
-                  'geometry':mapping(merged)
+                  'geometry':{'type':'MultiLineString','coordinates':coords}
               }
 
           out=[]
-          tolerances={
-              'motorway':0.0007,
-              'trunk':0.0009,
-              'primary':0.0013,
-          }
-          for cls in road_classes:
-              feature=merged_line_feature('road',cls,roads[cls],tolerances[cls])
-              if feature: out.append(feature)
+          for cls,tolerance in [('motorway',.0008),('trunk',.0010),('primary',.0015)]:
+              feature=packed_lines('road',cls,roads[cls],tolerance)
+              if feature:
+                  out.append(feature)
 
-          feature=merged_line_feature('water','river',waters,0.0018)
-          if feature: out.append(feature)
-          feature=merged_line_feature('coast','coastline',coasts,0.0012)
-          if feature: out.append(feature)
+          feature=packed_lines('water','river',water,.0020)
+          if feature:
+              out.append(feature)
 
-          if boundaries:
-              merged=unary_union(boundaries).simplify(0.0012,preserve_topology=True)
-              if not merged.is_empty:
-                  out.append({
-                      'type':'Feature',
-                      'properties':{'kind':'boundary','class':'country'},
-                      'geometry':mapping(merged)
-                  })
+          feature=packed_lines('coast','coastline',coast,.0015)
+          if feature:
+              out.append(feature)
+
+          boundary_geometries=[]
+          for geom in boundary:
+              try:
+                  simplified=geom.simplify(.0015,preserve_topology=True)
+                  if not simplified.is_empty:
+                      boundary_geometries.append(mapping(simplified))
+              except Exception:
+                  continue
+          if boundary_geometries:
+              out.append({
+                  'type':'Feature',
+                  'properties':{'kind':'boundary','class':'country'},
+                  'geometry':{'type':'GeometryCollection','geometries':boundary_geometries}
+              })
 
           out.extend(places)
 
-          def quantize(value,digits=5):
+          def quantize(value):
               if isinstance(value,float):
-                  return round(value,digits)
-              if isinstance(value,list):
-                  return [quantize(v,digits) for v in value]
-              if isinstance(value,tuple):
-                  return [quantize(v,digits) for v in value]
+                  return round(value,4)
+              if isinstance(value,(list,tuple)):
+                  return [quantize(v) for v in value]
               if isinstance(value,dict):
-                  return {k:quantize(v,digits) for k,v in value.items()}
+                  return {k:quantize(v) for k,v in value.items()}
               return value
 
           for feature in out:
-              feature['geometry']=quantize(feature['geometry'],4)
+              feature['geometry']=quantize(feature['geometry'])
 
-          fc={
+          final={
               'type':'FeatureCollection',
               'name':'TACTICAL RECON South Korea Low Data Basemap',
               'source':'OpenStreetMap via Geofabrik',
               'license':'ODbL 1.0',
               'features':out
           }
-          dst.write_text(json.dumps(fc,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+          dst.write_text(
+              json.dumps(final,ensure_ascii=False,separators=(',',':')),
+              encoding='utf-8'
+          )
 
-          print('source counts', {
-              'motorway':len(roads['motorway']),
-              'trunk':len(roads['trunk']),
-              'primary':len(roads['primary']),
-              'water':len(waters),
-              'coast':len(coasts),
-              'boundary':len(boundaries),
-              'place':len(places),
-          })
-          print('packaged features',len(out))
-          print('bytes',dst.stat().st_size)
-          if dst.stat().st_size > 9_000_000:
-              raise SystemExit('low-data basemap is still too large')
+          size=dst.stat().st_size
+          print('features',len(out))
+          print('bytes',size)
+          if size>9_000_000:
+              raise SystemExit('low-data basemap exceeds 9 MB')
           PY
 
           cat > offline/NOTICE.txt <<'EOF'
@@ -197,5 +203,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add offline/kr-low.geojson offline/NOTICE.txt
-          git commit -m "Generate South Korea low-data basemap"
-          git push origin HEAD:r1.6-local-basemap-grid
+          if git diff --cached --quiet; then
+            echo "Basemap is already current."
+            exit 0
+          fi
+          git commit -m "Refresh South Korea low-data basemap"
+          git push origin HEAD:${GITHUB_REF_NAME}
