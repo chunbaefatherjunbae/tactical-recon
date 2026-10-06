@@ -118,7 +118,7 @@ test('Network status is named NET and exposes truthful online/offline state styl
 test('R2.2 identifies itself as the new baseline',()=>{
   assert(r2.includes("VERSION='2.2'"));
   assert(r2.includes("document.title='TACTICAL RECON // R2.2 FIELD TERMINAL'"));
-  assert(index.includes('<title>TACTICAL RECON // R2.1 FIELD TERMINAL</title>'));
+  assert(index.includes('<title>TACTICAL RECON // R2.2 FIELD TERMINAL</title>'));
   assert(r2.includes("document.body.classList.add('r2-runtime')"));
 });
 
