@@ -6,6 +6,7 @@ const r2=fs.readFileSync('r2.js','utf8');
 const css=fs.readFileSync('r2.css','utf8');
 const sw=fs.readFileSync('service-worker.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
+const base=fs.readFileSync('app-base.js','utf8');
 const workflow=fs.readFileSync('.github/workflows/pages.yml','utf8');
 
 function test(name,fn){
@@ -112,7 +113,7 @@ test('Low-data grid and place overlays are swapped instead of cleared live',()=>
 
 test('Network status is named NET and exposes truthful online/offline state styling',()=>{
   assert(index.includes('<span>NET <b id="hudLinkState"'));
-  assert(index.includes("el.dataset.state = online ? 'online' : 'offline'"));
+  assert(base.includes("el.dataset.state = online ? 'online' : 'offline'"));
   assert(css.includes('#hudLinkState[data-state="offline"]'));
 });
 
