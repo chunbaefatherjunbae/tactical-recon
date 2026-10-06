@@ -1,0 +1,181 @@
+name: Build R1.6 Low Data Basemap
+
+on:
+  push:
+    branches:
+      - r1.6-local-basemap-grid
+    paths:
+      - '.github/workflows/build-lowdata-basemap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          ref: r1.6-local-basemap-grid
+
+      - name: Install OSM tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osmium-tool
+
+      - name: Download South Korea OSM extract
+        run: |
+          curl -L --fail --retry 3 \
+            https://download.geofabrik.de/asia/south-korea-latest.osm.pbf \
+            -o /tmp/south-korea.osm.pbf
+
+      - name: Extract low-data features
+        run: |
+          osmium tags-filter /tmp/south-korea.osm.pbf \
+            w/highway=motorway,trunk,primary,secondary,tertiary \
+            w/waterway=river,canal \
+            n/place=city,town \
+            r/admin_level=2 \
+            w/natural=coastline \
+            -o /tmp/recon-low.osm.pbf --overwrite
+          osmium export /tmp/recon-low.osm.pbf \
+            -f geojson \
+            -o /tmp/recon-low.raw.geojson \
+            --overwrite
+
+      - name: Simplify and package RECON basemap
+        run: |
+          mkdir -p offline
+          python3 - <<'PY'
+          import json, math, os
+          from pathlib import Path
+
+          src=Path('/tmp/recon-low.raw.geojson')
+          dst=Path('offline/kr-low.geojson')
+
+          def point_line_distance(p,a,b):
+              x,y=p; x1,y1=a; x2,y2=b
+              dx=x2-x1; dy=y2-y1
+              if dx==0 and dy==0:
+                  return math.hypot(x-x1,y-y1)
+              t=((x-x1)*dx+(y-y1)*dy)/(dx*dx+dy*dy)
+              t=max(0,min(1,t))
+              px=x1+t*dx; py=y1+t*dy
+              return math.hypot(x-px,y-py)
+
+          def dp(points,eps):
+              if len(points)<=2: return points
+              a,b=points[0],points[-1]
+              idx=-1; dist=0.0
+              for i,p in enumerate(points[1:-1],1):
+                  d=point_line_distance(p,a,b)
+                  if d>dist: idx=i; dist=d
+              if dist<=eps or idx<0:
+                  return [a,b]
+              left=dp(points[:idx+1],eps)
+              right=dp(points[idx:],eps)
+              return left[:-1]+right
+
+          def simplify_ring(points,eps):
+              if len(points)<4: return points
+              closed=points[0]==points[-1]
+              base=points[:-1] if closed else points
+              out=dp(base,eps)
+              if closed:
+                  if len(out)<3: out=base[:3]
+                  if out[0]!=out[-1]: out.append(out[0])
+              return out
+
+          def simplify_geom(g,eps):
+              if not g: return g
+              t=g.get('type'); c=g.get('coordinates')
+              if t=='LineString': c=dp(c,eps)
+              elif t=='MultiLineString': c=[dp(x,eps) for x in c if len(x)>=2]
+              elif t=='Polygon': c=[simplify_ring(r,eps) for r in c if len(r)>=4]
+              elif t=='MultiPolygon':
+                  c=[[simplify_ring(r,eps) for r in poly if len(r)>=4] for poly in c]
+              return {'type':t,'coordinates':c}
+
+          raw=json.load(src.open(encoding='utf-8'))
+          out=[]
+          counts={}
+
+          for f in raw.get('features',[]):
+              p=f.get('properties') or {}
+              g=f.get('geometry')
+              kind=None; cls=None; eps=.0015
+
+              h=p.get('highway')
+              if h in {'motorway','trunk','primary','secondary','tertiary'}:
+                  kind='road'; cls=h
+                  eps={'motorway':.0006,'trunk':.0007,'primary':.0009,'secondary':.0012,'tertiary':.0018}[h]
+              elif p.get('waterway') in {'river','canal'}:
+                  kind='water'; cls=p.get('waterway'); eps=.0012
+              elif p.get('place') in {'city','town'}:
+                  kind='place'; cls=p.get('place'); eps=0
+              elif p.get('natural')=='coastline':
+                  kind='coast'; cls='coastline'; eps=.0008
+              elif str(p.get('admin_level',''))=='2':
+                  kind='boundary'; cls='country'; eps=.0008
+              else:
+                  continue
+
+              name=p.get('name:ko') or p.get('name') or p.get('name:en') or ''
+              props={'kind':kind,'class':cls}
+              if name: props['name']=name
+              if kind=='place':
+                  pop=p.get('population')
+                  try:
+                      if pop is not None: props['population']=int(str(pop).replace(',',''))
+                  except Exception:
+                      pass
+
+              geom=g if eps==0 else simplify_geom(g,eps)
+              if not geom: continue
+              out.append({'type':'Feature','properties':props,'geometry':geom})
+              counts[kind]=counts.get(kind,0)+1
+
+          fc={
+              'type':'FeatureCollection',
+              'name':'TACTICAL RECON South Korea Low Data Basemap',
+              'source':'OpenStreetMap via Geofabrik',
+              'license':'ODbL 1.0',
+              'features':out
+          }
+
+          dst.write_text(json.dumps(fc,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+
+          # If the first pass is too large, remove tertiary roads and simplify secondary roads harder.
+          if dst.stat().st_size > 12_000_000:
+              compact=[]
+              for f in out:
+                  p=f['properties']
+                  if p.get('kind')=='road' and p.get('class')=='tertiary':
+                      continue
+                  if p.get('kind')=='road' and p.get('class')=='secondary':
+                      f={**f,'geometry':simplify_geom(f['geometry'],.002)}
+                  compact.append(f)
+              fc['features']=compact
+              dst.write_text(json.dumps(fc,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+
+          print('features', counts)
+          print('bytes', dst.stat().st_size)
+          PY
+
+          cat > offline/NOTICE.txt <<'EOF'
+          TACTICAL RECON low-data basemap
+          Contains information from OpenStreetMap, available under the Open Database License (ODbL).
+          Source extract: Geofabrik South Korea.
+          https://www.openstreetmap.org/copyright
+          https://download.geofabrik.de/asia/south-korea.html
+          EOF
+
+      - name: Commit generated basemap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add offline/kr-low.geojson offline/NOTICE.txt
+          git commit -m "Generate South Korea low-data basemap"
+          git push origin HEAD:r1.6-local-basemap-grid
