@@ -5,6 +5,8 @@ const r1=fs.readFileSync('r1.js','utf8');
 const css=fs.readFileSync('r1.css','utf8');
 const sw=fs.readFileSync('service-worker.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
+const lowDataPath='offline/kr-low.geojson';
+const lowData=JSON.parse(fs.readFileSync(lowDataPath,'utf8'));
 
 function test(name,fn){
   try{fn();console.log('PASS',name);}
@@ -23,9 +25,9 @@ test('R1 is the final runtime layer',()=>{
 });
 
 test('PWA cache identity moved to R1',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r1-5-map-shell-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r1-5-map-shell-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r1-5-map-shell-20261006-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r1-6-local-map-20261006-1';"));
+  assert(index.includes('service-worker.js?v=r1-6-local-map-20261006-1'));
+  assert(index.includes('tactical-recon-sw-reload-r1-6-local-map-20261006-1'));
 });
 
 test('Home bar is RECON SITES RECORDS MENU',()=>{
@@ -164,8 +166,9 @@ test('R1.4 removes fake REC state from the top bar',()=>{
 
 test('R1.4 restores V-series reticle visibility',()=>{
   assert(r1.includes("'r14-ui'"));
-  assert(r1.includes('R1.5 FIELD TERMINAL'));
+  assert(r1.includes('R1.6 FIELD TERMINAL'));
   assert(r1.includes("'r15-ui'"));
+  assert(r1.includes("'r16-ui'"));
   assert(css.includes('body.r14-ui .reticle-container'));
   assert(css.includes('width:112px !important'));
   assert(css.includes('height:112px !important'));
@@ -193,15 +196,40 @@ test('R1.4 corners use screen edges and scale is bottom-center',()=>{
   assert(css.includes('transform:translateX(-50%) !important'));
 });
 
-test('R1.5 low-data mode keeps the Leaflet map and suppresses only network tiles',()=>{
+test('R1.6 low-data mode keeps one Leaflet map with a local OSM basemap',()=>{
   assert(r1.includes('function isNetworkTileLayer(layer)'));
-  assert(r1.includes('function ensureLightMapGridLayer()'));
   assert(r1.includes('function suppressLightMapNetworkTiles()'));
-  assert(r1.includes("document.body.classList.add('r15-light-map')"));
-  assert(r1.includes("document.body.classList.remove('r15-light-map')"));
+  assert(r1.includes("const LOW_DATA_MAP_URL='./offline/kr-low.geojson'"));
+  assert(r1.includes('function loadLowDataBasemap()'));
+  assert(r1.includes("fetch(LOW_DATA_MAP_URL,{cache:'force-cache'})"));
+  assert(r1.includes("document.body.classList.add('r15-light-map','r16-light-map')"));
+  assert(r1.includes("document.body.classList.remove('r15-light-map','r16-light-map')"));
+  assert.strictEqual(r1.includes("L.GridLayer.extend"),false);
   assert.strictEqual(r1.includes("id='v29LightMap'"),false);
-  assert(css.includes('.r15-low-data-tile'));
-  assert(css.includes('body.r15-light-map #map'));
+  assert(css.includes('body.r16-light-map #map'));
+  assert(sw.includes("'./offline/kr-low.geojson'"));
+});
+
+test('R1.6 low-data basemap is compact, truthful and includes real context layers',()=>{
+  assert(fs.statSync(lowDataPath).size<9000000);
+  assert.strictEqual(lowData.type,'FeatureCollection');
+  assert.strictEqual(lowData.source,'OpenStreetMap via Geofabrik');
+  assert.strictEqual(lowData.license,'ODbL 1.0');
+  const kinds=new Set(lowData.features.map(f=>f?.properties?.kind));
+  ['road','water','coast','boundary','place'].forEach(kind=>assert(kinds.has(kind)));
+  const roads=lowData.features.filter(f=>f?.properties?.kind==='road').map(f=>f.properties.class).sort();
+  assert.deepStrictEqual(roads,['motorway','primary','trunk']);
+});
+
+test('R1.6 grid is geographic rather than a decorative tile pattern',()=>{
+  assert(r1.includes('function lowDataGridStep(bounds)'));
+  assert(r1.includes('function lowDataGridLabel(value,axis,decimals)'));
+  assert(r1.includes('function renderLowDataCoordinateGrid()'));
+  assert(r1.includes("bounds=map.getBounds().pad(.18)"));
+  assert(r1.includes("L.polyline([[v,west],[v,east]],style)"));
+  assert(r1.includes("L.polyline([[south,v],[north,v]],style)"));
+  assert(css.includes('.r16-grid-label'));
+  assert(css.includes('.r16-low-place-label'));
 });
 
 test('R1.5 HUD uses a fixed semantic slot instead of an empty BRG placeholder',()=>{

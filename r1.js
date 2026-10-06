@@ -1609,8 +1609,18 @@
   let missionMapMode=false;
   let lightMapOpen=false;
   let lightMapGridLayer=null;
+  let lightMapBaseLayer=null;
+  let lightMapBaseData=null;
+  let lightMapBasePromise=null;
+  let lightMapPlaceLayer=null;
+  let lightMapBaseRenderer=null;
+  let lightMapLabelRenderer=null;
+  let lightMapAttributionAdded=false;
   let lightMapSuppressedTiles=[];
   let lightMapGuardInstalled=false;
+  let lightMapRefreshInstalled=false;
+  const LOW_DATA_MAP_URL='./offline/kr-low.geojson';
+  const LOW_DATA_ATTRIBUTION='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
   let activeOverlayType='REFERENCE';
   let overlaySeenCount=0;
   let overlaySeenPlanId='';
@@ -2170,24 +2180,250 @@
     if(!lightMapSuppressedTiles.includes(layer))lightMapSuppressedTiles.push(layer);
   }
 
+  function lowDataColor(){
+    try{
+      const color=typeof getOpticColor==='function'?getOpticColor():null;
+      if(color)return color;
+    }catch(e){}
+    try{
+      const style=getComputedStyle(document.body);
+      return style.getPropertyValue('--field-active').trim()||style.getPropertyValue('--accent').trim()||'#9ad6a4';
+    }catch(e){return '#9ad6a4';}
+  }
+
+  function ensureLowDataPanes(){
+    if(typeof map==='undefined'||!map?.createPane)return;
+    const panes=[
+      ['r16LowDataBasePane','205'],
+      ['r16LowDataGridPane','225'],
+      ['r16LowDataLabelPane','240']
+    ];
+    panes.forEach(([name,z])=>{
+      const pane=map.getPane(name)||map.createPane(name);
+      pane.style.zIndex=z;
+      pane.style.pointerEvents='none';
+    });
+  }
+
+  function lowDataGridStep(bounds){
+    const span=Math.max(
+      Math.abs(bounds.getNorth()-bounds.getSouth()),
+      Math.abs(bounds.getEast()-bounds.getWest())
+    );
+    const target=Math.max(span/6,0.0001);
+    const steps=[0.0002,0.0005,0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10];
+    return steps.find(step=>step>=target)||10;
+  }
+
+  function lowDataGridDecimals(step){
+    if(step>=1)return 0;
+    if(step>=.1)return 1;
+    if(step>=.01)return 2;
+    if(step>=.001)return 3;
+    return 4;
+  }
+
+  function lowDataGridLabel(value,axis,decimals){
+    const hemi=axis==='lat'?(value>=0?'N':'S'):(value>=0?'E':'W');
+    return Math.abs(value).toFixed(decimals)+'°'+hemi;
+  }
+
   function ensureLightMapGridLayer(){
-    if(lightMapGridLayer||typeof L==='undefined'||typeof map==='undefined'||!L.GridLayer)return lightMapGridLayer;
-    const LowDataGrid=L.GridLayer.extend({
-      createTile(){
-        const tile=L.DomUtil.create('div','r15-low-data-tile');
-        tile.setAttribute('aria-hidden','true');
-        return tile;
-      }
-    });
-    lightMapGridLayer=new LowDataGrid({
-      pane:'tilePane',
-      minZoom:2,
-      maxZoom:22,
-      keepBuffer:2,
-      updateWhenIdle:false,
-      updateWhenZooming:true
-    });
+    if(lightMapGridLayer||typeof L==='undefined'||typeof map==='undefined')return lightMapGridLayer;
+    ensureLowDataPanes();
+    lightMapGridLayer=L.layerGroup();
     return lightMapGridLayer;
+  }
+
+  function renderLowDataCoordinateGrid(){
+    const layer=ensureLightMapGridLayer();
+    if(!layer||!lightMapOpen||typeof map==='undefined')return;
+    layer.clearLayers();
+
+    const bounds=map.getBounds().pad(.18);
+    const step=lowDataGridStep(bounds);
+    const decimals=lowDataGridDecimals(step);
+    const color=lowDataColor();
+    const south=bounds.getSouth(),north=bounds.getNorth(),west=bounds.getWest(),east=bounds.getEast();
+    const size=map.getSize();
+    const leftLabelLon=map.containerPointToLatLng([12,Math.max(120,size.y*.45)]).lng;
+    const bottomLabelLat=map.containerPointToLatLng([Math.max(80,size.x*.45),Math.max(120,size.y-92)]).lat;
+    const style={pane:'r16LowDataGridPane',color,weight:.7,opacity:.18,interactive:false};
+
+    let lat=Math.ceil((south-1e-10)/step)*step;
+    let guard=0;
+    while(lat<=north+1e-10&&guard++<24){
+      const v=Number(lat.toFixed(8));
+      L.polyline([[v,west],[v,east]],style).addTo(layer);
+      const label=lowDataGridLabel(v,'lat',decimals);
+      L.marker([v,leftLabelLon],{
+        pane:'r16LowDataLabelPane',
+        interactive:false,
+        keyboard:false,
+        icon:L.divIcon({className:'r16-grid-label r16-grid-label-lat',html:'<span>'+label+'</span>',iconSize:null})
+      }).addTo(layer);
+      lat+=step;
+    }
+
+    let lon=Math.ceil((west-1e-10)/step)*step;
+    guard=0;
+    while(lon<=east+1e-10&&guard++<24){
+      const v=Number(lon.toFixed(8));
+      L.polyline([[south,v],[north,v]],style).addTo(layer);
+      const label=lowDataGridLabel(v,'lon',decimals);
+      L.marker([bottomLabelLat,v],{
+        pane:'r16LowDataLabelPane',
+        interactive:false,
+        keyboard:false,
+        icon:L.divIcon({className:'r16-grid-label r16-grid-label-lon',html:'<span>'+label+'</span>',iconSize:null})
+      }).addTo(layer);
+      lon+=step;
+    }
+
+    if(!map.hasLayer(layer))layer.addTo(map);
+  }
+
+  function lowDataFeatureStyle(feature){
+    const p=feature?.properties||{};
+    const kind=p.kind;
+    const cls=p.class;
+    const color=lowDataColor();
+    if(kind==='road'){
+      const road={
+        motorway:{weight:2.1,opacity:.48},
+        trunk:{weight:1.7,opacity:.40},
+        primary:{weight:1.25,opacity:.31}
+      }[cls]||{weight:1,opacity:.24};
+      return {pane:'r16LowDataBasePane',renderer:lightMapBaseRenderer,color,weight:road.weight,opacity:road.opacity,fill:false,interactive:false};
+    }
+    if(kind==='water')return {pane:'r16LowDataBasePane',renderer:lightMapBaseRenderer,color,weight:1,opacity:.26,fill:false,interactive:false};
+    if(kind==='coast')return {pane:'r16LowDataBasePane',renderer:lightMapBaseRenderer,color,weight:1.15,opacity:.52,fill:false,interactive:false};
+    if(kind==='boundary')return {pane:'r16LowDataBasePane',renderer:lightMapBaseRenderer,color,weight:.8,opacity:.24,dashArray:'6 5',fillColor:color,fillOpacity:.018,interactive:false};
+    return {pane:'r16LowDataBasePane',renderer:lightMapBaseRenderer,color,weight:.7,opacity:.18,fill:false,interactive:false};
+  }
+
+  function ensureLowDataBaseLayer(){
+    if(lightMapBaseLayer||!lightMapBaseData||typeof L==='undefined'||typeof map==='undefined')return lightMapBaseLayer;
+    ensureLowDataPanes();
+    lightMapBaseRenderer=L.canvas({pane:'r16LowDataBasePane',padding:.35});
+    lightMapLabelRenderer=L.canvas({pane:'r16LowDataLabelPane',padding:.35});
+    const baseFeatures=(lightMapBaseData.features||[]).filter(f=>f?.properties?.kind!=='place');
+    lightMapBaseLayer=L.geoJSON({type:'FeatureCollection',features:baseFeatures},{
+      filter:feature=>feature?.properties?.kind!=='place',
+      style:lowDataFeatureStyle,
+      interactive:false
+    });
+    return lightMapBaseLayer;
+  }
+
+  function lowDataPlaceFeatures(){
+    return (lightMapBaseData?.features||[]).filter(f=>f?.properties?.kind==='place'&&f?.geometry?.type==='Point');
+  }
+
+  function refreshLowDataPlaces(){
+    if(!lightMapOpen||!lightMapBaseData||typeof L==='undefined'||typeof map==='undefined')return;
+    ensureLowDataPanes();
+    if(!lightMapPlaceLayer)lightMapPlaceLayer=L.layerGroup();
+    lightMapPlaceLayer.clearLayers();
+
+    const zoom=map.getZoom();
+    if(zoom<7){
+      if(!map.hasLayer(lightMapPlaceLayer))lightMapPlaceLayer.addTo(map);
+      return;
+    }
+
+    const bounds=map.getBounds().pad(.08);
+    const limit=zoom<9?18:(zoom<11?32:56);
+    const candidates=lowDataPlaceFeatures()
+      .filter(feature=>{
+        if(zoom<9&&feature.properties?.class!=='city')return false;
+        const c=feature.geometry.coordinates;
+        return Array.isArray(c)&&c.length>=2&&bounds.contains([Number(c[1]),Number(c[0])]);
+      })
+      .sort((a,b)=>{
+        const ac=a.properties?.class==='city'?0:1;
+        const bc=b.properties?.class==='city'?0:1;
+        if(ac!==bc)return ac-bc;
+        return Number(b.properties?.population||0)-Number(a.properties?.population||0);
+      })
+      .slice(0,limit);
+
+    const color=lowDataColor();
+    candidates.forEach(feature=>{
+      const c=feature.geometry.coordinates;
+      const name=String(feature.properties?.name||'').trim();
+      if(!name)return;
+      const radius=feature.properties?.class==='city'?2.5:1.8;
+      const marker=L.circleMarker([Number(c[1]),Number(c[0])],{
+        pane:'r16LowDataLabelPane',
+        renderer:lightMapLabelRenderer||lightMapBaseRenderer,
+        radius,
+        weight:.8,
+        color,
+        opacity:.48,
+        fillColor:color,
+        fillOpacity:.28,
+        interactive:false
+      });
+      marker.bindTooltip(name,{
+        permanent:true,
+        direction:'right',
+        offset:[4,0],
+        opacity:1,
+        className:'r16-low-place-label',
+        pane:'r16LowDataLabelPane'
+      });
+      marker.addTo(lightMapPlaceLayer);
+    });
+
+    if(!map.hasLayer(lightMapPlaceLayer))lightMapPlaceLayer.addTo(map);
+  }
+
+  function refreshLowDataBaseStyle(){
+    if(!lightMapBaseLayer)return;
+    lightMapBaseLayer.setStyle?.(lowDataFeatureStyle);
+    refreshLowDataPlaces();
+  }
+
+  function loadLowDataBasemap(){
+    if(lightMapBaseData){
+      const layer=ensureLowDataBaseLayer();
+      if(lightMapOpen&&layer&&!map.hasLayer(layer))layer.addTo(map);
+      refreshLowDataBaseStyle();
+      return Promise.resolve(lightMapBaseData);
+    }
+    if(lightMapBasePromise)return lightMapBasePromise;
+    lightMapBasePromise=fetch(LOW_DATA_MAP_URL,{cache:'force-cache'})
+      .then(response=>{
+        if(!response.ok)throw new Error('LOW_DATA_MAP_HTTP_'+response.status);
+        return response.json();
+      })
+      .then(data=>{
+        if(!data||data.type!=='FeatureCollection'||!Array.isArray(data.features))throw new Error('LOW_DATA_MAP_INVALID');
+        lightMapBaseData=data;
+        const layer=ensureLowDataBaseLayer();
+        if(lightMapOpen&&layer&&!map.hasLayer(layer))layer.addTo(map);
+        if(lightMapOpen)refreshLowDataPlaces();
+        return data;
+      })
+      .catch(error=>{
+        lightMapBasePromise=null;
+        if(lightMapOpen)notify(lang()==='ko'?'로컬 경량지도 불러오기 실패 · 좌표 그리드만 표시':'LOCAL BASEMAP UNAVAILABLE · GRID ONLY','warn',3600);
+        throw error;
+      });
+    return lightMapBasePromise;
+  }
+
+  function installLowDataRefreshHooks(){
+    if(lightMapRefreshInstalled||typeof map==='undefined'||!map?.on)return;
+    lightMapRefreshInstalled=true;
+    const refresh=()=>{
+      if(!lightMapOpen)return;
+      renderLowDataCoordinateGrid();
+      refreshLowDataBaseStyle();
+    };
+    map.on('moveend',refresh);
+    map.on('zoomend',refresh);
   }
 
   function suppressLightMapNetworkTiles(){
@@ -2215,10 +2451,15 @@
 
   function renderLightMap(){
     if(!lightMapOpen)return;
-    const grid=ensureLightMapGridLayer();
     suppressLightMapNetworkTiles();
-    if(grid&&!map.hasLayer(grid))grid.addTo(map);
-    document.body.classList.add('r15-light-map');
+    installLowDataRefreshHooks();
+    document.body.classList.add('r15-light-map','r16-light-map');
+    renderLowDataCoordinateGrid();
+    loadLowDataBasemap().catch(()=>{});
+    if(!lightMapAttributionAdded&&map.attributionControl){
+      map.attributionControl.addAttribution(LOW_DATA_ATTRIBUTION);
+      lightMapAttributionAdded=true;
+    }
     if(typeof updateMapScale==='function')updateMapScale();
     scheduleR12OverlayLayout();
   }
@@ -2236,8 +2477,14 @@
   function closeLightMap(){
     if(!lightMapOpen){syncMapModeButtons();return;}
     lightMapOpen=false;
-    document.body.classList.remove('r15-light-map');
+    document.body.classList.remove('r15-light-map','r16-light-map');
     if(lightMapGridLayer&&map?.hasLayer?.(lightMapGridLayer))map.removeLayer(lightMapGridLayer);
+    if(lightMapBaseLayer&&map?.hasLayer?.(lightMapBaseLayer))map.removeLayer(lightMapBaseLayer);
+    if(lightMapPlaceLayer&&map?.hasLayer?.(lightMapPlaceLayer))map.removeLayer(lightMapPlaceLayer);
+    if(lightMapAttributionAdded&&map.attributionControl){
+      map.attributionControl.removeAttribution(LOW_DATA_ATTRIBUTION);
+      lightMapAttributionAdded=false;
+    }
     const restore=[...lightMapSuppressedTiles];
     lightMapSuppressedTiles=[];
     restore.forEach(layer=>{
@@ -2977,8 +3224,8 @@
 
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R1.5 FIELD TERMINAL';
-    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui','r12-ui','r13-ui','r14-ui','r15-ui');
+    document.title='TACTICAL RECON // R1.6 FIELD TERMINAL';
+    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui','r12-ui','r13-ui','r14-ui','r15-ui','r16-ui');
     installLastFix();
     installUnifiedSearch();
     installSearchCloseReliability();

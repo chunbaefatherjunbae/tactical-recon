@@ -11,6 +11,7 @@ on:
       - r1.4-visual-correction
       - r1.4.1-mobile-reticle
       - r1.5-map-hud-reticle
+      - r1.6-local-basemap-grid
   workflow_dispatch:
 
 permissions:
