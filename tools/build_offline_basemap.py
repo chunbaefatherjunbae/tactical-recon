@@ -47,14 +47,14 @@ SOURCES = [
         "group": "10m_physical",
         "layer": "lake",
         "simplify": 0.008,
-        "rank_max": 6,
+        "rank_max": None,
     },
     {
         "name": "ne_10m_rivers_lake_centerlines",
         "group": "10m_physical",
         "layer": "river",
         "simplify": 0.008,
-        "rank_max": 7,
+        "rank_max": 9,
     },
     {
         "name": "ne_10m_admin_1_states_provinces_lines",
@@ -168,7 +168,10 @@ def read_features(shp_path: Path, cfg: dict) -> list[dict]:
     features: list[dict] = []
     for item in reader.iterShapeRecords():
         shp = item.shape
-        if not bbox_intersects(shp.bbox if len(shp.bbox) == 4 else BBOX):
+        if getattr(shp, "shapeType", None) == shapefile.NULL:
+            continue
+        raw_bbox = getattr(shp, "bbox", None)
+        if raw_bbox is not None and len(raw_bbox) == 4 and not bbox_intersects(raw_bbox):
             continue
         props = item.record.as_dict()
         rank = feature_rank(props)
