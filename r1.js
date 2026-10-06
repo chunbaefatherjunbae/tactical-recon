@@ -15,7 +15,7 @@
   const BACKUP_FORMAT='TACTICAL_RECON_BACKUP';
   const BACKUP_VERSION=1;
   const FREE_PLAN_KEY='tactical_recon_free_track_plan_v1';
-  const WORKING_GRID_KEY='tactical_recon_working_grid_v1';
+  const WORKING_GRID_KEY='tactical_recon_working_grid_v2';
 
   let installed=false;
   let pickerMode=null;
