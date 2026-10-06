@@ -1,0 +1,266 @@
+/* R2.0 // MAP + POSITION + ACTION
+   Final runtime layer above R1.6. Keeps legacy DOM IDs intact while reducing
+   permanent map chrome and moving detail into the unified position card. */
+
+body.r2-runtime .telemetry-osd{
+  width:min(232px,calc(100vw - 82px)) !important;
+  padding:6px 9px !important;
+  gap:3px !important;
+}
+body.r2-runtime .telemetry-osd .osd-head{
+  min-height:14px;
+}
+body.r2-runtime .telemetry-osd #currentOpticLabel{
+  display:none !important;
+}
+body.r2-runtime .telemetry-osd .osd-mgrs-btn{
+  border-top:1px solid var(--field-line) !important;
+  border-bottom:0 !important;
+  padding:6px 0 1px !important;
+  cursor:pointer;
+  min-height:42px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+body.r2-runtime .telemetry-osd .osd-mgrs-val{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:100%;
+}
+body.r2-runtime .telemetry-osd .osd-subgrid{
+  display:none !important;
+}
+body.r2-runtime .r2-legacy-coords{
+  display:none !important;
+}
+
+.r2-location-formats{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+.r2-location-format{
+  width:100%;
+  min-height:44px;
+  display:grid;
+  grid-template-columns:54px minmax(0,1fr) 42px;
+  align-items:center;
+  gap:8px;
+  padding:7px 8px;
+  border:1px solid var(--field-line,var(--border));
+  background:rgba(0,0,0,.22);
+  color:var(--field-text,var(--text-main));
+  font-family:var(--font-mono);
+  text-align:left;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.r2-location-format.primary{
+  border-color:var(--field-active,var(--accent));
+  background:rgba(255,255,255,.035);
+}
+.r2-location-format-label{
+  color:var(--field-dim,var(--text-dim));
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.8px;
+}
+.r2-location-format.primary .r2-location-format-label{
+  color:var(--field-active,var(--accent));
+}
+.r2-location-format-value{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--field-text,var(--text-main));
+  font-size:10px;
+  font-weight:800;
+}
+.r2-location-format-copy{
+  color:var(--field-active,var(--accent));
+  font-size:7px;
+  font-weight:900;
+  text-align:right;
+  letter-spacing:.5px;
+}
+.r2-location-copy-all{
+  min-height:40px;
+  border:1px solid var(--field-line,var(--border));
+  background:transparent;
+  color:var(--field-dim,var(--text-dim));
+  font:800 8px var(--font-mono);
+  letter-spacing:.5px;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.r2-location-source{
+  margin-top:-3px;
+  color:var(--field-dim,var(--text-dim));
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.8px;
+}
+
+.r2-display-sheet{
+  position:fixed;
+  inset:0;
+  z-index:5100;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  padding:max(12px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));
+  background:rgba(0,0,0,.64);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+.r2-display-sheet[hidden]{display:none !important;}
+.r2-display-shell{
+  width:min(520px,100%);
+  max-height:min(78dvh,620px);
+  overflow:auto;
+  background:var(--field-panel-solid,var(--bg-panel));
+  border:1px solid var(--field-line-strong,var(--border-accent));
+  box-shadow:0 10px 34px rgba(0,0,0,.72);
+  color:var(--field-text,var(--text-main));
+}
+.r2-display-head{
+  min-height:58px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:9px 10px 9px 12px;
+  border-bottom:1px solid var(--field-line,var(--border));
+}
+.r2-display-head small{
+  display:block;
+  color:var(--field-dim,var(--text-dim));
+  font:800 7px var(--font-mono);
+  letter-spacing:1px;
+}
+.r2-display-head strong{
+  display:block;
+  margin-top:3px;
+  color:var(--field-active,var(--accent));
+  font:900 13px var(--font-mono);
+}
+.r2-display-close{
+  width:44px;
+  height:44px;
+  flex:0 0 44px;
+  border:1px solid var(--field-line,var(--border));
+  background:transparent;
+  color:var(--field-active,var(--accent));
+  font:400 24px/1 var(--font-mono);
+  cursor:pointer;
+}
+.r2-display-body{
+  padding:12px;
+}
+.r2-primary-field{
+  display:grid;
+  grid-template-columns:100px minmax(0,1fr);
+  align-items:center;
+  gap:10px;
+  min-height:48px;
+}
+.r2-primary-field > span,
+.r2-display-section-title{
+  color:var(--field-dim,var(--text-dim));
+  font:900 8px var(--font-mono);
+  letter-spacing:.8px;
+}
+.r2-primary-field select{
+  width:100%;
+  min-height:44px;
+  padding:0 9px;
+  border:1px solid var(--field-line,var(--border));
+  background:#07100a;
+  color:var(--field-text,var(--text-main));
+  font:800 10px var(--font-mono);
+}
+.r2-display-section-title{
+  margin:14px 0 6px;
+}
+.r2-format-rows{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+.r2-format-row{
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:4px 5px 4px 10px;
+  border:1px solid var(--field-line,var(--border));
+  background:rgba(0,0,0,.16);
+}
+.r2-format-check{
+  flex:1;
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:var(--field-text,var(--text-main));
+  font:800 10px var(--font-mono);
+  cursor:pointer;
+}
+.r2-format-check input{
+  width:18px;
+  height:18px;
+  accent-color:var(--field-active,var(--accent));
+}
+.r2-format-moves{
+  display:flex;
+  gap:4px;
+}
+.r2-format-moves button{
+  width:44px;
+  height:40px;
+  border:1px solid var(--field-line,var(--border));
+  background:transparent;
+  color:var(--field-active,var(--accent));
+  font:900 16px var(--font-mono);
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.r2-format-moves button:disabled{
+  opacity:.25;
+}
+.r2-display-note{
+  margin-top:12px;
+  color:var(--field-dim,var(--text-dim));
+  font:500 8px/1.55 var(--font-mono);
+  letter-spacing:.15px;
+}
+body.r2-display-open{
+  overflow:hidden;
+}
+
+@media (max-width:768px){
+  body.r2-runtime .telemetry-osd{
+    top:50px !important;
+    left:10px !important;
+    width:min(206px,calc(100vw - 72px)) !important;
+  }
+  .r2-display-sheet{
+    padding-left:0;
+    padding-right:0;
+    padding-bottom:0;
+  }
+  .r2-display-shell{
+    width:100%;
+    max-height:82dvh;
+    border-left:0;
+    border-right:0;
+    border-bottom:0;
+  }
+  .r2-location-format{
+    grid-template-columns:50px minmax(0,1fr) 40px;
+  }
+}
