@@ -13,19 +13,20 @@ function test(name,fn){
   catch(e){console.error('FAIL',name);throw e;}
 }
 
-test('R2 is the final runtime layer above R1',()=>{
+test('R2 is the final explicit runtime layer above R1',()=>{
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
   assert(sw.includes("'./r2.css'"));
   assert(sw.includes("'./r2.js'"));
-  assert(sw.indexOf("html.includes('r2.css')")>sw.indexOf("html.includes('r1.css')"));
-  assert(sw.indexOf("html.includes('r2.js')")>sw.indexOf("html.includes('r1.js')"));
+  assert(index.indexOf('href="./r2.css"')>index.indexOf('href="./r1.css"'));
+  assert(index.indexOf('src="./r2.js"')>index.indexOf('src="./r1.js"'));
+  assert.strictEqual(sw.includes('injectStableOverlay'),false);
 });
 
-test('R2.2 uses a new cache identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r2-2-gev-hud-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r2-2-gev-hud-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r2-2-gev-hud-20261006-1'));
+test('Cleanup runtime uses a new cache identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'r2-cleanup-20261006-1';"));
+  assert(index.includes('service-worker.js?v=r2-cleanup-20261006-1'));
+  assert(index.includes('tactical-recon-sw-reload-r2-cleanup-20261006-1'));
 });
 
 test('R2 location display preferences separate primary, visibility and order',()=>{
