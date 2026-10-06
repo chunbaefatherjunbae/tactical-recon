@@ -57,10 +57,12 @@ test('Emergency NAV separates GRID TRUE MAG and model metadata',()=>{
   assert(ui.includes("t('mag')"));
 });
 
-test('Emergency map has no tile or network dependency',()=>{
-  assert(ui.includes('renderEmergencyMap'));
-  assert(ui.includes('<svg viewBox='));
-  assert.strictEqual(/fetch\(|tileLayer\(/.test(ui.slice(ui.indexOf('function renderEmergencyMap'))),false);
+test('Emergency navigation no longer creates a duplicate map surface',()=>{
+  assert.strictEqual(ui.includes('function renderEmergencyMap'),false);
+  assert.strictEqual(ui.includes('id="v29EmergencyMap"'),false);
+  assert(ui.includes('v29EmergencyReadout'));
+  assert(ui.includes("root.v29Stabilize?.openLightMap"));
+  assert(ui.includes("?'경량지도':'LOW DATA'"));
 });
 
 test('Online map failure exposes automatic emergency fallback',()=>{
