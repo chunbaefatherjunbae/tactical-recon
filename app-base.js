@@ -662,19 +662,17 @@ window.__reconRotateUnavailable = true;
       const hudLabel = document.getElementById('hudPrimaryLabel');
       const ref = getReferencePosition();
       const refShort = ref?.type === 'LAST_FIX' ? 'LAST' : (ref?.type === 'TEMP' ? 'TEMP' : (ref?.type === 'GPS' ? 'GPS' : (ref?.type || 'NONE')));
+      if (hudLabel) hudLabel.innerText = 'REF';
+      if (hudEl) hudEl.innerText = refShort;
       if (!currentActiveTarget || !ref?.coords) {
         if (distEl) distEl.innerText = 'DIST: --';
         if (brgEl) brgEl.innerText = 'BRG: ---° --';
-        if (hudLabel) hudLabel.innerText = 'REF';
-        if (hudEl) hudEl.innerText = refShort;
         return;
       }
       const dist = calcDistanceKm(ref.coords[0], ref.coords[1], currentActiveTarget.coords[0], currentActiveTarget.coords[1]);
       const brg = calcBearing(ref.coords[0], ref.coords[1], currentActiveTarget.coords[0], currentActiveTarget.coords[1]);
       if (distEl) distEl.innerText = `DIST: ${dist} KM · ${referenceLabel(ref.type)}`;
       if (brgEl) brgEl.innerText = `BRG: ${brg}`;
-      if (hudLabel) hudLabel.innerText = 'BRG';
-      if (hudEl) hudEl.innerText = brg;
     }
 
     function cleanLegacyIntelText(value) {
