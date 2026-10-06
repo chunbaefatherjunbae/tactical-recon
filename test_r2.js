@@ -163,7 +163,8 @@ test('Topographic low-data runtime distinguishes field features',()=>{
     assert(r1.includes(kind),kind);
   }
   assert(r1.includes("secondary:{weight:1.15,opacity:.38}"));
-  assert(r1.includes("['place','peak','contour_label']"));
+  assert(r1.includes("['place','peak'].includes(kind)"));
+  assert(r1.includes("feature?.properties?.kind==='contour_label'"));
   assert(r1.includes("className:'r16-contour-label'"));
   assert(r1.includes("className:peak?'r16-low-peak-label':'r16-low-place-label'"));
   assert(r1.includes('lowDataBackgroundColor()'));
