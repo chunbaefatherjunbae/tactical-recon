@@ -27,6 +27,7 @@ jobs:
 
       - name: Syntax check
         run: |
+          node --check app-base.js
           node --check v28.js
           node --check v28-runtime.js
           node --check v29.js
