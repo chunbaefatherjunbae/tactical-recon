@@ -1,3 +1,4 @@
+/* R2.1 runtime: HUD surface hierarchy, isolated position state, controlled address lookup. */
 (function(root){
   'use strict';
 
