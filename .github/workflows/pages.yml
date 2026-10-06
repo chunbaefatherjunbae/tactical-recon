@@ -4,15 +4,9 @@ on:
   push:
     branches:
       - main
-      - r1-structure-overhaul
-      - r1.1-ui-polish
-      - r1.2-reticle-layout
-      - r1.3-field-search
-      - r1.4-visual-correction
-      - r1.4.1-mobile-reticle
-      - r1.5-map-hud-reticle
-      - r1.6-local-basemap-grid
-      - r2-position-actions
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
