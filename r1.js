@@ -1608,6 +1608,9 @@
   let missionLayer=null;
   let missionMapMode=false;
   let lightMapOpen=false;
+  let lightMapGridLayer=null;
+  let lightMapSuppressedTiles=[];
+  let lightMapGuardInstalled=false;
   let activeOverlayType='REFERENCE';
   let overlaySeenCount=0;
   let overlaySeenPlanId='';
@@ -2158,119 +2161,101 @@
     document.getElementById('v29LightMapBtn')?.classList.toggle('active',lightMapOpen);
   }
 
-  function lightMapSites(){
-    const out=[];
-    try{
-      if(typeof RECON_TARGETS!=='undefined'&&Array.isArray(RECON_TARGETS))out.push(...RECON_TARGETS);
-      if(typeof getLocalIntel==='function')out.push(...getLocalIntel());
-    }catch(e){}
-    return out.filter(item=>validCoords(item?.coords));
+  function isNetworkTileLayer(layer){
+    return Boolean(layer&&typeof L!=='undefined'&&L.TileLayer&&layer instanceof L.TileLayer);
   }
 
-  function ensureLightMap(){
-    let el=document.getElementById('v29LightMap');
-    if(el)return el;
-    el=document.createElement('section');
-    el.id='v29LightMap';
-    el.className='v29-light-map';
-    el.hidden=true;
-    el.innerHTML=
-      '<div class="v29-light-map-head"><div><small>TACTICAL RECON // LOW DATA</small><strong id="v29LightMapTitle"></strong></div>'+
-      '<button class="osb-btn" id="v29LightMapClose" type="button"></button></div>'+
-      '<div class="v29-light-map-canvas" id="v29LightMapCanvas"></div>'+
-      '<div class="v29-light-map-readout" id="v29LightMapReadout"></div>';
-    document.body.appendChild(el);
-    el.querySelector('#v29LightMapClose')?.addEventListener('click',closeLightMap);
-    return el;
+  function rememberLightMapTile(layer){
+    if(!isNetworkTileLayer(layer))return;
+    if(!lightMapSuppressedTiles.includes(layer))lightMapSuppressedTiles.push(layer);
+  }
+
+  function ensureLightMapGridLayer(){
+    if(lightMapGridLayer||typeof L==='undefined'||typeof map==='undefined'||!L.GridLayer)return lightMapGridLayer;
+    const LowDataGrid=L.GridLayer.extend({
+      createTile(){
+        const tile=L.DomUtil.create('div','r15-low-data-tile');
+        tile.setAttribute('aria-hidden','true');
+        return tile;
+      }
+    });
+    lightMapGridLayer=new LowDataGrid({
+      pane:'tilePane',
+      minZoom:2,
+      maxZoom:22,
+      keepBuffer:2,
+      updateWhenIdle:false,
+      updateWhenZooming:true
+    });
+    return lightMapGridLayer;
+  }
+
+  function suppressLightMapNetworkTiles(){
+    if(typeof map==='undefined'||!map?.eachLayer)return;
+    const active=[];
+    map.eachLayer(layer=>{if(isNetworkTileLayer(layer))active.push(layer);});
+    active.forEach(layer=>{
+      rememberLightMapTile(layer);
+      if(map.hasLayer(layer))map.removeLayer(layer);
+    });
+  }
+
+  function installLightMapLayerGuard(){
+    if(lightMapGuardInstalled||typeof map==='undefined'||!map?.on)return;
+    lightMapGuardInstalled=true;
+    map.on('layeradd',event=>{
+      const layer=event?.layer;
+      if(!lightMapOpen||!isNetworkTileLayer(layer))return;
+      rememberLightMapTile(layer);
+      setTimeout(()=>{
+        if(lightMapOpen&&map?.hasLayer?.(layer))map.removeLayer(layer);
+      },0);
+    });
   }
 
   function renderLightMap(){
-    const el=ensureLightMap();
     if(!lightMapOpen)return;
-    const canvas=el.querySelector('#v29LightMapCanvas');
-    const readout=el.querySelector('#v29LightMapReadout');
-    const title=el.querySelector('#v29LightMapTitle');
-    const close=el.querySelector('#v29LightMapClose');
-    if(title)title.textContent=t('lightMap');
-    if(close)close.textContent=t('standardMap');
-
-    const {ref,obj,bundle}=missionMetrics();
-    const plan=activePlan();
-    const route=(plan?.routeSegments||[]).flat().filter(validCoords);
-    let pts=[...route];
-    if(ref?.coords)pts.push(ref.coords);
-    if(obj?.coords)pts.push(obj.coords);
-    if(!pts.length&&typeof map!=='undefined'&&map?.getCenter){
-      const c=map.getCenter();pts.push([c.lat,c.lng]);
-    }
-    if(!pts.length){canvas.innerHTML='';if(readout)readout.textContent='NO POSITION';return;}
-
-    let minLat=Math.min(...pts.map(p=>Number(p[0]))),maxLat=Math.max(...pts.map(p=>Number(p[0])));
-    let minLon=Math.min(...pts.map(p=>Number(p[1]))),maxLon=Math.max(...pts.map(p=>Number(p[1])));
-    const latPad=Math.max(.012,(maxLat-minLat)*.2),lonPad=Math.max(.012,(maxLon-minLon)*.2);
-    minLat-=latPad;maxLat+=latPad;minLon-=lonPad;maxLon+=lonPad;
-    const W=600,H=420,pad=38;
-    const x=lon=>pad+(lon-minLon)/(maxLon-minLon)*(W-2*pad);
-    const y=lat=>H-pad-(lat-minLat)/(maxLat-minLat)*(H-2*pad);
-    let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="LIGHT MAP">';
-    svg+='<text class="north" x="'+(W/2)+'" y="22">N</text>';
-    for(let i=0;i<=5;i++){
-      const gx=pad+i*(W-2*pad)/5,gy=pad+i*(H-2*pad)/5;
-      svg+='<line class="grid" x1="'+gx+'" y1="'+pad+'" x2="'+gx+'" y2="'+(H-pad)+'"/>';
-      svg+='<line class="grid" x1="'+pad+'" y1="'+gy+'" x2="'+(W-pad)+'" y2="'+gy+'"/>';
-    }
-    (plan?.routeSegments||[]).forEach(seg=>{
-      const clean=(seg||[]).filter(validCoords);if(clean.length<2)return;
-      svg+='<polyline class="route" points="'+clean.map(p=>x(p[1]).toFixed(1)+','+y(p[0]).toFixed(1)).join(' ')+'"/>';
-    });
-    lightMapSites()
-      .filter(site=>site.coords[0]>=minLat&&site.coords[0]<=maxLat&&site.coords[1]>=minLon&&site.coords[1]<=maxLon)
-      .slice(0,40)
-      .forEach(site=>{svg+='<circle class="site" cx="'+x(site.coords[1])+'" cy="'+y(site.coords[0])+'" r="2.6"/>';});
-    if(ref?.coords&&obj?.coords)svg+='<line class="direct" x1="'+x(ref.coords[1])+'" y1="'+y(ref.coords[0])+'" x2="'+x(obj.coords[1])+'" y2="'+y(obj.coords[0])+'"/>';
-    if(ref?.coords){
-      svg+='<circle class="current" cx="'+x(ref.coords[1])+'" cy="'+y(ref.coords[0])+'" r="7"/>';
-      svg+='<text class="tag" x="'+(x(ref.coords[1])+10)+'" y="'+(y(ref.coords[0])-8)+'">'+String(ref.type||'REF')+'</text>';
-    }
-    if(obj?.coords){
-      const tx=x(obj.coords[1]),ty=y(obj.coords[0]);
-      svg+='<path class="target" d="M '+tx+' '+(ty-10)+' L '+(tx+10)+' '+ty+' L '+tx+' '+(ty+10)+' L '+(tx-10)+' '+ty+' Z"/>';
-      svg+='<text class="tag" x="'+(tx+12)+'" y="'+(ty-9)+'">OBJ</text>';
-    }
-    svg+='<text class="bounds" x="'+pad+'" y="'+(H-10)+'">'+minLat.toFixed(3)+'..'+maxLat.toFixed(3)+' / '+minLon.toFixed(3)+'..'+maxLon.toFixed(3)+'</text>';
-    svg+='</svg>';
-    canvas.innerHTML=svg;
-    if(readout){
-      readout.textContent=bundle
-        ? 'DIST '+missionDistance(bundle.distanceKm)+' · GRID '+formatDeg(bundle.gridBearing)+' · TRUE '+formatDeg(bundle.trueBearing)+' · MAG '+formatDeg(bundle.magneticBearing)+' · REF '+missionReferenceLabel(ref)
-        : 'REF '+missionReferenceLabel(ref)+(obj?' · OBJ SET':' · NO OBJ');
-    }
+    const grid=ensureLightMapGridLayer();
+    suppressLightMapNetworkTiles();
+    if(grid&&!map.hasLayer(grid))grid.addTo(map);
+    document.body.classList.add('r15-light-map');
+    if(typeof updateMapScale==='function')updateMapScale();
+    scheduleR12OverlayLayout();
   }
 
   function openLightMap(){
+    if(lightMapOpen){renderLightMap();syncMapModeButtons();return;}
     lightMapOpen=true;
-    const el=ensureLightMap();
-    el.hidden=false;
-    document.body.classList.add('v29-light-map-open');
-    syncMapModeButtons();
+    installLightMapLayerGuard();
     renderLightMap();
+    const banner=document.getElementById('v29MapFallback');
+    if(banner)banner.hidden=true;
+    syncMapModeButtons();
   }
 
   function closeLightMap(){
+    if(!lightMapOpen){syncMapModeButtons();return;}
     lightMapOpen=false;
-    const el=document.getElementById('v29LightMap');if(el)el.hidden=true;
-    document.body.classList.remove('v29-light-map-open');
+    document.body.classList.remove('r15-light-map');
+    if(lightMapGridLayer&&map?.hasLayer?.(lightMapGridLayer))map.removeLayer(lightMapGridLayer);
+    const restore=[...lightMapSuppressedTiles];
+    lightMapSuppressedTiles=[];
+    restore.forEach(layer=>{
+      if(typeof roadBoostLayer!=='undefined'&&layer===roadBoostLayer&&typeof roadBoostEnabled!=='undefined'&&!roadBoostEnabled)return;
+      if(layer&&!map.hasLayer(layer))layer.addTo(map);
+    });
+    if(!navigator.onLine){
+      const banner=document.getElementById('v29MapFallback');
+      if(banner)banner.hidden=false;
+    }
+    if(typeof updateMapScale==='function')updateMapScale();
+    scheduleR12OverlayLayout();
     syncMapModeButtons();
   }
 
   function installLightMapFallback(){
     const btn=document.querySelector('#v29MapFallback button');
-    if(btn&&btn.dataset.v29LightMap!=='1'){
-      const clone=btn.cloneNode(true);
-      clone.dataset.v29LightMap='1';
-      btn.replaceWith(clone);
-      clone.addEventListener('click',openLightMap);
-    }
+    if(btn)btn.dataset.v29LightMap='1';
   }
 
   function ensureDrawTypePicker(){
@@ -2549,7 +2534,6 @@
     installLightMapFallback();
     ensureMissionObjectiveSheet();
     ensureMissionMapHud();
-    ensureLightMap();
     syncMissionHomebarText();
     syncMissionMenuText();
     syncReconPanel();
@@ -2993,8 +2977,8 @@
 
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R1.4 FIELD TERMINAL';
-    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui','r12-ui','r13-ui','r14-ui');
+    document.title='TACTICAL RECON // R1.5 FIELD TERMINAL';
+    document.body.classList.add('v29-stabilized','r1-runtime','r11-ui','r12-ui','r13-ui','r14-ui','r15-ui');
     installLastFix();
     installUnifiedSearch();
     installSearchCloseReliability();
@@ -3057,6 +3041,7 @@
     if(typeof map!=='undefined'&&map?.on)map.on('moveend',syncR13WorkingGridUi);
     syncAllText();
     syncR13WorkingGridUi();
+    if(typeof updateActiveTargetNavigation==='function')updateActiveTargetNavigation();
   }
 
   root.v29Stabilize={
