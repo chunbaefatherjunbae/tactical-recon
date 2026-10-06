@@ -1871,21 +1871,35 @@ window.__reconRotateUnavailable = true;
     }
 
     function parseDirectRouteLocation(query) {
+      const core = window.ReconLocationCore;
+      if (core) {
+        try {
+          const wgs = core.parseWgs84(query);
+          if (wgs) return { ...wgs, name:'WGS84 POSITION', address:'' };
+          const full = core.decodeFull(query, window.mgrs);
+          if (full) return { lat:full.lat, lon:full.lon, name:'MGRS POSITION', address:'', source:'MGRS', mgrs:full.compact };
+          core.validateCoordinateLike(query);
+        } catch (error) {
+          if (error?.code) throw error;
+        }
+        return null;
+      }
+
       const q = String(query || '').trim();
       if (!q) return null;
       const coord = q.match(/^\s*([+-]?\d{1,2}(?:\.\d+)?)\s*[,\s]\s*([+-]?\d{1,3}(?:\.\d+)?)\s*$/);
       if (coord) {
         const lat = Number(coord[1]), lon = Number(coord[2]);
         if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-          return { lat, lon, name:'WGS84 VIA', address:'', source:'WGS84' };
+          return { lat, lon, name:'WGS84 POSITION', address:'', source:'WGS84' };
         }
       }
-      const compact = q.toUpperCase().replace(/\s+/g, '');
-      if (/^\d{1,2}[C-X][A-Z]{2}\d{2,10}$/.test(compact) && window.mgrs?.toPoint) {
+      const compact = q.toUpperCase().replace(/[\s-]+/g, '');
+      if (/^\d{1,2}[C-HJ-NP-X][A-HJ-NP-Z]{2}\d{2,10}$/.test(compact) && window.mgrs?.toPoint) {
         try {
           const point = window.mgrs.toPoint(compact);
           const lon = Number(point?.[0]), lat = Number(point?.[1]);
-          if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon, name:'MGRS VIA', address:'', source:'MGRS' };
+          if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon, name:'MGRS POSITION', address:'', source:'MGRS' };
         } catch (e) {}
       }
       return null;
