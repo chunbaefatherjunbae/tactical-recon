@@ -2207,6 +2207,12 @@
       return style.getPropertyValue('--field-active').trim()||style.getPropertyValue('--accent').trim()||'#9ad6a4';
     }catch(e){return '#9ad6a4';}
   }
+  function lowDataBackgroundColor(){
+    try{
+      const style=getComputedStyle(document.body);
+      return style.getPropertyValue('--bg-base').trim()||style.getPropertyValue('--field-panel-solid').trim()||'#050a07';
+    }catch(e){return '#050a07';}
+  }
 
   function ensureLowDataPanes(){
     if(typeof map==='undefined'||!map?.createPane)return;
@@ -2318,7 +2324,7 @@
     if(kind==='water_area'){
       return {
         pane:'r16LowDataBasePane',renderer:lightMapBaseRenderer,
-        color,weight:.8,opacity:.34,fill:true,fillColor:color,fillOpacity:.012,interactive:false
+        color,weight:.85,opacity:.42,fill:true,fillColor:lowDataBackgroundColor(),fillOpacity:.94,interactive:false
       };
     }
     if(kind==='road'){
