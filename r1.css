@@ -1972,6 +1972,42 @@ body.r16-light-map .r15-low-data-tile {
   display:none !important;
 }
 
+.leaflet-tooltip.r16-low-peak-label {
+  padding:1px 3px !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:rgba(2,8,4,.54) !important;
+  box-shadow:none !important;
+  color:var(--field-active) !important;
+  font:800 7.5px/1.15 var(--font-mono) !important;
+  letter-spacing:.02em !important;
+  white-space:nowrap !important;
+  opacity:.92 !important;
+  pointer-events:none !important;
+}
+.leaflet-tooltip.r16-low-peak-label::before {
+  display:none !important;
+}
+.r16-contour-label {
+  width:auto !important;
+  height:auto !important;
+  margin:0 !important;
+  border:0 !important;
+  background:transparent !important;
+  pointer-events:none !important;
+}
+.r16-contour-label span {
+  display:inline-block;
+  transform:translate(-50%,-50%);
+  padding:1px 3px;
+  background:rgba(2,8,4,.54);
+  color:var(--field-active);
+  font:800 7px/1 var(--font-mono);
+  letter-spacing:.02em;
+  white-space:nowrap;
+  opacity:.78;
+}
+
 body.r16-light-map .leaflet-control-attribution {
   background:rgba(2,8,4,.38) !important;
   color:var(--field-dim-readable) !important;
@@ -1984,7 +2020,9 @@ body.r16-light-map .leaflet-control-attribution a {
 
 @media (max-width:768px) {
   .r16-grid-label span,
-  .leaflet-tooltip.r16-low-place-label {
+  .leaflet-tooltip.r16-low-place-label,
+  .leaflet-tooltip.r16-low-peak-label,
+  .r16-contour-label span {
     font-size:7px !important;
   }
 }
