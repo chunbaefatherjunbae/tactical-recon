@@ -52,6 +52,8 @@ test('Map selection is separate from the legacy active target until objective ac
   assert(r1.includes("const activateLegacyTarget=options?.activateLegacyTarget===true"));
   assert(r1.includes("card.dataset.ownsLegacyTarget=activateLegacyTarget?'1':'0'"));
   assert(r2.includes("root.r1.openLocation(target,'LOCATION',{activateLegacyTarget:false})"));
+  assert(r1.includes("getLocationTarget:()=>r1LocationTarget"));
+  assert(r2.indexOf("const selected=root.r1?.getLocationTarget?.()")<r2.indexOf("if(r2CardTarget&&validCoords(r2CardTarget.coords))return r2CardTarget"));
   assert(r2.indexOf("if(r2CardTarget&&validCoords(r2CardTarget.coords))return r2CardTarget")<r2.indexOf("if(typeof currentActiveTarget!=='undefined'"));
 });
 
