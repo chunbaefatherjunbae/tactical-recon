@@ -1,0 +1,5 @@
+TACTICAL RECON low-data basemap
+Contains information from OpenStreetMap, available under the Open Database License (ODbL).
+Source extract: Geofabrik South Korea.
+https://www.openstreetmap.org/copyright
+https://download.geofabrik.de/asia/south-korea.html
