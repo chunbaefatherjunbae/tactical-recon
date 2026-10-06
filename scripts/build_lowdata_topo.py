@@ -26,13 +26,15 @@ BBOX = (124.0, 32.5, 132.0, 39.5)
 TERRAIN_ZOOM = 9
 CONTOUR_INTERVAL_M = 100
 INDEX_CONTOUR_INTERVAL_M = 500
-MAX_OUTPUT_BYTES = 14_000_000
+MAX_BASE_BYTES = 11_000_000
+MAX_CONTOUR_BYTES = 8_000_000
 
 OSM_RAW = Path("/tmp/recon-topo.raw.geojson")
 DEM_TIF = Path("/tmp/korea-dem.tif")
 CONTOUR_3857 = Path("/tmp/korea-contours-3857.geojson")
 CONTOUR_4326 = Path("/tmp/korea-contours.geojson")
-OUTPUT = Path("offline/kr-low.geojson")
+BASE_OUTPUT = Path("offline/kr-low.geojson")
+CONTOUR_OUTPUT = Path("offline/kr-contours.geojson")
 
 
 def tile_x(lon: float, zoom: int) -> int:
@@ -339,8 +341,9 @@ def build_output() -> None:
                 except Exception:
                     pass
 
+    contour_output = []
     for ele, coords in sorted(contours.items()):
-        output.append(
+        contour_output.append(
             {
                 "type": "Feature",
                 "properties": {
@@ -359,34 +362,59 @@ def build_output() -> None:
         )
     )
     peaks.sort(key=lambda feature: -int(feature["properties"].get("ele") or 0))
-    output.extend(places[:3200])
-    output.extend(peaks[:1600])
-    output.extend(contour_labels[:700])
+    output.extend(places[:2600])
+    output.extend(peaks[:1200])
+    contour_output.extend(contour_labels[:600])
 
-    for feature in output:
-        feature["geometry"] = quantize(feature["geometry"])
+    for collection in (output, contour_output):
+        for feature in collection:
+            feature["geometry"] = quantize(feature["geometry"])
 
-    final = {
+    base_final = {
         "type": "FeatureCollection",
-        "name": "TACTICAL RECON South Korea Topographic Low Data Basemap",
+        "name": "TACTICAL RECON South Korea Low Data Basemap",
         "source": "OpenStreetMap via Geofabrik + Mapzen Terrain Tiles via AWS Open Data",
         "license": "OSM ODbL 1.0; terrain source-specific attribution applies",
-        "contourIntervalM": CONTOUR_INTERVAL_M,
-        "indexContourIntervalM": INDEX_CONTOUR_INTERVAL_M,
+        "contourFile": "./kr-contours.geojson",
         "features": output,
     }
+    contour_final = {
+        "type": "FeatureCollection",
+        "name": "TACTICAL RECON South Korea Terrain Contours",
+        "source": "Mapzen Terrain Tiles via AWS Open Data",
+        "license": "terrain source-specific attribution applies",
+        "contourIntervalM": CONTOUR_INTERVAL_M,
+        "indexContourIntervalM": INDEX_CONTOUR_INTERVAL_M,
+        "features": contour_output,
+    }
 
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(json.dumps(final, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    BASE_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    BASE_OUTPUT.write_text(
+        json.dumps(base_final, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    CONTOUR_OUTPUT.write_text(
+        json.dumps(contour_final, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
 
     kinds = defaultdict(int)
     for feature in output:
         kinds[(feature.get("properties") or {}).get("kind", "?")] += 1
-    size = OUTPUT.stat().st_size
-    print("feature kinds", dict(kinds))
-    print("output bytes", size)
-    if size > MAX_OUTPUT_BYTES:
-        raise SystemExit(f"topographic low-data basemap exceeds {MAX_OUTPUT_BYTES} bytes")
+    contour_kinds = defaultdict(int)
+    for feature in contour_output:
+        contour_kinds[(feature.get("properties") or {}).get("kind", "?")] += 1
+
+    base_size = BASE_OUTPUT.stat().st_size
+    contour_size = CONTOUR_OUTPUT.stat().st_size
+    print("base feature kinds", dict(kinds))
+    print("contour feature kinds", dict(contour_kinds))
+    print("base bytes", base_size)
+    print("contour bytes", contour_size)
+    if base_size > MAX_BASE_BYTES:
+        raise SystemExit(f"base low-data basemap exceeds {MAX_BASE_BYTES} bytes")
+    if contour_size > MAX_CONTOUR_BYTES:
+        raise SystemExit(f"contour low-data payload exceeds {MAX_CONTOUR_BYTES} bytes")
 
 
 def main() -> None:
