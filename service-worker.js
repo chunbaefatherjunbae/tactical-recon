@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'r1-6-local-map-20261006-1';
+const CACHE_VERSION = 'r2-0-position-actions-20261006-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
@@ -19,6 +19,8 @@ const STATIC_ASSETS = [
   './vendor/leaflet-1.9.4.css',
   './r1.css',
   './r1.js',
+  './r2.css',
+  './r2.js',
   './offline/kr-low.geojson',
   './offline/NOTICE.txt'
 ];
@@ -59,7 +61,9 @@ async function injectStableOverlay(response) {
     .replace(/\s*<script[^>]+src=["']\.\/v27-2-1\.js["'][^>]*><\/script>\s*/g, '\n')
     .replace(/\s*<script[^>]+src=["']\.\/v27-3\.js["'][^>]*><\/script>\s*/g, '\n')
     .replace(/\s*<link[^>]+href=["']\.\/v29-stabilize\.css["'][^>]*>\s*/g, '\n')
-    .replace(/\s*<script[^>]+src=["']\.\/v29-stabilize\.js["'][^>]*><\/script>\s*/g, '\n');
+    .replace(/\s*<script[^>]+src=["']\.\/v29-stabilize\.js["'][^>]*><\/script>\s*/g, '\n')
+    .replace(/\s*<link[^>]+href=["']\.\/r2\.css["'][^>]*>\s*/g, '\n')
+    .replace(/\s*<script[^>]+src=["']\.\/r2\.js["'][^>]*><\/script>\s*/g, '\n');
 
   if (!html.includes('v27-stable.css')) {
     html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-stable.css" />\n</head>');
@@ -91,8 +95,14 @@ async function injectStableOverlay(response) {
   if (!html.includes('r1.css')) {
     html = html.replace('</head>', '  <link rel="stylesheet" href="./r1.css" />\n</head>');
   }
+  if (!html.includes('r2.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./r2.css" />\n</head>');
+  }
   if (!html.includes('r1.js')) {
     html = html.replace('</body>', '  <script src="./r1.js"></script>\n</body>');
+  }
+  if (!html.includes('r2.js')) {
+    html = html.replace('</body>', '  <script src="./r2.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
