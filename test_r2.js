@@ -135,9 +135,10 @@ test('R2.2 command strip uses matched compact hardware controls',()=>{
   assert(r2.includes("search.dataset.r22Decorated='1'"));
   assert(r2.includes("meta.textContent='MGRS · ADDR'"));
   assert(css.includes('--r22-command-h:48px'));
-  assert(css.includes('right:128px !important'));
-  assert(css.includes('grid-template-columns:repeat(2,48px) !important'));
+  assert(css.includes('right:184px !important'));
+  assert(css.includes('grid-template-columns:repeat(3,48px) !important'));
   assert(css.includes('height:48px !important'));
+  assert(css.includes('grid-template-columns:repeat(3,44px) !important'));
 });
 
 test('R2.2 restores a strong always-visible reticle and screen frame',()=>{
