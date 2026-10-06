@@ -3041,6 +3041,7 @@
     if(typeof map!=='undefined'&&map?.on)map.on('moveend',syncR13WorkingGridUi);
     syncAllText();
     syncR13WorkingGridUi();
+    if(typeof updateActiveTargetNavigation==='function')updateActiveTargetNavigation();
   }
 
   root.v29Stabilize={
