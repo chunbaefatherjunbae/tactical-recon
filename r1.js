@@ -2992,7 +2992,7 @@
     r1LocationTarget={...target,coords:[Number(target.coords[0]),Number(target.coords[1])]};
     r1LocationStatus=String(statusType||target.status||'LOCATION').toUpperCase();
     r1LocationMoreOpen=false;
-    const activateLegacyTarget=options?.activateLegacyTarget!==false;
+    const activateLegacyTarget=options?.activateLegacyTarget===true;
     if(activateLegacyTarget)currentActiveTarget=target;
     const card=ensureR1LocationCard();
     card.dataset.ownsLegacyTarget=activateLegacyTarget?'1':'0';
@@ -3112,7 +3112,7 @@
       saveLocalIntel(list);
       r1LocationTarget=point;
       currentActiveTarget=point;
-      showR1LocationCard(point,'UNEXPLORED');
+      showR1LocationCard(point,'UNEXPLORED',{activateLegacyTarget:true});
       if(typeof renderAllMarkers==='function')renderAllMarkers();
       notify(r1Text('거점으로 저장했습니다.','SITE SAVED.'));
     }catch(e){
@@ -3126,7 +3126,7 @@
       const previous=openSitrep;
       const wrapped=function(target,statusType){
         const out=previous.apply(this,arguments);
-        showR1LocationCard(target,statusType||target?.status||'LOCATION');
+        showR1LocationCard(target,statusType||target?.status||'LOCATION',{activateLegacyTarget:true});
         return out;
       };
       wrapped.__r1Location=true;
