@@ -246,304 +246,372 @@ body.r2-display-open{overflow:hidden;}
   }
 }
 
-
 /* ============================================================
-   R2.2 // GOD'S EYE-INSPIRED FIELD VISUAL SYSTEM
-   Keep map visibility, but restore purposeful military telemetry,
-   compact controls, strong reticle geometry and coherent surfaces.
+   R2.3 // CANONICAL TACTICAL VIEWPORT
+   One frame, one HUD hierarchy, one control rail, one active panel.
+   Theme color is inherited directly from the current FIELD tokens.
    ============================================================ */
 
 body.r2-runtime{
-  --r22-font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --r22-line-soft:color-mix(in srgb,var(--field-active,var(--accent)) 18%,transparent);
-  --r22-line:color-mix(in srgb,var(--field-active,var(--accent)) 34%,transparent);
-  --r22-line-strong:color-mix(in srgb,var(--field-active,var(--accent)) 58%,transparent);
-  --r22-surface:color-mix(in srgb,var(--field-active,var(--accent)) 7%,rgba(3,8,12,.86));
-  --r22-surface-strong:color-mix(in srgb,var(--field-active,var(--accent)) 9%,rgba(3,8,12,.94));
-  --r22-active-dim:color-mix(in srgb,var(--field-active,var(--accent)) 14%,transparent);
-  --r22-glow:color-mix(in srgb,var(--field-active,var(--accent)) 22%,transparent);
-  --r22-hud-top:calc(env(safe-area-inset-top,0px) + 6px);
-  --r22-command-top:calc(env(safe-area-inset-top,0px) + 88px);
-  --r22-command-h:48px;
+  --r23-ui-font:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --r23-accent:var(--field-active,var(--accent));
+  --r23-text:var(--field-text,var(--text-main));
+  --r23-muted:var(--field-dim-readable,var(--field-dim,var(--text-dim)));
+  --r23-line:var(--field-line,var(--border));
+  --r23-line-strong:var(--field-line-strong,var(--border-accent));
+  --r23-panel:var(--field-panel-solid,var(--bg-panel));
+  --r23-panel-soft:var(--field-panel,var(--bg-osd));
+  --r23-glow:var(--accent-glow);
+  --r23-nav-h:calc(58px + env(safe-area-inset-bottom,0px));
+  --r23-frame-top:calc(env(safe-area-inset-top,0px) + 8px);
+  --r23-frame-bottom:calc(var(--r23-nav-h) + 8px);
+  --r23-hud-top:calc(env(safe-area-inset-top,0px) + 18px);
+  --r23-coord-top:calc(env(safe-area-inset-top,0px) + 48px);
+  --r23-command-top:calc(env(safe-area-inset-top,0px) + 104px);
+  --r23-control-size:48px;
+  --r23-control-gap:8px;
+}
+body.r2-runtime.target-mode,
+body.r2-runtime.target-nav{
+  --r23-frame-bottom:calc(env(safe-area-inset-bottom,0px) + 8px);
 }
 
-/* Top telemetry behaves like equipment readout, not another card. */
+/* --- Full map viewport frame --- */
+body.r2-runtime .viewfinder-frame{
+  position:fixed !important;
+  top:var(--r23-frame-top) !important;
+  left:8px !important;
+  right:8px !important;
+  bottom:var(--r23-frame-bottom) !important;
+  width:auto !important;
+  height:auto !important;
+  padding:0 !important;
+  border:1px solid var(--r23-line) !important;
+  box-shadow:0 0 0 1px rgba(0,0,0,.2) inset !important;
+  pointer-events:none !important;
+  z-index:900 !important;
+}
+body.r2-runtime .viewfinder-frame::before{
+  content:'TACTICAL RECON // FIELD DISPLAY';
+  position:absolute;
+  top:-5px;
+  left:42px;
+  padding:0 7px;
+  background:var(--bg-base);
+  color:var(--r23-muted);
+  font:800 8px/1 var(--font-mono);
+  letter-spacing:.14em;
+}
+body.r2-runtime .bracket{
+  position:absolute !important;
+  width:34px !important;
+  height:34px !important;
+  opacity:1 !important;
+  border-width:1.5px !important;
+  border-color:var(--r23-accent) !important;
+  filter:drop-shadow(0 0 3px var(--r23-glow)) !important;
+  z-index:1 !important;
+}
+body.r2-runtime .bracket::before,
+body.r2-runtime .bracket::after{
+  display:none !important;
+  content:none !important;
+}
+body.r2-runtime .bracket.tl{top:-1px !important;left:-1px !important;right:auto !important;bottom:auto !important;}
+body.r2-runtime .bracket.tr{top:-1px !important;right:-1px !important;left:auto !important;bottom:auto !important;}
+body.r2-runtime .bracket.bl{bottom:-1px !important;left:-1px !important;right:auto !important;top:auto !important;}
+body.r2-runtime .bracket.br{bottom:-1px !important;right:-1px !important;left:auto !important;top:auto !important;}
+
+/* --- GOD'S EYE-style readout hierarchy: label < value < primary coordinate --- */
 body.r2-runtime .top-compass-bar{
   position:fixed !important;
-  top:var(--r22-hud-top) !important;
-  left:16px !important;
-  right:16px !important;
+  top:var(--r23-hud-top) !important;
+  left:22px !important;
+  right:22px !important;
   width:auto !important;
   max-width:none !important;
-  min-height:28px !important;
+  min-height:24px !important;
   transform:none !important;
   z-index:1510 !important;
-  padding:2px 0 !important;
-  background:transparent !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:16px !important;
+  padding:0 !important;
   border:0 !important;
-  border-radius:0 !important;
+  background:transparent !important;
   box-shadow:none !important;
-  pointer-events:none;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  pointer-events:none !important;
 }
 body.r2-runtime .compass-tape{
   display:flex !important;
-  align-items:center;
-  gap:7px !important;
-  color:var(--r2-state-muted) !important;
+  align-items:baseline !important;
+  gap:9px !important;
+  min-width:0;
+  color:var(--r23-muted) !important;
   font:800 9px/1 var(--font-mono) !important;
-  letter-spacing:.12em !important;
+  letter-spacing:.13em !important;
 }
 body.r2-runtime .compass-label{
-  display:inline !important;
-  color:var(--r2-state-muted) !important;
+  color:var(--r23-muted) !important;
+  font-size:8.5px !important;
+  letter-spacing:.16em !important;
 }
 body.r2-runtime .compass-center{
   padding:0 !important;
   border:0 !important;
   background:transparent !important;
-  color:var(--r2-state-active) !important;
-  font:900 11px/1 var(--font-mono) !important;
-  letter-spacing:.1em !important;
-  text-shadow:0 0 8px var(--r22-glow);
+  color:var(--r23-accent) !important;
+  font:900 12px/1 var(--font-mono) !important;
+  letter-spacing:.12em !important;
+  text-shadow:0 0 7px var(--r23-glow) !important;
 }
 body.r2-runtime .sys-telemetry{
   display:flex !important;
-  align-items:center;
-  gap:10px !important;
-  color:var(--r2-state-muted) !important;
-  font:800 8.5px/1 var(--font-mono) !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  gap:11px !important;
+  min-width:0;
+  color:var(--r23-muted) !important;
+  font:800 8px/1 var(--font-mono) !important;
   letter-spacing:.08em !important;
 }
 body.r2-runtime .sys-telemetry span{
   display:flex;
-  align-items:center;
+  align-items:baseline;
   gap:4px;
   white-space:nowrap;
 }
 body.r2-runtime .sys-telemetry b{
-  color:var(--r2-state-active) !important;
-  font-size:10px;
-  font-weight:900;
-  letter-spacing:.05em;
-  text-shadow:0 0 7px var(--r22-glow);
+  color:var(--r23-accent) !important;
+  font-size:10px !important;
+  font-weight:900 !important;
+  letter-spacing:.05em !important;
+  text-shadow:0 0 6px var(--r23-glow);
 }
-body.r2-runtime #hudLinkState[data-state="online"]{
-  color:var(--r2-state-active) !important;
-}
-body.r2-runtime #hudLinkState[data-state="offline"]{
-  color:var(--r2-state-warning) !important;
-  text-shadow:none;
-}
-body.r2-runtime #r22GpsHudValue[data-state="off"]{
-  color:var(--r2-state-muted) !important;
-  text-shadow:none;
-}
+body.r2-runtime #hudLinkState[data-state="offline"],
 body.r2-runtime #r22GpsHudValue[data-state="search"]{
   color:var(--r2-state-warning) !important;
-  text-shadow:none;
+  text-shadow:none !important;
+}
+body.r2-runtime #r22GpsHudValue[data-state="off"]{
+  color:var(--r23-muted) !important;
+  text-shadow:none !important;
 }
 
-/* Reticle coordinate block stays visible at all times. */
 body.r2-runtime .telemetry-osd{
   position:fixed !important;
-  top:calc(env(safe-area-inset-top,0px) + 36px) !important;
-  left:16px !important;
+  top:var(--r23-coord-top) !important;
+  left:22px !important;
   right:auto !important;
-  width:min(280px,calc(100vw - 32px)) !important;
-  min-height:44px !important;
-  z-index:1505 !important;
-  padding:0 !important;
-  gap:1px !important;
+  width:min(326px,calc(100vw - 100px)) !important;
+  min-height:46px !important;
+  z-index:1508 !important;
+  display:block !important;
+  padding:3px 8px 4px 0 !important;
   border:0 !important;
-  background:transparent !important;
+  border-radius:0 !important;
+  background:linear-gradient(90deg,rgba(0,0,0,.34),rgba(0,0,0,.12) 58%,transparent) !important;
   box-shadow:none !important;
-  filter:drop-shadow(0 1px 2px rgba(0,0,0,.9)) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.82)) !important;
   pointer-events:auto;
 }
 body.r2-runtime .telemetry-osd .osd-head{
   display:flex !important;
   align-items:center;
   min-height:12px;
-  margin:0 0 1px !important;
+  margin:0 0 3px !important;
   padding:0 !important;
   border:0 !important;
-  color:var(--r2-state-muted);
-  font:800 8px/1 var(--font-mono);
-  letter-spacing:.18em;
+  color:var(--r23-muted) !important;
+  font:800 8.5px/1 var(--font-mono) !important;
+  letter-spacing:.17em !important;
 }
-body.r2-runtime .telemetry-osd #currentOpticLabel{
+body.r2-runtime .telemetry-osd #currentOpticLabel,
+body.r2-runtime .telemetry-osd .osd-subgrid,
+body.r2-runtime .gps-status-osd,
+body.r2-runtime .r2-legacy-coords{
   display:none !important;
 }
 body.r2-runtime .telemetry-osd .osd-mgrs-btn{
   width:auto !important;
   min-height:27px !important;
   display:grid !important;
-  grid-template-columns:auto minmax(0,1fr);
-  align-items:baseline;
-  justify-content:start;
-  gap:8px;
+  grid-template-columns:42px minmax(0,1fr) !important;
+  align-items:baseline !important;
+  justify-content:start !important;
+  gap:8px !important;
   padding:0 !important;
   border:0 !important;
   background:transparent !important;
 }
 body.r2-runtime .telemetry-osd .osd-mgrs-btn > div:first-child{
   display:block !important;
-  min-width:38px;
   margin:0 !important;
-  color:var(--r2-state-muted) !important;
-  font:850 8px/1 var(--font-mono) !important;
+  color:var(--r23-muted) !important;
+  font:850 9px/1 var(--font-mono) !important;
   letter-spacing:.1em !important;
 }
 body.r2-runtime .telemetry-osd .osd-mgrs-val{
   min-width:0;
   max-width:none !important;
   overflow:hidden;
-  color:var(--r2-state-active) !important;
-  font:900 12.5px/1.15 var(--font-mono) !important;
+  color:var(--r23-accent) !important;
+  font:900 14px/1.12 var(--font-mono) !important;
   letter-spacing:.045em !important;
   text-align:left !important;
   text-overflow:ellipsis;
   white-space:nowrap;
-  text-shadow:0 0 8px var(--r22-glow);
+  text-shadow:0 0 8px var(--r23-glow) !important;
 }
 body.r2-runtime .r22-mgrs-secondary{
-  margin:1px 0 0 46px;
-  color:var(--field-text,var(--text-main));
-  font:800 9px/1.15 var(--font-mono);
-  letter-spacing:.045em;
-  opacity:.78;
+  margin:3px 0 0 50px !important;
+  color:var(--r23-text) !important;
+  font:800 9.5px/1.1 var(--font-mono) !important;
+  letter-spacing:.04em !important;
+  opacity:.86 !important;
 }
 body.r2-runtime .r22-mgrs-secondary[hidden]{display:none !important;}
 
-/* One command strip. Search is the wide control; hardware buttons are compact squares. */
+/* --- Search surface + vertical right-hand field controls --- */
 body.r2-runtime .r1-map-search{
   position:fixed !important;
-  top:var(--r22-command-top) !important;
-  left:16px !important;
-  right:184px !important;
+  top:var(--r23-command-top) !important;
+  left:22px !important;
+  right:84px !important;
   width:auto !important;
   max-width:none !important;
-  height:var(--r22-command-h) !important;
-  min-height:var(--r22-command-h) !important;
+  height:48px !important;
+  min-height:48px !important;
   transform:none !important;
   z-index:1515 !important;
-  display:flex;
-  align-items:center;
-  gap:10px;
+  display:flex !important;
+  align-items:center !important;
+  gap:10px !important;
   padding:0 13px !important;
   overflow:hidden;
-  border:1px solid var(--r22-line) !important;
-  border-radius:8px !important;
-  background:var(--r22-surface) !important;
-  color:var(--field-text,var(--text-main)) !important;
-  box-shadow:
-    0 8px 24px rgba(0,0,0,.32),
-    0 0 0 1px rgba(255,255,255,.025) inset,
-    0 0 18px var(--r22-glow) !important;
-  backdrop-filter:blur(18px) saturate(1.2);
-  -webkit-backdrop-filter:blur(18px) saturate(1.2);
+  border:1px solid var(--r23-line-strong) !important;
+  border-radius:6px !important;
+  background:var(--r23-panel-soft) !important;
+  color:var(--r23-text) !important;
+  box-shadow:0 8px 24px rgba(0,0,0,.34) !important;
+  backdrop-filter:blur(14px) saturate(1.08) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(1.08) !important;
 }
 body.r2-runtime .r1-map-search::after{
   content:'';
   position:absolute;
-  top:0;
-  right:0;
-  width:28px;
-  height:1px;
-  background:var(--r2-state-active);
-  opacity:.55;
+  top:-1px;
+  left:16px;
+  width:54px;
+  height:2px;
+  background:var(--r23-accent);
+  opacity:.72;
 }
 body.r2-runtime .r22-search-glyph{
   flex:0 0 auto;
-  color:var(--r2-state-active) !important;
+  color:var(--r23-accent) !important;
   font:900 20px/1 var(--font-mono) !important;
-  text-shadow:0 0 8px var(--r22-glow);
+  text-shadow:0 0 7px var(--r23-glow);
 }
 body.r2-runtime .r22-search-copy{
   min-width:0;
-  display:flex;
-  align-items:baseline;
-  gap:8px;
+  display:flex !important;
+  flex-direction:column;
+  align-items:flex-start !important;
+  justify-content:center;
+  gap:3px !important;
 }
 body.r2-runtime .r22-search-copy strong{
   min-width:0;
   overflow:hidden;
-  color:var(--field-text,var(--text-main));
-  font:750 13px/1 var(--r22-font-ui);
-  letter-spacing:.01em;
+  color:var(--r23-text) !important;
+  font:750 13px/1 var(--r23-ui-font) !important;
+  letter-spacing:.01em !important;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
 body.r2-runtime .r22-search-copy small{
-  flex:0 0 auto;
-  color:var(--r2-state-muted);
-  font:800 8px/1 var(--font-mono);
-  letter-spacing:.08em;
+  color:var(--r23-muted) !important;
+  font:800 8px/1 var(--font-mono) !important;
+  letter-spacing:.07em !important;
 }
 
-/* GPS and re-center share the exact same geometry. */
 body.r2-runtime .global-gps-controls{
   position:fixed !important;
-  top:var(--r22-command-top) !important;
-  right:16px !important;
+  top:var(--r23-command-top) !important;
+  right:22px !important;
   left:auto !important;
-  width:160px !important;
-  height:var(--r22-command-h) !important;
+  width:var(--r23-control-size) !important;
+  height:auto !important;
   z-index:1516 !important;
-  display:grid !important;
-  grid-template-columns:repeat(3,48px) !important;
-  grid-auto-rows:48px !important;
-  gap:8px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+  gap:var(--r23-control-gap) !important;
 }
-body.r2-runtime .global-gps-button{
-  width:48px !important;
-  height:48px !important;
-  min-width:48px !important;
-  min-height:48px !important;
+body.r2-runtime .global-gps-button,
+body.r2-runtime #tempQuickBtn{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:var(--r23-control-size) !important;
+  height:var(--r23-control-size) !important;
+  min-width:var(--r23-control-size) !important;
+  min-height:var(--r23-control-size) !important;
   padding:0 !important;
-  border:1px solid var(--r22-line) !important;
-  border-radius:8px !important;
-  background:var(--r22-surface) !important;
-  color:var(--r2-state-muted) !important;
-  box-shadow:
-    0 8px 22px rgba(0,0,0,.28),
-    0 0 0 1px rgba(255,255,255,.02) inset !important;
-  backdrop-filter:blur(18px) saturate(1.2);
-  -webkit-backdrop-filter:blur(18px) saturate(1.2);
+  border:1px solid var(--r23-line-strong) !important;
+  border-radius:6px !important;
+  background:var(--r23-panel-soft) !important;
+  color:var(--r23-muted) !important;
+  box-shadow:0 7px 20px rgba(0,0,0,.28) !important;
+  backdrop-filter:blur(14px) saturate(1.08) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(1.08) !important;
   font:850 9px/1 var(--font-mono) !important;
-  letter-spacing:.05em !important;
+  letter-spacing:.04em !important;
+  touch-action:manipulation;
 }
 body.r2-runtime .global-gps-button svg{
-  width:21px;
-  height:21px;
+  width:22px !important;
+  height:22px !important;
 }
 body.r2-runtime .global-gps-button:not(:disabled):active{
   transform:scale(.96);
 }
 body.r2-runtime #gpsPowerBtn.active,
-body.r2-runtime #gpsPowerBtn[aria-pressed="true"]{
-  border-color:var(--r22-line-strong) !important;
-  background:var(--r22-active-dim) !important;
-  color:var(--r2-state-active) !important;
-  box-shadow:
-    0 0 18px var(--r22-glow),
-    0 0 0 1px var(--r22-line-soft) inset !important;
-}
-body.r2-runtime .gps-center-button:not(:disabled){
-  color:var(--r2-state-active) !important;
-  border-color:var(--r22-line-strong) !important;
+body.r2-runtime #gpsPowerBtn[aria-pressed="true"],
+body.r2-runtime #gpsCenterBtn.active,
+body.r2-runtime #tempQuickBtn.active{
+  color:var(--r23-accent) !important;
+  border-color:var(--r23-accent) !important;
+  background:var(--r23-panel) !important;
+  box-shadow:0 0 13px var(--r23-glow),0 7px 20px rgba(0,0,0,.3) !important;
 }
 body.r2-runtime .global-gps-button:disabled{
-  opacity:.38 !important;
+  opacity:.34 !important;
+  color:var(--r23-muted) !important;
+  border-color:var(--r23-line) !important;
+  background:var(--r23-panel-soft) !important;
+  box-shadow:none !important;
 }
 
-/* Strong optical identity. The reticle is a measuring instrument, not decoration. */
+/* --- Reticle is a primary measuring instrument --- */
 body.r2-runtime .reticle-container{
-  width:96px !important;
-  height:96px !important;
+  position:fixed !important;
+  top:50dvh !important;
+  left:50vw !important;
+  width:104px !important;
+  height:104px !important;
+  transform:translate(-50%,-50%) !important;
   opacity:1 !important;
-  filter:drop-shadow(0 0 3px var(--r22-glow)) !important;
+  z-index:940 !important;
+  filter:drop-shadow(0 0 3px var(--r23-glow)) !important;
   transition:none !important;
+  pointer-events:none !important;
 }
 body.r2-runtime .reticle-axis-v{
   top:0 !important;
@@ -551,14 +619,8 @@ body.r2-runtime .reticle-axis-v{
   width:1px !important;
   height:100% !important;
   transform:translateX(-50%) !important;
-  background:
-    linear-gradient(
-      to bottom,
-      var(--r2-state-active) 0 33%,
-      transparent 33% 67%,
-      var(--r2-state-active) 67% 100%
-    ) !important;
-  opacity:.88 !important;
+  background:linear-gradient(to bottom,var(--r23-accent) 0 35%,transparent 35% 65%,var(--r23-accent) 65% 100%) !important;
+  opacity:.92 !important;
 }
 body.r2-runtime .reticle-axis-h{
   top:50% !important;
@@ -566,33 +628,27 @@ body.r2-runtime .reticle-axis-h{
   width:100% !important;
   height:1px !important;
   transform:translateY(-50%) !important;
-  background:
-    linear-gradient(
-      to right,
-      var(--r2-state-active) 0 33%,
-      transparent 33% 67%,
-      var(--r2-state-active) 67% 100%
-    ) !important;
-  opacity:.88 !important;
+  background:linear-gradient(to right,var(--r23-accent) 0 35%,transparent 35% 65%,var(--r23-accent) 65% 100%) !important;
+  opacity:.92 !important;
 }
 body.r2-runtime .target-gate{
   top:50% !important;
   left:50% !important;
-  width:34px !important;
-  height:34px !important;
+  width:38px !important;
+  height:38px !important;
   transform:translate(-50%,-50%) !important;
   border:0 !important;
   opacity:1 !important;
-  color:var(--r2-state-active) !important;
+  color:var(--r23-accent) !important;
   background:
-    linear-gradient(currentColor,currentColor) left top/10px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) left top/1px 10px no-repeat,
-    linear-gradient(currentColor,currentColor) right top/10px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) right top/1px 10px no-repeat,
-    linear-gradient(currentColor,currentColor) left bottom/10px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) left bottom/1px 10px no-repeat,
-    linear-gradient(currentColor,currentColor) right bottom/10px 1px no-repeat,
-    linear-gradient(currentColor,currentColor) right bottom/1px 10px no-repeat !important;
+    linear-gradient(currentColor,currentColor) left top/11px 1.5px no-repeat,
+    linear-gradient(currentColor,currentColor) left top/1.5px 11px no-repeat,
+    linear-gradient(currentColor,currentColor) right top/11px 1.5px no-repeat,
+    linear-gradient(currentColor,currentColor) right top/1.5px 11px no-repeat,
+    linear-gradient(currentColor,currentColor) left bottom/11px 1.5px no-repeat,
+    linear-gradient(currentColor,currentColor) left bottom/1.5px 11px no-repeat,
+    linear-gradient(currentColor,currentColor) right bottom/11px 1.5px no-repeat,
+    linear-gradient(currentColor,currentColor) right bottom/1.5px 11px no-repeat !important;
 }
 body.r2-runtime .target-gate::before,
 body.r2-runtime .target-gate::after{
@@ -601,282 +657,425 @@ body.r2-runtime .target-gate::after{
   position:absolute !important;
   left:50% !important;
   top:50% !important;
-  background:var(--r2-state-active) !important;
+  background:var(--r23-accent) !important;
   opacity:1 !important;
 }
-body.r2-runtime .target-gate::before{
-  width:10px !important;
-  height:1px !important;
-  transform:translate(-50%,-50%) !important;
+body.r2-runtime .target-gate::before{width:12px !important;height:1.5px !important;transform:translate(-50%,-50%) !important;}
+body.r2-runtime .target-gate::after{width:1.5px !important;height:12px !important;transform:translate(-50%,-50%) !important;}
+
+/* --- Scale and map chrome --- */
+body.r2-runtime .map-scale-osd{
+  position:fixed !important;
+  left:50% !important;
+  bottom:calc(var(--r23-nav-h) + 22px) !important;
+  transform:translateX(-50%) !important;
+  color:var(--r23-accent) !important;
+  text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 6px var(--r23-glow) !important;
+  z-index:930 !important;
 }
-body.r2-runtime .target-gate::after{
-  width:1px !important;
-  height:10px !important;
-  transform:translate(-50%,-50%) !important;
+body.r2-runtime .map-scale-line{border-color:var(--r23-accent) !important;}
+body.r2-runtime.r1-location-open .map-scale-osd{display:none !important;}
+body.r2-runtime .leaflet-control-attribution{
+  bottom:var(--r23-nav-h) !important;
+  opacity:.62;
 }
 
-/* Screen-corner viewfinder brackets remain clearly visible. */
-body.r2-runtime .bracket{
-  width:40px !important;
-  height:40px !important;
-  border-width:1.5px !important;
-  border-color:var(--r2-state-active) !important;
-  opacity:.82 !important;
-  filter:drop-shadow(0 0 3px var(--r22-glow)) !important;
+/* --- Bottom navigation: one stable home surface --- */
+body.r2-runtime .mfd-bottom-bar{
+  position:fixed !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:0 !important;
+  width:100% !important;
+  max-width:none !important;
+  min-height:var(--r23-nav-h) !important;
+  height:auto !important;
+  transform:none !important;
+  margin:0 !important;
+  padding:5px 8px max(5px,env(safe-area-inset-bottom,0px)) !important;
+  border:0 !important;
+  border-top:1px solid var(--r23-line) !important;
+  border-radius:0 !important;
+  background:var(--r23-panel) !important;
+  box-shadow:0 -7px 24px rgba(0,0,0,.32) !important;
+  z-index:2300 !important;
+  backdrop-filter:blur(18px) saturate(1.08);
+  -webkit-backdrop-filter:blur(18px) saturate(1.08);
 }
-body.r2-runtime .bracket.tl{
-  top:calc(env(safe-area-inset-top,0px) + 6px) !important;
-  left:8px !important;
+body.r2-runtime .mfd-bottom-bar > .osb-cluster:not(.v26-main-cluster){display:none !important;}
+body.r2-runtime .mfd-bottom-bar .v26-main-cluster{
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:2px !important;
+  width:100% !important;
+  height:48px !important;
 }
-body.r2-runtime .bracket.tr{
-  top:calc(env(safe-area-inset-top,0px) + 6px) !important;
-  right:8px !important;
+body.r2-runtime .mfd-bottom-bar .v26-main-cluster .osb-btn{
+  position:relative;
+  min-height:46px !important;
+  height:46px !important;
+  border:0 !important;
+  background:transparent !important;
+  color:var(--r23-muted) !important;
+  box-shadow:none !important;
+  font:700 11px/1 var(--r23-ui-font) !important;
 }
-body.r2-runtime .bracket.bl{
-  bottom:calc(env(safe-area-inset-bottom,0px) + 64px) !important;
-  left:8px !important;
+body.r2-runtime .mfd-bottom-bar .v26-main-cluster .osb-btn.active{
+  color:var(--r23-accent) !important;
+  text-shadow:0 0 7px var(--r23-glow);
 }
-body.r2-runtime .bracket.br{
-  bottom:calc(env(safe-area-inset-bottom,0px) + 64px) !important;
-  right:8px !important;
+body.r2-runtime .mfd-bottom-bar .v26-main-cluster .osb-btn.active::before{
+  content:'';
+  position:absolute;
+  top:-5px;
+  left:24%;
+  right:24%;
+  height:2px;
+  background:var(--r23-accent);
+  box-shadow:0 0 6px var(--r23-glow);
+}
+body.r2-runtime.target-mode .mfd-bottom-bar,
+body.r2-runtime.target-nav .mfd-bottom-bar{
+  display:none !important;
 }
 
-/* One visual language for actual interactive surfaces. */
+/* --- Interactive surfaces. One active panel, no nested bezel pile. --- */
 body.r2-runtime .r1-location-card,
 body.r2-runtime .r1-records-sheet,
 body.r2-runtime .field-control-tray,
 body.r2-runtime .target-mode-panel,
+body.r2-runtime .v29-mission-map-hud,
+body.r2-runtime .v29-mission-sheet,
+body.r2-runtime .sitrep-panel,
 body.r2-runtime .r2-display-shell,
-body.r2-runtime #addressSearchBackdrop .promo-modal{
-  border:1px solid var(--r22-line) !important;
-  border-radius:10px !important;
-  background:var(--r22-surface-strong) !important;
-  box-shadow:
-    0 14px 38px rgba(0,0,0,.48),
-    0 0 0 1px rgba(255,255,255,.025) inset,
-    0 0 24px var(--r22-glow) !important;
-  backdrop-filter:blur(24px) saturate(1.22);
-  -webkit-backdrop-filter:blur(24px) saturate(1.22);
+body.r2-runtime #addressSearchBackdrop .promo-modal,
+body.r2-runtime #routeLocateBackdrop .promo-modal{
+  border:1px solid var(--r23-line-strong) !important;
+  border-radius:8px !important;
+  background:var(--r23-panel) !important;
+  color:var(--r23-text) !important;
+  box-shadow:0 14px 36px rgba(0,0,0,.46) !important;
+  backdrop-filter:blur(20px) saturate(1.08);
+  -webkit-backdrop-filter:blur(20px) saturate(1.08);
 }
 body.r2-runtime .r1-location-card::before,
 body.r2-runtime .r1-records-sheet::before,
 body.r2-runtime .field-control-tray::before,
 body.r2-runtime .target-mode-panel::before,
+body.r2-runtime .v29-mission-map-hud::before,
 body.r2-runtime .r2-display-shell::before{
   content:'';
   position:absolute;
   top:-1px;
   left:14px;
   width:54px;
-  height:1px;
-  background:var(--r2-state-active);
+  height:2px;
+  background:var(--r23-accent);
   opacity:.72;
   pointer-events:none;
 }
-body.r2-runtime .r1-location-head,
-body.r2-runtime .r1-sheet-head,
-body.r2-runtime .r2-display-head,
-body.r2-runtime .target-mode-head{
-  border-bottom:1px solid var(--r22-line-soft) !important;
+body.r2-runtime .r1-location-card,
+body.r2-runtime .r1-records-sheet{
+  left:8px !important;
+  right:8px !important;
+  bottom:calc(var(--r23-nav-h) + 9px) !important;
+  max-width:760px !important;
+  max-height:min(40dvh,390px) !important;
+  margin:0 auto !important;
+  overflow-y:auto !important;
+  padding:11px !important;
+  z-index:2440 !important;
 }
-body.r2-runtime .r1-location-head span,
-body.r2-runtime .r1-sheet-head small,
-body.r2-runtime .r2-display-head small,
-body.r2-runtime .target-mode-kicker{
-  color:var(--r2-state-muted) !important;
-  font-family:var(--font-mono) !important;
-  letter-spacing:.12em !important;
+body.r2-runtime .r1-location-head{
+  padding:2px 48px 8px 2px !important;
+  border-bottom:1px solid var(--r23-line) !important;
 }
-body.r2-runtime .r1-location-head strong,
-body.r2-runtime .r1-sheet-head strong,
-body.r2-runtime .r2-display-head strong,
-body.r2-runtime .target-mode-name{
-  color:var(--field-text,var(--text-main)) !important;
-  font-family:var(--r22-font-ui) !important;
-  font-weight:760 !important;
+body.r2-runtime .r1-location-head span{
+  color:var(--r23-muted) !important;
+  font:800 9px/1 var(--font-mono) !important;
+  letter-spacing:.13em !important;
 }
-body.r2-runtime .r1-location-meta,
-body.r2-runtime .r2-location-source{
-  color:var(--r2-state-muted) !important;
+body.r2-runtime .r1-location-head strong{
+  margin-top:4px;
+  color:var(--r23-text) !important;
+  font:760 16px/1.15 var(--r23-ui-font) !important;
+}
+body.r2-runtime .r1-location-coords{
+  min-height:44px !important;
+  margin-top:7px !important;
+  padding:5px 4px !important;
+  border:0 !important;
+  border-bottom:1px solid var(--r23-line) !important;
+  background:transparent !important;
+  color:var(--r23-accent) !important;
+  font:900 12px/1.2 var(--font-mono) !important;
+}
+body.r2-runtime .r1-location-meta{
+  min-height:31px !important;
+  color:var(--r23-muted) !important;
+  border-bottom:1px solid var(--r23-line) !important;
+  font:800 10px/1.2 var(--font-mono) !important;
+}
+body.r2-runtime .r1-location-actions{
+  position:static !important;
+  display:grid !important;
+  grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 52px !important;
+  gap:6px !important;
+  margin-top:8px !important;
+}
+body.r2-runtime .r1-location-more{
+  position:static !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+}
+body.r2-runtime .r1-location-close,
+body.r2-runtime .r1-sheet-close,
+body.r2-runtime .r2-display-close,
+body.r2-runtime .v29-mission-map-close,
+body.r2-runtime .v29-sheet-x{
+  width:44px !important;
+  height:44px !important;
+  border:1px solid var(--r23-line) !important;
+  border-radius:6px !important;
+  background:transparent !important;
+  color:var(--r23-muted) !important;
 }
 
-/* Panel controls mimic the God's Eye command language without copying its palette. */
+/* Field menu sits above the home bar, never over it. */
+body.r2-runtime .field-control-tray{
+  position:fixed !important;
+  left:8px !important;
+  right:8px !important;
+  bottom:calc(var(--r23-nav-h) + 6px) !important;
+  max-height:min(44dvh,390px) !important;
+  overflow-y:auto !important;
+  padding:10px !important;
+  z-index:2480 !important;
+}
+body.r2-runtime .field-control-head{
+  min-height:44px;
+  border-bottom:1px solid var(--r23-line) !important;
+  color:var(--r23-muted) !important;
+  font:800 9px/1 var(--font-mono) !important;
+  letter-spacing:.13em !important;
+}
+body.r2-runtime .field-control-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:6px !important;
+}
+body.r2-runtime .field-control-grid .osb-btn{
+  min-height:46px !important;
+}
+
+/* Target / NAV owns the bottom. Home bar is hidden in this mode. */
+body.r2-runtime .target-mode-panel{
+  position:fixed !important;
+  left:8px !important;
+  right:8px !important;
+  bottom:max(8px,env(safe-area-inset-bottom,0px)) !important;
+  width:auto !important;
+  max-width:820px !important;
+  max-height:min(38dvh,360px) !important;
+  margin:0 auto !important;
+  overflow-y:auto !important;
+  transform:none !important;
+  padding:10px !important;
+  z-index:2600 !important;
+}
+body.r2-runtime .target-mode-head{
+  min-height:52px !important;
+  padding:2px 2px 8px !important;
+  border-bottom:1px solid var(--r23-line) !important;
+}
+body.r2-runtime .target-mode-kicker{
+  color:var(--r23-muted) !important;
+  font:800 9px/1 var(--font-mono) !important;
+  letter-spacing:.12em !important;
+}
+body.r2-runtime .target-mode-name{
+  margin-top:4px !important;
+  color:var(--r23-text) !important;
+  font:760 16px/1.15 var(--r23-ui-font) !important;
+}
+body.r2-runtime .target-mode-stats,
+body.r2-runtime .plan-nav-hint{
+  color:var(--r23-muted) !important;
+  font-size:10px !important;
+}
+body.r2-runtime .target-mode-actions,
+body.r2-runtime .target-mode-actions.v271-mode-toolbar{
+  position:static !important;
+  margin-top:8px !important;
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  gap:5px !important;
+  background:transparent !important;
+}
+body.r2-runtime.target-nav .target-mode-actions,
+body.r2-runtime.target-nav .target-mode-actions.v271-mode-toolbar{
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+}
+body.r2-runtime .target-mode-actions .osb-btn{
+  min-height:46px !important;
+  padding:0 3px !important;
+  font-size:10px !important;
+}
+
+/* Mission/map surfaces and SITREP use the same bottom geometry. */
+body.r2-runtime .v29-mission-map-hud,
+body.r2-runtime .v29-mission-sheet,
+body.r2-runtime .sitrep-panel{
+  left:8px !important;
+  right:8px !important;
+  bottom:calc(var(--r23-nav-h) + 8px) !important;
+  max-width:820px !important;
+  max-height:min(42dvh,390px) !important;
+  margin:0 auto !important;
+  overflow-y:auto !important;
+  z-index:2420 !important;
+}
+body.r2-runtime.target-mode .sitrep-panel{display:none !important;}
+
+/* Buttons inside real panels share one quiet equipment language. */
 body.r2-runtime .r1-location-card .osb-btn,
 body.r2-runtime .r1-records-sheet .osb-btn,
 body.r2-runtime .field-control-tray .osb-btn,
 body.r2-runtime .target-mode-panel .osb-btn,
+body.r2-runtime .v29-mission-map-hud .osb-btn,
+body.r2-runtime .v29-mission-sheet .osb-btn,
 body.r2-runtime .r2-display-shell button,
-body.r2-runtime #addressSearchBackdrop button{
+body.r2-runtime #addressSearchBackdrop button,
+body.r2-runtime #routeLocateBackdrop button{
   min-height:44px;
-  border:1px solid var(--r22-line-soft) !important;
-  border-radius:7px !important;
-  background:rgba(255,255,255,.025) !important;
-  color:var(--field-text,var(--text-main)) !important;
-  box-shadow:none !important;
-  font-family:var(--r22-font-ui);
-  transition:
-    background-color .14s ease,
-    border-color .14s ease,
-    color .14s ease,
-    transform .14s ease;
-}
-body.r2-runtime .r1-location-card .osb-btn:active,
-body.r2-runtime .r1-records-sheet .osb-btn:active,
-body.r2-runtime .field-control-tray .osb-btn:active,
-body.r2-runtime .target-mode-panel .osb-btn:active,
-body.r2-runtime .r2-display-shell button:active,
-body.r2-runtime #addressSearchBackdrop button:active{
-  transform:scale(.97);
-}
-body.r2-runtime .r1-location-card .osb-btn.active,
-body.r2-runtime .r1-records-sheet .osb-btn.active,
-body.r2-runtime .field-control-tray .osb-btn.active,
-body.r2-runtime .target-mode-panel .osb-btn.active,
-body.r2-runtime .r2-display-shell button.active{
-  border-color:var(--r22-line-strong) !important;
-  background:var(--r22-active-dim) !important;
-  color:var(--r2-state-active) !important;
-  box-shadow:0 0 14px var(--r22-glow) !important;
-}
-body.r2-runtime .r1-location-close,
-body.r2-runtime .r1-sheet-close,
-body.r2-runtime .r2-display-close{
-  width:40px !important;
-  height:40px !important;
-  border-color:var(--r22-line-soft) !important;
-  border-radius:7px !important;
+  border:1px solid var(--r23-line) !important;
+  border-radius:6px !important;
   background:rgba(255,255,255,.02) !important;
-  color:var(--r2-state-muted) !important;
-}
-
-/* Position rows remain one surface: dividers, not nested cards. */
-body.r2-runtime .r2-location-formats{
-  border-top:1px solid var(--r22-line-soft) !important;
-}
-body.r2-runtime .r2-location-format{
-  border-bottom:1px solid var(--r22-line-soft) !important;
-}
-body.r2-runtime .r2-location-format.primary{
-  background:linear-gradient(90deg,var(--r22-active-dim),transparent 46%) !important;
-  box-shadow:inset 2px 0 var(--r2-state-active) !important;
-}
-
-/* Bottom dock uses the same surface/line family as the upper command strip. */
-body.r2-runtime .mfd-bottom-bar{
-  border-top:1px solid var(--r22-line-soft) !important;
-  background:var(--r22-surface-strong) !important;
-  box-shadow:
-    0 -8px 24px rgba(0,0,0,.30),
-    0 0 20px var(--r22-glow) !important;
-  backdrop-filter:blur(22px) saturate(1.18);
-  -webkit-backdrop-filter:blur(22px) saturate(1.18);
-}
-body.r2-runtime .mfd-bottom-bar .v26-main-cluster .osb-btn{
-  color:var(--r2-state-muted) !important;
-  font-family:var(--r22-font-ui) !important;
+  color:var(--r23-text) !important;
+  box-shadow:none !important;
+  font-family:var(--r23-ui-font) !important;
   font-weight:700 !important;
 }
-body.r2-runtime .mfd-bottom-bar .v26-main-cluster .osb-btn.active{
-  color:var(--r2-state-active) !important;
-  text-shadow:0 0 8px var(--r22-glow);
+body.r2-runtime .osb-btn.active,
+body.r2-runtime .r2-display-shell button.active{
+  border-color:var(--r23-line-strong) !important;
+  color:var(--r23-accent) !important;
+  background:rgba(255,255,255,.035) !important;
+  box-shadow:inset 2px 0 var(--r23-accent) !important;
 }
 
-/* Keep required map features legible inside the unified theme. */
-body.r2-runtime .map-scale-osd{
-  color:var(--r2-state-active) !important;
-  text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 7px var(--r22-glow) !important;
+/* Position data is one panel with row dividers, not cards inside cards. */
+body.r2-runtime .r2-location-formats,
+body.r2-runtime .r2-format-rows{
+  border-top:1px solid var(--r23-line) !important;
 }
-body.r2-runtime .map-scale-line{
-  border-color:var(--r2-state-active) !important;
+body.r2-runtime .r2-location-format,
+body.r2-runtime .r2-format-row{
+  border:0 !important;
+  border-bottom:1px solid var(--r23-line) !important;
+  background:transparent !important;
 }
+body.r2-runtime .r2-location-format.primary{
+  box-shadow:inset 2px 0 var(--r23-accent) !important;
+  background:linear-gradient(90deg,rgba(255,255,255,.035),transparent 44%) !important;
+}
+body.r2-runtime .r2-location-format-label,
+body.r2-runtime .r2-display-section-title,
+body.r2-runtime .r2-primary-field > span{
+  color:var(--r23-muted) !important;
+}
+body.r2-runtime .r2-location-format.primary .r2-location-format-label,
+body.r2-runtime .r2-location-format-copy{
+  color:var(--r23-accent) !important;
+}
+
+/* LOW DATA must not flash the online tile pane. */
+body.r2-runtime.r16-light-map .leaflet-tile-pane{display:none !important;}
 
 @media (max-width:768px){
-  :root{
-    --r22-command-top:calc(env(safe-area-inset-top,0px) + 88px);
+  body.r2-runtime{
+    --r23-control-size:48px;
+    --r23-control-gap:8px;
   }
-
-  body.r2-runtime .r1-map-search{
-    left:14px !important;
-    right:179px !important;
-  }
-  body.r2-runtime .global-gps-controls{
-    right:14px !important;
-    width:157px !important;
-    grid-template-columns:repeat(3,47px) !important;
-    grid-auto-rows:47px !important;
+  body.r2-runtime .sys-telemetry{
     gap:8px !important;
   }
-  body.r2-runtime .global-gps-button{
-    width:47px !important;
-    height:47px !important;
-    min-width:47px !important;
-    min-height:47px !important;
-  }
-
   body.r2-runtime .telemetry-osd{
-    left:16px !important;
-    width:min(284px,calc(100vw - 32px)) !important;
+    width:min(300px,calc(100vw - 92px)) !important;
   }
-
-  body.r2-runtime .reticle-container{
-    width:96px !important;
-    height:96px !important;
+  body.r2-runtime .r1-map-search{
+    left:18px !important;
+    right:78px !important;
   }
-
+  body.r2-runtime .global-gps-controls{
+    right:18px !important;
+  }
   body.r2-runtime .r1-location-card,
-  body.r2-runtime .r1-records-sheet{
+  body.r2-runtime .r1-records-sheet,
+  body.r2-runtime .field-control-tray,
+  body.r2-runtime .target-mode-panel,
+  body.r2-runtime .v29-mission-map-hud,
+  body.r2-runtime .v29-mission-sheet,
+  body.r2-runtime .sitrep-panel{
     left:8px !important;
     right:8px !important;
   }
 }
 
 @media (max-width:390px){
+  body.r2-runtime{
+    --r23-control-size:44px;
+    --r23-control-gap:7px;
+    --r23-command-top:calc(env(safe-area-inset-top,0px) + 100px);
+  }
+  body.r2-runtime .top-compass-bar{
+    left:16px !important;
+    right:16px !important;
+    gap:8px !important;
+  }
+  body.r2-runtime .sys-telemetry{
+    gap:6px !important;
+    font-size:7.5px !important;
+  }
+  body.r2-runtime .sys-telemetry b{
+    font-size:9px !important;
+  }
+  body.r2-runtime .telemetry-osd{
+    left:16px !important;
+    width:min(282px,calc(100vw - 80px)) !important;
+  }
+  body.r2-runtime .telemetry-osd .osd-mgrs-val{
+    font-size:13px !important;
+  }
   body.r2-runtime .r1-map-search{
-    left:10px !important;
-    right:162px !important;
+    left:14px !important;
+    right:70px !important;
     padding:0 10px !important;
   }
   body.r2-runtime .global-gps-controls{
-    right:10px !important;
-    width:94px !important;
-    grid-template-columns:repeat(3,44px) !important;
-    grid-auto-rows:44px !important;
-    gap:6px !important;
-  }
-  body.r2-runtime .global-gps-button{
-    width:44px !important;
-    height:44px !important;
-    min-width:44px !important;
-    min-height:44px !important;
+    right:14px !important;
   }
   body.r2-runtime .r22-search-copy small{
-    display:none;
+    display:none !important;
   }
-  body.r2-runtime .sys-telemetry{
-    gap:7px !important;
-    font-size:8px !important;
+  body.r2-runtime .target-mode-actions,
+  body.r2-runtime .target-mode-actions.v271-mode-toolbar{
+    grid-template-columns:repeat(5,minmax(0,1fr)) !important;
   }
-  body.r2-runtime .sys-telemetry b{
-    font-size:9px;
+  body.r2-runtime.target-nav .target-mode-actions,
+  body.r2-runtime.target-nav .target-mode-actions.v271-mode-toolbar{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
   }
 }
 
 @media (min-width:769px){
   body.r2-runtime .reticle-container{
-    width:112px !important;
-    height:112px !important;
+    width:116px !important;
+    height:116px !important;
   }
   body.r2-runtime .target-gate{
-    width:40px !important;
-    height:40px !important;
-    background:
-      linear-gradient(currentColor,currentColor) left top/12px 1px no-repeat,
-      linear-gradient(currentColor,currentColor) left top/1px 12px no-repeat,
-      linear-gradient(currentColor,currentColor) right top/12px 1px no-repeat,
-      linear-gradient(currentColor,currentColor) right top/1px 12px no-repeat,
-      linear-gradient(currentColor,currentColor) left bottom/12px 1px no-repeat,
-      linear-gradient(currentColor,currentColor) left bottom/1px 12px no-repeat,
-      linear-gradient(currentColor,currentColor) right bottom/12px 1px no-repeat,
-      linear-gradient(currentColor,currentColor) right bottom/1px 12px no-repeat !important;
+    width:42px !important;
+    height:42px !important;
+  }
+  body.r2-runtime .r1-map-search{
+    right:92px !important;
   }
 }
