@@ -22,10 +22,10 @@ test('R2 is the final runtime layer above R1',()=>{
   assert(sw.indexOf("html.includes('r2.js')")>sw.indexOf("html.includes('r1.js')"));
 });
 
-test('R2.1 uses a new cache identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r2-1-hud-state-perf-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r2-1-hud-state-perf-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r2-1-hud-state-perf-20261006-1'));
+test('R2.2 uses a new cache identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'r2-2-gev-hud-20261006-1';"));
+  assert(index.includes('service-worker.js?v=r2-2-gev-hud-20261006-1'));
+  assert(index.includes('tactical-recon-sw-reload-r2-2-gev-hud-20261006-1'));
 });
 
 test('R2 location display preferences separate primary, visibility and order',()=>{
@@ -115,11 +115,57 @@ test('Network status is named NET and exposes truthful online/offline state styl
   assert(css.includes('#hudLinkState[data-state="offline"]'));
 });
 
-test('R2.1 identifies itself as the new baseline',()=>{
-  assert(r2.includes("VERSION='2.1'"));
-  assert(r2.includes("document.title='TACTICAL RECON // R2.1 FIELD TERMINAL'"));
+test('R2.2 identifies itself as the new baseline',()=>{
+  assert(r2.includes("VERSION='2.2'"));
+  assert(r2.includes("document.title='TACTICAL RECON // R2.2 FIELD TERMINAL'"));
   assert(index.includes('<title>TACTICAL RECON // R2.1 FIELD TERMINAL</title>'));
   assert(r2.includes("document.body.classList.add('r2-runtime')"));
+});
+
+test('R2.2 keeps military coordinate telemetry visible in the HUD',()=>{
+  assert(r2.includes('function ensureR22Hud'));
+  assert(r2.includes("head.textContent='RETICLE'"));
+  assert(r2.includes("id='r22MgrsSecondary'")||r2.includes("secondary.id='r22MgrsSecondary'"));
+  assert(r2.includes("secondary.hidden=settings.primary==='MGRS'||!mgrs"));
+  assert(css.includes('Reticle coordinate block stays visible at all times'));
+  assert(css.includes('font:900 12.5px/1.15 var(--font-mono)'));
+});
+
+test('R2.2 command strip uses matched compact hardware controls',()=>{
+  assert(r2.includes("search.dataset.r22Decorated='1'"));
+  assert(r2.includes("meta.textContent='MGRS · ADDR'"));
+  assert(css.includes('--r22-command-h:48px'));
+  assert(css.includes('right:128px !important'));
+  assert(css.includes('grid-template-columns:repeat(2,48px) !important'));
+  assert(css.includes('height:48px !important'));
+});
+
+test('R2.2 restores a strong always-visible reticle and screen frame',()=>{
+  assert(css.includes('The reticle is a measuring instrument, not decoration'));
+  assert(css.includes('width:96px !important'));
+  assert(css.includes('opacity:1 !important'));
+  assert(css.includes('body.r2-runtime .target-gate::before'));
+  assert(css.includes('body.r2-runtime .bracket'));
+  assert(css.includes('width:40px !important'));
+  assert(css.includes('opacity:.82 !important'));
+});
+
+test('R2.2 panel surfaces share one accent-derived visual language',()=>{
+  assert(css.includes('--r22-surface:'));
+  assert(css.includes('--r22-line-soft:'));
+  assert(css.includes('One visual language for actual interactive surfaces'));
+  assert(css.includes('body.r2-runtime .r1-location-card'));
+  assert(css.includes('body.r2-runtime .r1-records-sheet'));
+  assert(css.includes('body.r2-runtime .field-control-tray'));
+  assert(css.includes('body.r2-runtime .target-mode-panel'));
+  assert(css.includes('body.r2-runtime .r2-display-shell'));
+});
+
+test('R2.2 adds GPS state to the equipment telemetry row',()=>{
+  assert(r2.includes("item.id='r22GpsHud'"));
+  assert(r2.includes('function syncR22GpsHud'));
+  assert(r2.includes("value.dataset.state=on?(raw.includes('NO FIX')?'search':'on'):'off'"));
+  assert(css.includes('#r22GpsHudValue[data-state="off"]'));
 });
 
 test('Pages validation includes R2 checks',()=>{
@@ -128,4 +174,4 @@ test('Pages validation includes R2 checks',()=>{
   assert(workflow.includes('node test_r2.js'));
 });
 
-console.log('R2.1 regression checks complete.');
+console.log('R2.2 regression checks complete.');
