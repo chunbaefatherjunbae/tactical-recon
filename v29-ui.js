@@ -116,7 +116,10 @@
     banner.className='v29-map-fallback';
     banner.hidden=true;
     banner.innerHTML='<span></span><button type="button"></button>';
-    banner.querySelector('button').addEventListener('click',()=>openSheet('emergency'));
+    banner.querySelector('button').addEventListener('click',()=>{
+      if(root.v29Stabilize?.openLightMap){root.v29Stabilize.openLightMap();return;}
+      openSheet('emergency');
+    });
     document.body.appendChild(banner);
     return banner;
   }
@@ -127,12 +130,13 @@
       ? (lang()==='ko'?'오프라인 · 온라인 지도 사용 불가':'OFFLINE · ONLINE MAP UNAVAILABLE')
       : (lang()==='ko'?'지도 타일 수신 실패':'MAP TILE FAILURE');
     banner.querySelector('span').textContent=text;
-    banner.querySelector('button').textContent=lang()==='ko'?'비상지도':'EMERGENCY MAP';
+    banner.querySelector('button').textContent=lang()==='ko'?'경량지도':'LOW DATA';
   }
 
   function showMapFallback(reason='TILE'){
     const banner=ensureMapFallbackBanner();
     syncMapFallbackCopy(reason);
+    if(document.body.classList.contains('r15-light-map')){banner.hidden=true;return;}
     banner.hidden=false;
   }
 
@@ -447,8 +451,7 @@
       '<label>'+t('currentInput')+'<input id="v29CurrentInput" value="'+esc(current?current[0].toFixed(6)+', '+current[1].toFixed(6):'')+'"></label>'+
       '<label>'+t('targetInput')+'<input id="v29TargetInput" value="'+esc(target?target[0].toFixed(6)+', '+target[1].toFixed(6):'')+'"></label>'+
       '<button class="osb-btn active" id="v29CalcBtn">'+t('calculate')+'</button></div>'+
-      '<div class="v29-emergency-readout" id="v29EmergencyReadout"></div>'+
-      '<div class="v29-section"><div class="v29-section-title">'+t('offlineMap')+'</div><div class="v29-emergency-map" id="v29EmergencyMap"></div></div>';
+      '<div class="v29-emergency-readout" id="v29EmergencyReadout"></div>';
     const cm=body.querySelector('#v29CurrentMode'),tm=body.querySelector('#v29TargetMode');
     if(saved.currentSource==='MANUAL')cm.value='manual';
     if(saved.targetSource==='MANUAL')tm.value='manual';
@@ -474,7 +477,7 @@
     if(!target)target=parsePosition(document.getElementById('v29TargetInput')?.value);
     const out=document.getElementById('v29EmergencyReadout');
     if(!current||!target){
-      if(out)out.textContent=t('invalid');renderEmergencyMap(null,null);return;
+      if(out)out.textContent=t('invalid');return;
     }
     core.emergency.saveState({current,target,currentSource:cm==='auto'?'AUTO':'MANUAL',targetSource:tm==='objective'?'OBJECTIVE':'MANUAL'});
     const bundle=core.geo.bearingBundle(current,target,{date:new Date(),altitudeKm:0});
@@ -489,51 +492,6 @@
       metric(t('model'),bundle.model?.valid?'WMM-2025 · '+bundle.model.decimalYear.toFixed(2):'WMM OUT OF RANGE')+
       metric('UTM','ZONE '+bundle.zone)+
       '</div>';
-    renderEmergencyMap(current,target);
-  }
-
-  function renderEmergencyMap(current,target){
-    const box=document.getElementById('v29EmergencyMap');if(!box)return;
-    if(!current||!target){box.innerHTML='<div class="v29-empty">'+t('invalid')+'</div>';return;}
-    const plan=activePlan();
-    const route=(plan?.routeSegments||[]).flat().filter(core.geo.validCoords);
-    const pts=[current,target,...route];
-    let minLat=Math.min(...pts.map(p=>p[0])),maxLat=Math.max(...pts.map(p=>p[0]));
-    let minLon=Math.min(...pts.map(p=>p[1])),maxLon=Math.max(...pts.map(p=>p[1]));
-    const latPad=Math.max(.01,(maxLat-minLat)*.15),lonPad=Math.max(.01,(maxLon-minLon)*.15);
-    minLat-=latPad;maxLat+=latPad;minLon-=lonPad;maxLon+=lonPad;
-    let contextSites=[];
-    try{
-      if(typeof getWaypoints==='function'){
-        contextSites=(getWaypoints('ALL')||[])
-          .filter(site=>core.geo.validCoords(site?.coords))
-          .filter(site=>site.coords[0]>=minLat&&site.coords[0]<=maxLat&&site.coords[1]>=minLon&&site.coords[1]<=maxLon)
-          .slice(0,30);
-      }
-    }catch(e){}
-    const W=600,H=360,pad=34;
-    const x=lon=>pad+(lon-minLon)/(maxLon-minLon)*(W-2*pad);
-    const y=lat=>H-pad-(lat-minLat)/(maxLat-minLat)*(H-2*pad);
-    let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(t('offlineMap'))+'">';
-    for(let i=0;i<=4;i++){
-      const gx=pad+i*(W-2*pad)/4,gy=pad+i*(H-2*pad)/4;
-      svg+='<line class="grid" x1="'+gx+'" y1="'+pad+'" x2="'+gx+'" y2="'+(H-pad)+'"/>';
-      svg+='<line class="grid" x1="'+pad+'" y1="'+gy+'" x2="'+(W-pad)+'" y2="'+gy+'"/>';
-    }
-    (plan?.routeSegments||[]).forEach(seg=>{
-      const clean=seg.filter(core.geo.validCoords);if(clean.length<2)return;
-      svg+='<polyline class="route" points="'+clean.map(p=>x(p[1]).toFixed(1)+','+y(p[0]).toFixed(1)).join(' ')+'"/>';
-    });
-    contextSites.forEach(site=>{
-      svg+='<circle class="site" cx="'+x(site.coords[1])+'" cy="'+y(site.coords[0])+'" r="2.8"/>';
-    });
-    svg+='<line class="direct" x1="'+x(current[1])+'" y1="'+y(current[0])+'" x2="'+x(target[1])+'" y2="'+y(target[0])+'"/>';
-    svg+='<circle class="current" cx="'+x(current[1])+'" cy="'+y(current[0])+'" r="7"/>';
-    const tx=x(target[1]),ty=y(target[0]);
-    svg+='<path class="target" d="M '+tx+' '+(ty-9)+' L '+(tx+9)+' '+ty+' L '+tx+' '+(ty+9)+' L '+(tx-9)+' '+ty+' Z"/>';
-    svg+='<text x="'+pad+'" y="18">'+minLat.toFixed(3)+'..'+maxLat.toFixed(3)+' / '+minLon.toFixed(3)+'..'+maxLon.toFixed(3)+'</text>';
-    svg+='</svg>';
-    box.innerHTML=svg;
   }
 
   function renderExport(body){
