@@ -308,6 +308,10 @@ def build_output() -> None:
             ele = int(round(float(props.get("ele")) / CONTOUR_INTERVAL_M) * CONTOUR_INTERVAL_M)
         except Exception:
             continue
+        # This is a land-navigation basemap. Drop sea-level/bathymetric contours
+        # and impossible outliers before they inflate the offline payload.
+        if ele < CONTOUR_INTERVAL_M or ele > 2500:
+            continue
         geom = safe_shape(feature)
         if geom is None:
             continue
