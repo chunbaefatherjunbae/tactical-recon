@@ -2495,9 +2495,13 @@
     const restore=[...lightMapSuppressedTiles];
     lightMapSuppressedTiles=[];
     restore.forEach(layer=>{
-      if(typeof roadBoostLayer!=='undefined'&&layer===roadBoostLayer&&typeof roadBoostEnabled!=='undefined'&&!roadBoostEnabled)return;
+      const isManagedBasemap=
+        (typeof baseTileLayer!=='undefined'&&layer===baseTileLayer)||
+        (typeof roadBoostLayer!=='undefined'&&layer===roadBoostLayer);
+      if(isManagedBasemap)return;
       if(layer&&!map.hasLayer(layer))layer.addTo(map);
     });
+    if(typeof syncNetworkBasemap==='function')syncNetworkBasemap();
     if(!navigator.onLine){
       const banner=document.getElementById('v29MapFallback');
       if(banner)banner.hidden=false;
