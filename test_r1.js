@@ -5,6 +5,7 @@ const r1=fs.readFileSync('r1.js','utf8');
 const css=fs.readFileSync('r1.css','utf8');
 const sw=fs.readFileSync('service-worker.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
+const base=fs.readFileSync('app-base.js','utf8');
 const lowDataPath='offline/kr-low.geojson';
 const lowData=JSON.parse(fs.readFileSync(lowDataPath,'utf8'));
 
@@ -236,9 +237,9 @@ test('R1.6 grid is geographic rather than a decorative tile pattern',()=>{
 test('R1.5 HUD uses a fixed semantic slot instead of an empty BRG placeholder',()=>{
   assert(index.includes('id="hudPrimaryLabel">REF</span>'));
   assert(index.includes('id="hudBearing">NONE</span>'));
-  assert(index.includes("hudLabel.innerText = 'REF'"));
-  assert(index.includes("hudLabel.innerText = 'BRG'"));
-  assert(index.includes("ref?.type === 'LAST_FIX' ? 'LAST'"));
+  assert(base.includes("hudLabel.innerText = 'REF'"));
+  assert(base.includes("hudLabel.innerText = 'BRG'"));
+  assert(base.includes("ref?.type === 'LAST_FIX' ? 'LAST'"));
   assert(css.includes('grid-template-columns:30px 76px'));
   assert(css.includes('font-variant-numeric:tabular-nums'));
 });
