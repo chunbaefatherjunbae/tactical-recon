@@ -25,9 +25,9 @@ test('R1 loads explicitly after the legacy runtime layers',()=>{
 });
 
 test('R1 remains cached beneath the current runtime identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r2-cleanup-20261006-1';"));
-  assert(base.includes('service-worker.js?v=r2-cleanup-20261006-1'));
-  assert(base.includes('tactical-recon-sw-reload-r2-cleanup-20261006-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r2-3-viewport-coordinates-20261006-1';"));
+  assert(base.includes('service-worker.js?v=r2-3-viewport-coordinates-20261006-1'));
+  assert(base.includes('tactical-recon-sw-reload-r2-3-viewport-coordinates-20261006-1'));
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
 });
@@ -128,10 +128,16 @@ test('R1.2 resolves LAST FIX label collision and scale placement',()=>{
   assert(css.includes('top:calc(var(--r12-frame-bottom) - 25px) !important'));
 });
 
-test('R1.3 working-grid search accepts abbreviated MGRS safely',()=>{
-  assert(r1.includes("const WORKING_GRID_KEY='tactical_recon_working_grid_v1'"));
+test('R2.3 working-grid search accepts short MGRS only with a bounded trusted context',()=>{
+  assert(r1.includes("const WORKING_GRID_KEY='tactical_recon_working_grid_v2'"));
+  assert(r1.includes("if(Number(raw?.version)!==2)return null"));
+  assert(r1.includes("['FULL','MANUAL'].includes"));
   assert(r1.includes('function workingGridContext()'));
+  assert(r1.indexOf('const saved=storedWorkingGrid()')<r1.indexOf("source:'MAP',coords,trusted:false"));
+  assert(r1.indexOf("source:'MAP',coords,trusted:false")<r1.indexOf("source:String(ref.type||'REF'),coords,trusted:false"));
   assert(r1.includes('function expandMgrsQuery(query)'));
+  assert(r1.includes("saveWorkingGrid(expanded.prefix,'FULL')"));
+  assert(r1.includes("error.code='GRID_CONTEXT_MISMATCH'"));
   assert(r1.includes("source:expanded.workingGridApplied?'MGRS_SHORT':'MGRS'"));
   assert(r1.includes("e?.code==='GRID_PREFIX_REQUIRED'"));
   assert(r1.includes("GRID '+ctx.prefix"));
