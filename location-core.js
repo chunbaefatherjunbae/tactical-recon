@@ -20,7 +20,7 @@
 
   function parseWgs84(value){
     const raw=String(value||'').trim();
-    const m=raw.match(/^\s*([+-]?\d{1,2}(?:\.\d+)?)\s*[,\s]\s*([+-]?\d{1,3}(?:\.\d+)?)\s*$/);
+    const m=raw.match(/^\s*([+-]?\d{1,3}(?:\.\d+)?)\s*[,\s]\s*([+-]?\d{1,3}(?:\.\d+)?)\s*$/);
     if(!m)return null;
     const lat=Number(m[1]),lon=Number(m[2]);
     if(!validLatLon(lat,lon)){
