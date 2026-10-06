@@ -287,15 +287,8 @@ body.r2-runtime .viewfinder-frame{
   z-index:900 !important;
 }
 body.r2-runtime .viewfinder-frame::before{
-  content:'TACTICAL RECON // FIELD DISPLAY';
-  position:absolute;
-  top:-5px;
-  left:42px;
-  padding:0 7px;
-  background:var(--bg-base);
-  color:var(--r23-muted);
-  font:800 8px/1 var(--font-mono);
-  letter-spacing:.14em;
+  display:none !important;
+  content:none !important;
 }
 body.r2-runtime .bracket{
   position:absolute !important;
