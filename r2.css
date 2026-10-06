@@ -108,7 +108,7 @@ body.r2-runtime.v29-picking-location .reticle-container,
 body.r2-runtime.route-drawing .reticle-container,
 body.r2-runtime.plan-set-submode .reticle-container,
 body.r2-runtime.plan-draw-submode .reticle-container{
-  width:94px !important;
+  width:144px !important;
   height:94px !important;
   opacity:1 !important;
 }
@@ -562,7 +562,7 @@ body.r2-runtime .r1-map-search{
   position:fixed !important;
   top:var(--r22-command-top) !important;
   left:16px !important;
-  right:128px !important;
+  right:184px !important;
   width:auto !important;
   max-width:none !important;
   height:var(--r22-command-h) !important;
@@ -629,11 +629,11 @@ body.r2-runtime .global-gps-controls{
   top:var(--r22-command-top) !important;
   right:16px !important;
   left:auto !important;
-  width:104px !important;
+  width:160px !important;
   height:var(--r22-command-h) !important;
   z-index:1516 !important;
   display:grid !important;
-  grid-template-columns:repeat(2,48px) !important;
+  grid-template-columns:repeat(3,48px) !important;
   grid-auto-rows:48px !important;
   gap:8px !important;
 }
@@ -939,12 +939,12 @@ body.r2-runtime .map-scale-line{
 
   body.r2-runtime .r1-map-search{
     left:14px !important;
-    right:124px !important;
+    right:179px !important;
   }
   body.r2-runtime .global-gps-controls{
     right:14px !important;
-    width:102px !important;
-    grid-template-columns:repeat(2,47px) !important;
+    width:157px !important;
+    grid-template-columns:repeat(3,47px) !important;
     grid-auto-rows:47px !important;
     gap:8px !important;
   }
@@ -975,13 +975,13 @@ body.r2-runtime .map-scale-line{
 @media (max-width:390px){
   body.r2-runtime .r1-map-search{
     left:10px !important;
-    right:112px !important;
+    right:162px !important;
     padding:0 10px !important;
   }
   body.r2-runtime .global-gps-controls{
     right:10px !important;
     width:94px !important;
-    grid-template-columns:repeat(2,44px) !important;
+    grid-template-columns:repeat(3,44px) !important;
     grid-auto-rows:44px !important;
     gap:6px !important;
   }
