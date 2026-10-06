@@ -20,8 +20,8 @@ function test(name, fn) {
   }
 }
 
-test('PWA cache version is current R1.1 runtime cache', () => {
-  assert(sw.includes("const CACHE_VERSION = 'r1-6-local-map-20261006-1';"));
+test('PWA cache version follows current R2 runtime cache', () => {
+  assert(sw.includes("const CACHE_VERSION = 'r2-0-position-actions-20261006-1';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
