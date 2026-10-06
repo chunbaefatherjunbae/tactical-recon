@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './app-base.css',
+  './location-core.js',
   './app-base.js',
   './v27-stable.css',
   './v27-stable.js',
