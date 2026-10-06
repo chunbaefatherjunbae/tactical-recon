@@ -563,6 +563,8 @@ body.r2-runtime #tempQuickBtn{
   -webkit-backdrop-filter:blur(14px) saturate(1.08) !important;
   font:850 9px/1 var(--font-mono) !important;
   letter-spacing:.04em !important;
+  opacity:1 !important;
+  border-style:solid !important;
   touch-action:manipulation;
 }
 body.r2-runtime .global-gps-button svg{
