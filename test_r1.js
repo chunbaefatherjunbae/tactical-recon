@@ -25,9 +25,9 @@ test('R1 is the final runtime layer',()=>{
 });
 
 test('R1 remains cached beneath the R2 runtime identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'r2-0-position-actions-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r2-0-position-actions-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r2-0-position-actions-20261006-1'));
+  assert(sw.includes("const CACHE_VERSION = 'r2-1-hud-state-perf-20261006-1';"));
+  assert(index.includes('service-worker.js?v=r2-1-hud-state-perf-20261006-1'));
+  assert(index.includes('tactical-recon-sw-reload-r2-1-hud-state-perf-20261006-1'));
   assert(sw.includes("'./r1.css'"));
   assert(sw.includes("'./r1.js'"));
 });
