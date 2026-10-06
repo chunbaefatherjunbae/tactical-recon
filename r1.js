@@ -1637,7 +1637,7 @@
   let lightMapRefreshInstalled=false;
   let lightMapRefreshTimer=null;
   const LOW_DATA_MAP_URL='./offline/kr-low.geojson';
-  const LOW_DATA_ATTRIBUTION='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+  const LOW_DATA_ATTRIBUTION='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · Terrain <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen/AWS</a>';
   let activeOverlayType='REFERENCE';
   let overlaySeenCount=0;
   let overlaySeenPlanId='';
@@ -2452,9 +2452,9 @@
           radius,
           weight:peak?1.1:.8,
           color,
-          opacity:peak?.62:.50,
+          opacity:peak ? .62 : .50,
           fillColor:color,
-          fillOpacity:peak?.38:.28,
+          fillOpacity:peak ? .38 : .28,
           interactive:false
         });
         marker.bindTooltip(label,{
