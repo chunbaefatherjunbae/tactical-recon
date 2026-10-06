@@ -29,7 +29,6 @@ jobs:
           import json
           from pathlib import Path
           from shapely.geometry import shape, mapping
-          from shapely.ops import unary_union, linemerge
 
           path=Path('offline/kr-low.geojson')
           raw=json.loads(path.read_text(encoding='utf-8'))
@@ -61,35 +60,61 @@ jobs:
               elif kind=='place':
                   places.append(feature)
 
-          def merge_lines(geoms,tolerance):
-              if not geoms:
-                  return None
-              geom=unary_union(geoms)
+          def collect_lines(geom,tolerance):
               try:
-                  if geom.geom_type in ('MultiLineString','GeometryCollection'):
-                      geom=linemerge(geom)
+                  geom=geom.simplify(tolerance,preserve_topology=False)
               except Exception:
-                  pass
-              geom=geom.simplify(tolerance,preserve_topology=False)
-              return None if geom.is_empty else geom
+                  return []
+              lines=[]
+              def visit(g):
+                  if g is None or g.is_empty:
+                      return
+                  if g.geom_type=='LineString':
+                      coords=list(g.coords)
+                      if len(coords)>=2: lines.append(coords)
+                  elif g.geom_type=='MultiLineString':
+                      for part in g.geoms: visit(part)
+                  elif g.geom_type=='GeometryCollection':
+                      for part in g.geoms: visit(part)
+              visit(geom)
+              return lines
+
+          def packed_lines(kind,cls,geoms,tolerance):
+              coords=[]
+              for geom in geoms:
+                  coords.extend(collect_lines(geom,tolerance))
+              if not coords:
+                  return None
+              return {
+                  'type':'Feature',
+                  'properties':{'kind':kind,'class':cls},
+                  'geometry':{'type':'MultiLineString','coordinates':coords}
+              }
 
           out=[]
           for cls,tol in [('motorway',.0008),('trunk',.0010),('primary',.0015)]:
-              geom=merge_lines(roads[cls],tol)
-              if geom is not None:
-                  out.append({'type':'Feature','properties':{'kind':'road','class':cls},'geometry':mapping(geom)})
+              feature=packed_lines('road',cls,roads[cls],tol)
+              if feature is not None: out.append(feature)
 
-          geom=merge_lines(water,.0020)
-          if geom is not None:
-              out.append({'type':'Feature','properties':{'kind':'water','class':'river'},'geometry':mapping(geom)})
-          geom=merge_lines(coast,.0015)
-          if geom is not None:
-              out.append({'type':'Feature','properties':{'kind':'coast','class':'coastline'},'geometry':mapping(geom)})
+          feature=packed_lines('water','river',water,.0020)
+          if feature is not None: out.append(feature)
+          feature=packed_lines('coast','coastline',coast,.0015)
+          if feature is not None: out.append(feature)
 
-          if boundary:
-              geom=unary_union(boundary).simplify(.0015,preserve_topology=True)
-              if not geom.is_empty:
-                  out.append({'type':'Feature','properties':{'kind':'boundary','class':'country'},'geometry':mapping(geom)})
+          boundary_geometries=[]
+          for geom in boundary:
+              try:
+                  simplified=geom.simplify(.0015,preserve_topology=True)
+                  if not simplified.is_empty:
+                      boundary_geometries.append(mapping(simplified))
+              except Exception:
+                  continue
+          if boundary_geometries:
+              out.append({
+                  'type':'Feature',
+                  'properties':{'kind':'boundary','class':'country'},
+                  'geometry':{'type':'GeometryCollection','geometries':boundary_geometries}
+              })
 
           # Keep named cities/towns. The renderer decides how many labels are visible by zoom.
           out.extend([f for f in places if (f.get('properties') or {}).get('name')])
