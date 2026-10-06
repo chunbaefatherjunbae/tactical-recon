@@ -26,8 +26,8 @@ test('R2 is the final explicit runtime layer above R1',()=>{
 
 test('Cleanup runtime uses a new cache identity',()=>{
   assert(sw.includes("const CACHE_VERSION = 'r2-cleanup-20261006-1';"));
-  assert(index.includes('service-worker.js?v=r2-cleanup-20261006-1'));
-  assert(index.includes('tactical-recon-sw-reload-r2-cleanup-20261006-1'));
+  assert(base.includes('service-worker.js?v=r2-cleanup-20261006-1'));
+  assert(base.includes('tactical-recon-sw-reload-r2-cleanup-20261006-1'));
 });
 
 test('R2 location display preferences separate primary, visibility and order',()=>{
