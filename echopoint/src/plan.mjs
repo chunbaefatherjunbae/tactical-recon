@@ -172,5 +172,5 @@ export function removeFuturePoint(mission,pointId){
 }
 
 export function elapsedMs(mission,at=Date.now()){
-  return Math.max(0,Number(mission?.(mission.endedAt?'endedAt':'startedAt'))?Number((mission.endedAt||at)-mission.startedAt):0);
+  if(!mission||!Number.isFinite(Number(mission.startedAt)))return 0;\n  const end=Number(mission.endedAt||at);\n  return Number.isFinite(end)?Math.max(0,end-Number(mission.startedAt)):0;
 }

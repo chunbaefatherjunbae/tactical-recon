@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko" data-theme="STH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#0B0F0C">
+  <title>PROJECT ECHOPOINT · EP-02</title>
+  <link rel="stylesheet" href="../vendor/leaflet-1.9.4.css">
+  <link rel="stylesheet" href="./styles/tokens.css">
+  <link rel="stylesheet" href="./styles/app.css">
+</head>
+<body>
+<main id="app">
+  <div id="map" aria-label="ECHOPOINT 지도"></div>
+
+  <i class="frame-corner frame-corner--tl"></i><i class="frame-corner frame-corner--tr"></i>
+  <i class="frame-corner frame-corner--bl"></i><i class="frame-corner frame-corner--br"></i>
+  <div class="reticle" aria-hidden="true"><i></i><b></b></div>
+
+  <header class="top-hud">
+    <button id="posReadout" class="coord-readout" type="button">
+      <span id="posLabel">POS</span><strong id="posCoord">NO FIX</strong><small id="posMeta">GPS STANDBY</small>
+    </button>
+    <button id="tgtReadout" class="coord-readout coord-readout--right" type="button">
+      <span>TGT</span><strong id="tgtCoord">--</strong><small>MAP CENTER</small>
+    </button>
+  </header>
+
+  <div class="top-actions">
+    <button id="searchBtn" class="icon-hit" type="button" aria-label="검색">⌕</button>
+    <button id="moreBtn" class="icon-hit" type="button" aria-label="더보기">⋯</button>
+  </div>
+
+  <aside class="global-tools" aria-label="전역 조작">
+    <button id="gpsBtn" class="global-tool" type="button"><strong>GPS</strong><small id="gpsState">OFF</small></button>
+    <button id="followBtn" class="global-tool" type="button" aria-label="현위치 추적"><strong>◎</strong><small>추적</small></button>
+    <button id="tempBtn" class="global-tool" type="button"><strong>⌖</strong><small>TEMP</small></button>
+    <button id="trackBtn" class="global-tool" type="button"><strong id="trackState">○</strong><small>트랙</small></button>
+  </aside>
+
+  <section id="planPanel" class="plan-panel" hidden>
+    <span class="eyebrow">PLAN</span>
+    <div id="planList"></div>
+    <button id="addPointBtn" class="quiet-action" type="button">＋ 위치</button>
+  </section>
+
+  <section id="missionHud" class="mission-hud" hidden>
+    <span class="eyebrow">NEXT</span>
+    <strong id="nextName">--</strong>
+    <span id="nextMetrics">-- KM · BRG ---°</span>
+    <span id="missionRef" class="mission-ref">REF --</span>
+    <span class="mission-clock"><small>MISSION</small><b id="missionTime">00:00:00</b></span>
+  </section>
+
+  <nav id="mapBar" class="bottom-actions bottom-actions--four">
+    <button data-main="points" type="button"><b>⌾</b><span>거점</span></button>
+    <button data-main="random" type="button"><b>✣</b><span>무작위</span></button>
+    <button data-main="records" type="button"><b>≋</b><span>기록</span></button>
+    <button data-main="tools" type="button"><b>⌁</b><span>도구</span></button>
+  </nav>
+
+  <nav id="planBar" class="bottom-actions bottom-actions--three" hidden>
+    <button id="routeBtn" type="button"><b>✎</b><span>경로</span></button>
+    <button id="importBtn" type="button"><b>⇩</b><span>불러오기</span></button>
+    <button id="planStartBtn" class="accent-action" type="button">▶ 시작</button>
+  </nav>
+
+  <nav id="missionBar" class="mission-stepper" hidden>
+    <button id="prevPointBtn" type="button" aria-label="이전 포인트">‹</button>
+    <button id="pointIndexBtn" type="button">-- / --</button>
+    <button id="nextPointBtn" type="button" aria-label="다음 포인트">›</button>
+  </nav>
+
+  <nav id="drawBar" class="draw-bar" hidden>
+    <button id="drawPenBtn" type="button">펜</button>
+    <button id="drawEraseBtn" type="button">지우개</button>
+    <button id="drawHandBtn" type="button">이동</button>
+    <button id="drawUndoBtn" type="button">↶</button>
+    <button id="drawClearBtn" type="button">초기화</button>
+    <button id="drawDoneBtn" class="accent-action" type="button">완료</button>
+  </nav>
+
+  <section id="locationCard" class="sheet location-card" hidden>
+    <button class="sheet-close" data-close-overlay type="button" aria-label="닫기">×</button>
+    <span id="locationKind" class="eyebrow">SELECTED</span>
+    <h2 id="locationName">선택 위치</h2>
+    <strong id="locationMgrs" class="mono">--</strong>
+    <span id="locationAddress" class="sheet-sub"></span>
+    <span id="locationMetrics" class="sheet-sub">기준위치 없음</span>
+    <div class="location-actions">
+      <button id="startAction" type="button">출발</button>
+      <button id="viaAction" type="button">경유</button>
+      <button id="destAction" class="accent-action" type="button">목적</button>
+      <button id="tempAction" type="button">TEMP</button>
+      <button id="saveAction" type="button">저장</button>
+      <button id="removeAction" type="button" disabled>계획삭제</button>
+    </div>
+  </section>
+
+  <section id="searchSheet" class="sheet search-sheet" hidden>
+    <button class="sheet-close" data-close-overlay type="button" aria-label="닫기">×</button>
+    <span class="eyebrow">SEARCH</span>
+    <form id="searchForm">
+      <input id="searchInput" autocomplete="off" placeholder="주소 · 장소 · MGRS · WGS84" aria-label="위치 검색">
+      <button class="accent-action" type="submit">검색</button>
+    </form>
+    <div id="searchStatus" class="sheet-sub"></div>
+    <div id="searchResults" class="search-results"></div>
+  </section>
+
+  <section id="listSheet" class="sheet list-sheet" hidden>
+    <button class="sheet-close" data-close-overlay type="button" aria-label="닫기">×</button>
+    <span id="listTitle" class="eyebrow">LIST</span>
+    <div id="listContent" class="list-content"></div>
+  </section>
+
+  <section id="moreSheet" class="sheet more-sheet" hidden>
+    <button class="sheet-close" data-close-overlay type="button" aria-label="닫기">×</button>
+    <span class="eyebrow">ECHOPOINT · EP-02</span>
+    <button id="editMissionBtn" class="menu-row" type="button">현재 계획 편집</button>
+    <button id="endMissionBtn" class="menu-row menu-row--danger" type="button">임무 종료</button>
+  </section>
+
+  <div id="toast" class="toast" hidden></div>
+</main>
+
+<script src="../vendor/leaflet-1.9.4.js"></script>
+<script src="../vendor/mgrs-1.0.0.js"></script>
+<script type="module" src="./src/main.mjs"></script>
+</body>
+</html>
