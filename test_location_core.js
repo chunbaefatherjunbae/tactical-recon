@@ -35,12 +35,16 @@ test('10 coordinate digits use exactly the supplied working-grid prefix',()=>{
   assert(core.haversineKm(source,[decoded.lat,decoded.lon])<0.2);
 });
 
-test('a wrong regional prefix produces a clearly distant point that callers can reject',()=>{
+test('a wrong regional prefix can never silently become a plausible nearby coordinate',()=>{
   const seoul=[37.5665,126.9780];
   const seoulParts=core.parseFullParts(mgrs.forward([seoul[1],seoul[0]],5));
   const tokyoParts=core.parseFullParts(mgrs.forward([139.6917,35.6895],5));
-  const wrong=core.decodeShort(seoulParts.digits,tokyoParts.compactPrefix,mgrs);
-  assert(core.haversineKm(seoul,[wrong.lat,wrong.lon])>165);
+  try{
+    const wrong=core.decodeShort(seoulParts.digits,tokyoParts.compactPrefix,mgrs);
+    assert(core.haversineKm(seoul,[wrong.lat,wrong.lon])>165);
+  }catch(error){
+    assert(['INVALID_MGRS','MGRS_ROUNDTRIP_MISMATCH','MGRS_ROUNDTRIP_FAILED'].includes(error.code));
+  }
 });
 
 test('odd or malformed coordinate-like input is rejected instead of becoming address search',()=>{
