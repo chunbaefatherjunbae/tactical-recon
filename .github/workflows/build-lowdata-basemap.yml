@@ -23,7 +23,7 @@ jobs:
       - name: Install OSM tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y osmium-tool
+          sudo apt-get install -y osmium-tool python3-shapely
 
       - name: Download South Korea OSM extract
         run: |
@@ -34,7 +34,7 @@ jobs:
       - name: Extract low-data features
         run: |
           osmium tags-filter /tmp/south-korea.osm.pbf \
-            w/highway=motorway,trunk,primary,secondary,tertiary \
+            w/highway=motorway,trunk,primary,secondary \
             w/waterway=river,canal \
             n/place=city,town \
             r/admin_level=2 \
@@ -49,93 +49,103 @@ jobs:
         run: |
           mkdir -p offline
           python3 - <<'PY'
-          import json, math, os
+          import json
           from pathlib import Path
+          from shapely.geometry import shape, mapping
+          from shapely.ops import unary_union, linemerge
 
           src=Path('/tmp/recon-low.raw.geojson')
           dst=Path('offline/kr-low.geojson')
-
-          def point_line_distance(p,a,b):
-              x,y=p; x1,y1=a; x2,y2=b
-              dx=x2-x1; dy=y2-y1
-              if dx==0 and dy==0:
-                  return math.hypot(x-x1,y-y1)
-              t=((x-x1)*dx+(y-y1)*dy)/(dx*dx+dy*dy)
-              t=max(0,min(1,t))
-              px=x1+t*dx; py=y1+t*dy
-              return math.hypot(x-px,y-py)
-
-          def dp(points,eps):
-              if len(points)<=2: return points
-              a,b=points[0],points[-1]
-              idx=-1; dist=0.0
-              for i,p in enumerate(points[1:-1],1):
-                  d=point_line_distance(p,a,b)
-                  if d>dist: idx=i; dist=d
-              if dist<=eps or idx<0:
-                  return [a,b]
-              left=dp(points[:idx+1],eps)
-              right=dp(points[idx:],eps)
-              return left[:-1]+right
-
-          def simplify_ring(points,eps):
-              if len(points)<4: return points
-              closed=points[0]==points[-1]
-              base=points[:-1] if closed else points
-              out=dp(base,eps)
-              if closed:
-                  if len(out)<3: out=base[:3]
-                  if out[0]!=out[-1]: out.append(out[0])
-              return out
-
-          def simplify_geom(g,eps):
-              if not g: return g
-              t=g.get('type'); c=g.get('coordinates')
-              if t=='LineString': c=dp(c,eps)
-              elif t=='MultiLineString': c=[dp(x,eps) for x in c if len(x)>=2]
-              elif t=='Polygon': c=[simplify_ring(r,eps) for r in c if len(r)>=4]
-              elif t=='MultiPolygon':
-                  c=[[simplify_ring(r,eps) for r in poly if len(r)>=4] for poly in c]
-              return {'type':t,'coordinates':c}
-
           raw=json.load(src.open(encoding='utf-8'))
-          out=[]
-          counts={}
+
+          road_classes=('motorway','trunk','primary','secondary')
+          roads={k:[] for k in road_classes}
+          waters=[]
+          coasts=[]
+          boundaries=[]
+          places=[]
+
+          def safe_shape(feature):
+              try:
+                  g=shape(feature.get('geometry'))
+                  return None if g.is_empty else g
+              except Exception:
+                  return None
 
           for f in raw.get('features',[]):
               p=f.get('properties') or {}
-              g=f.get('geometry')
-              kind=None; cls=None; eps=.0015
-
-              h=p.get('highway')
-              if h in {'motorway','trunk','primary','secondary','tertiary'}:
-                  kind='road'; cls=h
-                  eps={'motorway':.0006,'trunk':.0007,'primary':.0009,'secondary':.0012,'tertiary':.0018}[h]
-              elif p.get('waterway') in {'river','canal'}:
-                  kind='water'; cls=p.get('waterway'); eps=.0012
-              elif p.get('place') in {'city','town'}:
-                  kind='place'; cls=p.get('place'); eps=0
-              elif p.get('natural')=='coastline':
-                  kind='coast'; cls='coastline'; eps=.0008
-              elif str(p.get('admin_level',''))=='2':
-                  kind='boundary'; cls='country'; eps=.0008
-              else:
+              g=safe_shape(f)
+              if g is None:
                   continue
-
-              name=p.get('name:ko') or p.get('name') or p.get('name:en') or ''
-              props={'kind':kind,'class':cls}
-              if name: props['name']=name
-              if kind=='place':
-                  pop=p.get('population')
+              h=p.get('highway')
+              if h in roads:
+                  roads[h].append(g)
+                  continue
+              if p.get('waterway') in {'river','canal'}:
+                  waters.append(g)
+                  continue
+              if p.get('natural')=='coastline':
+                  coasts.append(g)
+                  continue
+              if str(p.get('admin_level',''))=='2':
+                  boundaries.append(g)
+                  continue
+              if p.get('place') in {'city','town'}:
+                  name=p.get('name:ko') or p.get('name') or p.get('name:en') or ''
+                  if not name:
+                      continue
+                  props={'kind':'place','class':p.get('place'),'name':name}
                   try:
-                      if pop is not None: props['population']=int(str(pop).replace(',',''))
+                      if p.get('population') is not None:
+                          props['population']=int(str(p.get('population')).replace(',',''))
                   except Exception:
                       pass
+                  places.append({'type':'Feature','properties':props,'geometry':mapping(g)})
 
-              geom=g if eps==0 else simplify_geom(g,eps)
-              if not geom: continue
-              out.append({'type':'Feature','properties':props,'geometry':geom})
-              counts[kind]=counts.get(kind,0)+1
+          def merged_line_feature(kind,cls,geoms,tolerance):
+              if not geoms:
+                  return None
+              merged=unary_union(geoms)
+              try:
+                  if merged.geom_type in ('MultiLineString','GeometryCollection'):
+                      merged=linemerge(merged)
+              except Exception:
+                  pass
+              merged=merged.simplify(tolerance,preserve_topology=False)
+              if merged.is_empty:
+                  return None
+              return {
+                  'type':'Feature',
+                  'properties':{'kind':kind,'class':cls},
+                  'geometry':mapping(merged)
+              }
+
+          out=[]
+          tolerances={
+              'motorway':0.0007,
+              'trunk':0.0009,
+              'primary':0.0013,
+              'secondary':0.0022,
+          }
+          for cls in road_classes:
+              feature=merged_line_feature('road',cls,roads[cls],tolerances[cls])
+              if feature: out.append(feature)
+
+          feature=merged_line_feature('water','river',waters,0.0018)
+          if feature: out.append(feature)
+          feature=merged_line_feature('coast','coastline',coasts,0.0012)
+          if feature: out.append(feature)
+
+          if boundaries:
+              merged=unary_union(boundaries).simplify(0.0012,preserve_topology=True)
+              if not merged.is_empty:
+                  out.append({
+                      'type':'Feature',
+                      'properties':{'kind':'boundary','class':'country'},
+                      'geometry':mapping(merged)
+                  })
+
+          out.extend(places)
 
           fc={
               'type':'FeatureCollection',
@@ -144,24 +154,22 @@ jobs:
               'license':'ODbL 1.0',
               'features':out
           }
-
           dst.write_text(json.dumps(fc,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
 
-          # If the first pass is too large, remove tertiary roads and simplify secondary roads harder.
-          if dst.stat().st_size > 12_000_000:
-              compact=[]
-              for f in out:
-                  p=f['properties']
-                  if p.get('kind')=='road' and p.get('class')=='tertiary':
-                      continue
-                  if p.get('kind')=='road' and p.get('class')=='secondary':
-                      f={**f,'geometry':simplify_geom(f['geometry'],.002)}
-                  compact.append(f)
-              fc['features']=compact
-              dst.write_text(json.dumps(fc,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
-
-          print('features', counts)
-          print('bytes', dst.stat().st_size)
+          print('source counts', {
+              'motorway':len(roads['motorway']),
+              'trunk':len(roads['trunk']),
+              'primary':len(roads['primary']),
+              'secondary':len(roads['secondary']),
+              'water':len(waters),
+              'coast':len(coasts),
+              'boundary':len(boundaries),
+              'place':len(places),
+          })
+          print('packaged features',len(out))
+          print('bytes',dst.stat().st_size)
+          if dst.stat().st_size > 9_000_000:
+              raise SystemExit('low-data basemap is still too large')
           PY
 
           cat > offline/NOTICE.txt <<'EOF'
