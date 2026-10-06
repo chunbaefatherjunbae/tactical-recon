@@ -1633,6 +1633,7 @@
   let lightMapBasePromise=null;
   let lightMapPlaceLayer=null;
   let lightMapBaseRenderer=null;
+  let lightMapContourRenderer=null;
   let lightMapLabelRenderer=null;
   let lightMapAttributionAdded=false;
   let lightMapSuppressedTiles=[];
@@ -2221,6 +2222,7 @@
   function ensureLowDataPanes(){
     if(typeof map==='undefined'||!map?.createPane)return;
     const panes=[
+      ['r16LowDataContourPane','204'],
       ['r16LowDataBasePane','205'],
       ['r16LowDataGridPane','225'],
       ['r16LowDataLabelPane','240']
@@ -2350,7 +2352,7 @@
       const elevation=Math.abs(Number(p.ele)||0);
       const index=elevation%500===0;
       return {
-        pane:'r16LowDataBasePane',renderer:lightMapBaseRenderer,color,
+        pane:'r16LowDataContourPane',renderer:lightMapContourRenderer||lightMapBaseRenderer,color,
         weight:index?1.05:.55,
         opacity:index?.42:.18,
         dashArray:index?null:'2 4',
@@ -2381,7 +2383,7 @@
   function ensureLowDataContourLayer(){
     if(lightMapContourLayer||!lightMapContourData||typeof L==='undefined'||typeof map==='undefined')return lightMapContourLayer;
     ensureLowDataPanes();
-    if(!lightMapBaseRenderer)lightMapBaseRenderer=L.canvas({pane:'r16LowDataBasePane',padding:.35});
+    if(!lightMapContourRenderer)lightMapContourRenderer=L.canvas({pane:'r16LowDataContourPane',padding:.35});
     const features=(lightMapContourData.features||[]).filter(f=>f?.properties?.kind==='contour');
     lightMapContourLayer=L.geoJSON({type:'FeatureCollection',features},{
       style:lowDataFeatureStyle,
