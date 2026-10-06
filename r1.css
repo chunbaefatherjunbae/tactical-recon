@@ -1799,3 +1799,118 @@ body.r14-ui .top-compass-bar::before {
     height:34px !important;
   }
 }
+
+
+/* ============================================================
+   R1.5 // MAP SHELL + HUD + OPEN RETICLE GATE
+   ============================================================ */
+
+/* The primary HUD slot never changes geometry; only its meaning changes. */
+body.r15-ui .top-compass-bar {
+  align-items:center !important;
+  justify-content:space-between !important;
+}
+body.r15-ui .compass-tape {
+  flex:0 0 112px !important;
+  width:112px !important;
+  display:grid !important;
+  grid-template-columns:30px 76px !important;
+  align-items:center !important;
+  gap:6px !important;
+  min-width:112px !important;
+  font-variant-numeric:tabular-nums;
+}
+body.r15-ui .compass-label {
+  display:block !important;
+  width:30px !important;
+  color:var(--field-dim-readable) !important;
+  font-size:8.5px !important;
+  letter-spacing:.08em !important;
+  text-align:left !important;
+}
+body.r15-ui .compass-center {
+  width:76px !important;
+  min-width:76px !important;
+  max-width:76px !important;
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+  text-overflow:clip !important;
+  font-variant-numeric:tabular-nums !important;
+}
+body.r15-ui .sys-telemetry {
+  flex:0 0 auto !important;
+  margin-left:auto !important;
+  white-space:nowrap !important;
+  font-variant-numeric:tabular-nums !important;
+}
+
+/* Keep the V-series visibility, but turn the center box into an open optical gate. */
+body.r15-ui .target-gate {
+  border:0 !important;
+  color:var(--field-active) !important;
+  opacity:.82 !important;
+  background:
+    linear-gradient(currentColor,currentColor) left top/10px 1px no-repeat,
+    linear-gradient(currentColor,currentColor) left top/1px 10px no-repeat,
+    linear-gradient(currentColor,currentColor) right top/10px 1px no-repeat,
+    linear-gradient(currentColor,currentColor) right top/1px 10px no-repeat,
+    linear-gradient(currentColor,currentColor) left bottom/10px 1px no-repeat,
+    linear-gradient(currentColor,currentColor) left bottom/1px 10px no-repeat,
+    linear-gradient(currentColor,currentColor) right bottom/10px 1px no-repeat,
+    linear-gradient(currentColor,currentColor) right bottom/1px 10px no-repeat !important;
+}
+body.r15-ui.v29-picking-location .target-gate,
+body.r15-ui.route-drawing .target-gate,
+body.r15-ui.plan-set-submode .target-gate {
+  opacity:1 !important;
+}
+
+/* LOW DATA is the same Leaflet map with network tiles removed, not another screen. */
+body.r15-light-map #map,
+body.r15-light-map .leaflet-container {
+  background:var(--field-panel-solid,#050a07) !important;
+}
+body.r15-light-map .leaflet-tile-pane .r15-low-data-tile {
+  filter:none !important;
+}
+.r15-low-data-tile {
+  box-sizing:border-box;
+  color:var(--field-line-strong);
+  border-right:1px solid currentColor;
+  border-bottom:1px solid currentColor;
+  opacity:.52;
+  background:
+    linear-gradient(to right,
+      transparent calc(50% - .5px),
+      currentColor calc(50% - .5px),
+      currentColor calc(50% + .5px),
+      transparent calc(50% + .5px)),
+    linear-gradient(to bottom,
+      transparent calc(50% - .5px),
+      currentColor calc(50% - .5px),
+      currentColor calc(50% + .5px),
+      transparent calc(50% + .5px));
+}
+body.r15-ui .v29-light-map {
+  display:none !important;
+}
+
+@media (max-width:768px) {
+  body.r15-ui .compass-tape {
+    flex-basis:104px !important;
+    width:104px !important;
+    min-width:104px !important;
+    grid-template-columns:28px 70px !important;
+    gap:6px !important;
+  }
+  body.r15-ui .compass-label {
+    width:28px !important;
+    font-size:8px !important;
+  }
+  body.r15-ui .compass-center {
+    width:70px !important;
+    min-width:70px !important;
+    max-width:70px !important;
+  }
+}
