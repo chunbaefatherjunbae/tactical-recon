@@ -167,6 +167,10 @@ test('Topographic low-data runtime distinguishes field features',()=>{
   assert(r1.includes("className:'r16-contour-label'"));
   assert(r1.includes("className:peak?'r16-low-peak-label':'r16-low-place-label'"));
   assert(r1.includes('lowDataBackgroundColor()'));
+  assert(r1.includes('let lightMapContourLayer=null'));
+  assert(r1.includes('function syncLowDataContourLayer()'));
+  assert(r1.includes('const show=map.getZoom()>=10'));
+  assert(r1.includes("excludedKinds=new Set(['place','peak','contour_label','contour'])"));
 });
 
 test('Topographic low-data builder includes terrain, land, water, road and peak sources',()=>{
