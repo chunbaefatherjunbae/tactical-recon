@@ -2,6 +2,7 @@ const fs=require('fs');
 const assert=require('assert');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
+const index=fs.readFileSync('index.html','utf8');
 const runtime=fs.readFileSync('v28-runtime.js','utf8');
 const core=fs.readFileSync('v29.js','utf8');
 const ui=fs.readFileSync('v29-ui.js','utf8');
@@ -13,10 +14,11 @@ function test(name,fn){
   catch(e){console.error('[FAIL] '+name+': '+e.message);failed++;}
 }
 
-test('PWA caches and injects V29 in dependency order',()=>{
+test('PWA caches V29 and index loads it in dependency order',()=>{
   ["'./v29.css'","'./v29.js'","'./v29-ui.js'"].forEach(x=>assert(sw.includes(x)));
-  assert(sw.indexOf("html.includes('v29.js')")>sw.indexOf("html.includes('v28-runtime.js')"));
-  assert(sw.indexOf("html.includes('v29-ui.js')")>sw.indexOf("html.includes('v29.js')"));
+  assert(index.indexOf('src="./v29.js"')>index.indexOf('src="./v28-runtime.js"'));
+  assert(index.indexOf('src="./v29-ui.js"')>index.indexOf('src="./v29.js"'));
+  assert.strictEqual(sw.includes('injectStableOverlay'),false);
 });
 
 test('V29 exposes all specification feature groups',()=>{
