@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'r2-cleanup-20261006-1';
+const CACHE_VERSION = 'r2-3-viewport-coordinates-20261006-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './app-base.css',
+  './location-core.js',
   './app-base.js',
   './v27-stable.css',
   './v27-stable.js',

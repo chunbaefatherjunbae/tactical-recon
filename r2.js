@@ -1,8 +1,8 @@
-/* R2.2 runtime: tactical HUD, compact command controls, unified panel language. */
+/* R2.3 runtime: canonical tactical viewport, vertical field controls, hardened position UX. */
 (function(root){
   'use strict';
 
-  const VERSION='2.2';
+  const VERSION='2.3';
   const DISPLAY_KEY='tactical_recon_location_display_v2';
   const FORMATS=['MGRS','WGS84','ADDRESS'];
   const DEFAULT_DISPLAY={primary:'MGRS',visible:['MGRS','WGS84','ADDRESS'],order:['MGRS','WGS84','ADDRESS']};
@@ -152,7 +152,7 @@
     sheet.innerHTML=
       '<div class="r2-display-shell">'+
         '<div class="r2-display-head">'+
-          '<div><small>R2.2 // POSITION DISPLAY</small><strong id="r2DisplayTitle"></strong></div>'+
+          '<div><small>R2.3 // POSITION DISPLAY</small><strong id="r2DisplayTitle"></strong></div>'+
           '<button class="r2-display-close" type="button" aria-label="Close">×</button>'+
         '</div>'+
         '<div class="r2-display-body">'+
@@ -259,6 +259,33 @@
     if(btn)btn.textContent=txt('위치 표기','POSITION DISPLAY');
   }
 
+  function ensureR23TempButton(){
+    const controls=document.getElementById('globalGpsControls');
+    if(!controls)return null;
+    let btn=document.getElementById('tempQuickBtn');
+    if(!btn){
+      btn=document.createElement('button');
+      btn.id='tempQuickBtn';
+      btn.type='button';
+      btn.className='global-gps-button global-temp-button';
+      btn.textContent='TEMP';
+      btn.title=txt('현재 조준점에 TEMP POS 지정/갱신','SET / UPDATE TEMP POS AT RETICLE');
+      btn.setAttribute('aria-label',txt('현재 조준점에 TEMP POS 지정','SET TEMP POSITION AT RETICLE'));
+      btn.addEventListener('click',()=>{
+        try{
+          const c=map?.getCenter?.();
+          if(!c)return;
+          if(typeof setTempMark==='function')setTempMark([Number(c.lat),Number(c.lng)],'TEMP POS');
+          syncR22GpsHud();
+        }catch(e){}
+      });
+      controls.appendChild(btn);
+    }
+    btn.hidden=false;
+    btn.disabled=false;
+    return btn;
+  }
+
   function ensureR22Hud(){
     const top=document.querySelector('.top-compass-bar .sys-telemetry');
     if(top&&!document.getElementById('r22GpsHud')){
@@ -289,6 +316,7 @@
         button.insertAdjacentElement('afterend',secondary);
       }
     }
+    ensureR23TempButton();
     syncR22Search();
     syncR22GpsHud();
   }
@@ -299,7 +327,7 @@
     const title=search.querySelector('.r22-search-copy strong');
     const meta=search.querySelector('.r22-search-copy small');
     if(title)title.textContent=txt('위치 검색','SEARCH POSITION');
-    if(meta)meta.textContent='MGRS · ADDR';
+    if(meta)meta.textContent=txt('MGRS · WGS84 · 주소','MGRS · WGS84 · ADDRESS');
   }
 
   function syncR22GpsHud(){
@@ -580,16 +608,17 @@
   }
   function install(){
     if(installed)return;installed=true;
-    document.title='TACTICAL RECON // R2.2 FIELD TERMINAL';
-    document.body.classList.add('r2-runtime');
+    document.title='TACTICAL RECON // R2.3 FIELD TERMINAL';
+    document.body.classList.add('r2-runtime','r23-ui');
     ensureDisplaySettingsSheet();
     if(!installDisplayMenuEntry())setTimeout(installDisplayMenuEntry,80);
     ensureR22Hud();
+    ensureR23TempButton();
     installR22HudObservers();
     installReticleOwnership();
     installLocationCardOwnership();
     const records=document.querySelector('#r1RecordsSheet .r1-sheet-head small');
-    if(records)records.textContent='TACTICAL RECON // R2.2';
+    if(records)records.textContent='TACTICAL RECON // R2.3';
     new MutationObserver(syncR2Text).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
     root.addEventListener('online',()=>{renderReticlePrimary(true);renderLocationFormats();});
     root.addEventListener('offline',()=>{renderReticlePrimary(false);renderLocationFormats();});

@@ -1871,21 +1871,35 @@ window.__reconRotateUnavailable = true;
     }
 
     function parseDirectRouteLocation(query) {
+      const core = window.ReconLocationCore;
+      if (core) {
+        try {
+          const wgs = core.parseWgs84(query);
+          if (wgs) return { ...wgs, name:'WGS84 POSITION', address:'' };
+          const full = core.decodeFull(query, window.mgrs);
+          if (full) return { lat:full.lat, lon:full.lon, name:'MGRS POSITION', address:'', source:'MGRS', mgrs:full.compact };
+          core.validateCoordinateLike(query);
+        } catch (error) {
+          if (error?.code) throw error;
+        }
+        return null;
+      }
+
       const q = String(query || '').trim();
       if (!q) return null;
       const coord = q.match(/^\s*([+-]?\d{1,2}(?:\.\d+)?)\s*[,\s]\s*([+-]?\d{1,3}(?:\.\d+)?)\s*$/);
       if (coord) {
         const lat = Number(coord[1]), lon = Number(coord[2]);
         if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-          return { lat, lon, name:'WGS84 VIA', address:'', source:'WGS84' };
+          return { lat, lon, name:'WGS84 POSITION', address:'', source:'WGS84' };
         }
       }
-      const compact = q.toUpperCase().replace(/\s+/g, '');
-      if (/^\d{1,2}[C-X][A-Z]{2}\d{2,10}$/.test(compact) && window.mgrs?.toPoint) {
+      const compact = q.toUpperCase().replace(/[\s-]+/g, '');
+      if (/^\d{1,2}[C-HJ-NP-X][A-HJ-NP-Z]{2}\d{2,10}$/.test(compact) && window.mgrs?.toPoint) {
         try {
           const point = window.mgrs.toPoint(compact);
           const lon = Number(point?.[0]), lat = Number(point?.[1]);
-          if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon, name:'MGRS VIA', address:'', source:'MGRS' };
+          if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon, name:'MGRS POSITION', address:'', source:'MGRS' };
         } catch (e) {}
       }
       return null;
@@ -3807,13 +3821,13 @@ window.__reconRotateUnavailable = true;
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js?v=r2-cleanup-20261006-1', { scope: './', updateViaCache: 'none' })
+        navigator.serviceWorker.register('./service-worker.js?v=r2-3-viewport-coordinates-20261006-1', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-r2-cleanup-20261006-1';
+        const reloadKey = 'tactical-recon-sw-reload-r2-3-viewport-coordinates-20261006-1';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();

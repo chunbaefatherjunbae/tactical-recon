@@ -15,7 +15,7 @@
   const BACKUP_FORMAT='TACTICAL_RECON_BACKUP';
   const BACKUP_VERSION=1;
   const FREE_PLAN_KEY='tactical_recon_free_track_plan_v1';
-  const WORKING_GRID_KEY='tactical_recon_working_grid_v1';
+  const WORKING_GRID_KEY='tactical_recon_working_grid_v2';
 
   let installed=false;
   let pickerMode=null;
@@ -132,8 +132,11 @@
   const locationTokens={address:0,route:0,plan:0};
 
   function mgrsPrefixFromText(value){
+    const core=root.ReconLocationCore;
+    const parts=core?.parseFullParts?.(value);
+    if(parts)return {zoneBand:parts.zoneBand,grid:parts.grid,prefix:parts.prefix,compactPrefix:parts.compactPrefix};
     const compact=String(value||'').toUpperCase().replace(/\s+/g,'');
-    const m=compact.match(/^(\d{1,2}[C-X])([A-Z]{2})(\d{2,10})$/);
+    const m=compact.match(/^(\d{1,2}[C-HJ-NP-X])([A-HJ-NP-Z]{2})(\d{2,10})$/);
     if(!m||m[3].length%2!==0)return null;
     return {zoneBand:m[1],grid:m[2],prefix:m[1]+' '+m[2],compactPrefix:m[1]+m[2]};
   }
@@ -147,31 +150,42 @@
 
   function storedWorkingGrid(){
     const raw=readJson(WORKING_GRID_KEY,null);
-    if(!raw?.compactPrefix||!/^(\d{1,2}[C-X])([A-Z]{2})$/.test(String(raw.compactPrefix)))return null;
-    const compact=String(raw.compactPrefix).toUpperCase();
-    const m=compact.match(/^(\d{1,2}[C-X])([A-Z]{2})$/);
-    return {zoneBand:m[1],grid:m[2],prefix:m[1]+' '+m[2],compactPrefix:compact,source:'SAVED'};
+    if(Number(raw?.version)!==2)return null;
+    if(!['FULL','MANUAL'].includes(String(raw?.source||'')))return null;
+    const core=root.ReconLocationCore;
+    const parsed=core?.parsePrefix?.(raw?.compactPrefix);
+    if(!parsed)return null;
+    return {...parsed,source:String(raw.source),trusted:true};
   }
 
-  function saveWorkingGrid(prefix,source='INPUT'){
-    if(!prefix?.compactPrefix)return;
-    writeJson(WORKING_GRID_KEY,{compactPrefix:prefix.compactPrefix,source,timestamp:Date.now()});
+  function saveWorkingGrid(prefix,source='FULL'){
+    if(!prefix?.compactPrefix||!['FULL','MANUAL'].includes(String(source)))return false;
+    return writeJson(WORKING_GRID_KEY,{
+      version:2,
+      compactPrefix:String(prefix.compactPrefix).toUpperCase(),
+      source:String(source),
+      timestamp:Date.now()
+    });
   }
 
   function workingGridContext(){
-    const ref=currentReference();
-    if(ref?.coords){
-      const prefix=mgrsPrefixForCoords(ref.coords);
-      if(prefix)return {...prefix,source:String(ref.type||'REF')};
-    }
+    const saved=storedWorkingGrid();
+    if(saved)return saved;
     try{
       if(typeof map!=='undefined'&&map?.getCenter){
         const c=map.getCenter();
-        const prefix=mgrsPrefixForCoords([Number(c.lat),Number(c.lng)]);
-        if(prefix)return {...prefix,source:'MAP'};
+        const coords=[Number(c.lat),Number(c.lng)];
+        const prefix=mgrsPrefixForCoords(coords);
+        if(prefix)return {...prefix,source:'MAP',coords,trusted:false};
       }
     }catch(e){}
-    return storedWorkingGrid();
+    const ref=currentReference();
+    if(ref?.coords){
+      const coords=[Number(ref.coords[0]),Number(ref.coords[1])];
+      const prefix=mgrsPrefixForCoords(coords);
+      if(prefix)return {...prefix,source:String(ref.type||'REF'),coords,trusted:false};
+    }
+    return null;
   }
 
   function isMgrsPrecisionDigits(value){
@@ -179,56 +193,64 @@
   }
 
   function expandMgrsQuery(query){
-    const compact=String(query||'').toUpperCase().replace(/[\s-]+/g,'');
-    if(!compact)return null;
+    const core=root.ReconLocationCore;
+    if(!core)return null;
+    const full=core.parseFullParts(query);
+    if(full)return {mgrs:full.compact,workingGridApplied:false,prefix:full,kind:'FULL'};
 
-    const full=compact.match(/^(\d{1,2}[C-X])([A-Z]{2})(\d{2,10})$/);
-    if(full&&isMgrsPrecisionDigits(full[3])){
-      const prefix={zoneBand:full[1],grid:full[2],prefix:full[1]+' '+full[2],compactPrefix:full[1]+full[2]};
-      saveWorkingGrid(prefix,'FULL');
-      return {mgrs:compact,workingGridApplied:false,prefix};
+    const short=core.shortParts(query);
+    if(!short){
+      core.validateCoordinateLike(query);
+      return null;
     }
-
-    const gridOnly=compact.match(/^([A-Z]{2})(\d{2,10})$/);
-    if(gridOnly&&isMgrsPrecisionDigits(gridOnly[2])){
-      const ctx=workingGridContext();
-      if(!ctx){
-        const error=new Error('GRID_PREFIX_REQUIRED');error.code='GRID_PREFIX_REQUIRED';throw error;
-      }
-      const prefix={zoneBand:ctx.zoneBand,grid:gridOnly[1],prefix:ctx.zoneBand+' '+gridOnly[1],compactPrefix:ctx.zoneBand+gridOnly[1]};
-      saveWorkingGrid(prefix,'GRID');
-      return {mgrs:prefix.compactPrefix+gridOnly[2],workingGridApplied:true,prefix,workingGridSource:ctx.source};
+    const ctx=workingGridContext();
+    if(!ctx){
+      const error=new Error('GRID_PREFIX_REQUIRED');error.code='GRID_PREFIX_REQUIRED';throw error;
     }
-
-    if(isMgrsPrecisionDigits(compact)){
-      const ctx=workingGridContext();
-      if(!ctx){
-        const error=new Error('GRID_PREFIX_REQUIRED');error.code='GRID_PREFIX_REQUIRED';throw error;
-      }
-      saveWorkingGrid(ctx,'SHORT');
-      return {mgrs:ctx.compactPrefix+compact,workingGridApplied:true,prefix:ctx,workingGridSource:ctx.source};
-    }
-    return null;
+    const expanded=core.expandShort(query,ctx.compactPrefix);
+    return {
+      mgrs:expanded.mgrs,
+      workingGridApplied:true,
+      prefix:expanded,
+      workingGridSource:ctx.source,
+      contextCoords:ctx.coords||null,
+      trustedContext:Boolean(ctx.trusted),
+      kind:short.kind
+    };
   }
 
   function parseLocation(query){
     const raw=String(query||'').trim();
     if(!raw)return null;
+    const core=root.ReconLocationCore;
 
-    let expanded=null;
-    try{expanded=expandMgrsQuery(raw);}catch(e){throw e;}
-    if(expanded&&root.mgrs?.toPoint){
-      try{
-        const p=root.mgrs.toPoint(expanded.mgrs);
-        const coords=[Number(p?.[1]),Number(p?.[0])];
-        if(validCoords(coords))return {
-          lat:coords[0],lon:coords[1],name:'MGRS POSITION',address:'',
+    if(core){
+      const wgs=core.parseWgs84(raw);
+      if(wgs)return {lat:wgs.lat,lon:wgs.lon,name:'WGS84 POSITION',address:'',source:'WGS84'};
+
+      let expanded=null;
+      try{expanded=expandMgrsQuery(raw);}catch(e){throw e;}
+      if(expanded){
+        const decoded=core.decodeFull(expanded.mgrs,root.mgrs);
+        if(expanded.workingGridApplied&&expanded.contextCoords&&!expanded.trustedContext){
+          const distance=core.haversineKm(expanded.contextCoords,[decoded.lat,decoded.lon]);
+          if(!Number.isFinite(distance)||distance>165){
+            const error=new Error('GRID_CONTEXT_MISMATCH');error.code='GRID_CONTEXT_MISMATCH';throw error;
+          }
+        }
+        if(!expanded.workingGridApplied&&expanded.kind==='FULL'){
+          saveWorkingGrid(expanded.prefix,'FULL');
+        }
+        return {
+          lat:decoded.lat,lon:decoded.lon,name:'MGRS POSITION',address:'',
           source:expanded.workingGridApplied?'MGRS_SHORT':'MGRS',
-          mgrs:typeof calcMGRS==='function'?calcMGRS(coords[0],coords[1]):expanded.mgrs,
+          mgrs:typeof calcMGRS==='function'?calcMGRS(decoded.lat,decoded.lon):expanded.mgrs,
           workingGridApplied:Boolean(expanded.workingGridApplied),
           workingGridSource:expanded.workingGridSource||null
         };
-      }catch(e){}
+      }
+
+      core.validateCoordinateLike(raw);
     }
 
     try{
@@ -238,11 +260,7 @@
           return {lat:Number(direct.lat),lon:Number(direct.lon),name:(direct.source||'COORDINATE')+' POSITION',address:'',source:String(direct.source||'INPUT')};
         }
       }
-    }catch(e){}
-    const m=raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/);
-    if(m&&validCoords([Number(m[1]),Number(m[2])])){
-      return {lat:Number(m[1]),lon:Number(m[2]),name:'WGS84 POSITION',address:'',source:'WGS84'};
-    }
+    }catch(e){if(e?.code)throw e;}
     return null;
   }
 
@@ -367,8 +385,10 @@
             e?.code==='OFFLINE'
               ? (lang()==='ko'?'OFFLINE · 주소 검색은 사용할 수 없습니다. WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ADDRESS SEARCH UNAVAILABLE. ENTER WGS84 OR MGRS.')
               : e?.code==='GRID_PREFIX_REQUIRED'
-                ? (lang()==='ko'?'GRID PREFIX가 없습니다. 전체 MGRS를 한 번 입력하거나 지도 기준 위치를 먼저 지정하세요.':'GRID PREFIX REQUIRED. ENTER A FULL MGRS OR SET A MAP REFERENCE.')
-                : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.')
+                ? (lang()==='ko'?'GRID PREFIX가 없습니다. 전체 MGRS를 한 번 입력하거나 현재 지도를 해당 GRID로 이동하세요.':'GRID PREFIX REQUIRED. ENTER A FULL MGRS OR MOVE THE MAP INTO THE REQUIRED GRID.')
+                : ['INVALID_MGRS','INVALID_MGRS_PRECISION','INVALID_COORDINATE_FORMAT','INVALID_WGS84','MGRS_ROUNDTRIP_MISMATCH','MGRS_ROUNDTRIP_FAILED','GRID_CONTEXT_MISMATCH'].includes(e?.code)
+                  ? (lang()==='ko'?'좌표 형식 또는 GRID가 맞지 않습니다. 입력값을 확인하세요.':'INVALID COORDINATE OR GRID. CHECK THE INPUT.')
+                  : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.')
           )+'</div>';
         }finally{if(button&&token===locationTokens.address)button.disabled=false;}
       };
@@ -409,9 +429,12 @@
           });
         }catch(e){
           if(token!==locationTokens.route)return;
+          const coordinateError=['GRID_PREFIX_REQUIRED','INVALID_MGRS','INVALID_MGRS_PRECISION','INVALID_COORDINATE_FORMAT','INVALID_WGS84','MGRS_ROUNDTRIP_MISMATCH','MGRS_ROUNDTRIP_FAILED','GRID_CONTEXT_MISMATCH'].includes(e?.code);
           results.innerHTML='<div class="address-search-empty">'+(e?.code==='OFFLINE'
             ? (lang()==='ko'?'OFFLINE · WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ENTER WGS84 OR MGRS.')
-            : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
+            : coordinateError
+              ? (lang()==='ko'?'좌표 형식 또는 GRID가 맞지 않습니다. 입력값을 확인하세요.':'INVALID COORDINATE OR GRID. CHECK THE INPUT.')
+              : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
         }finally{if(button&&token===locationTokens.route)button.disabled=false;}
       };
       wrapped.__v29Unified=true;
@@ -441,9 +464,12 @@
           });
         }catch(e){
           if(token!==locationTokens.plan)return;
+          const coordinateError=['GRID_PREFIX_REQUIRED','INVALID_MGRS','INVALID_MGRS_PRECISION','INVALID_COORDINATE_FORMAT','INVALID_WGS84','MGRS_ROUNDTRIP_MISMATCH','MGRS_ROUNDTRIP_FAILED','GRID_CONTEXT_MISMATCH'].includes(e?.code);
           results.innerHTML='<div class="address-search-empty">'+(e?.code==='OFFLINE'
             ? (lang()==='ko'?'OFFLINE · WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ENTER WGS84 OR MGRS.')
-            : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
+            : coordinateError
+              ? (lang()==='ko'?'좌표 형식 또는 GRID가 맞지 않습니다. 입력값을 확인하세요.':'INVALID COORDINATE OR GRID. CHECK THE INPUT.')
+              : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
         }finally{if(button&&token===locationTokens.plan)button.disabled=false;}
       };
       wrapped.__v29Unified=true;

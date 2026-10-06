@@ -27,6 +27,7 @@ jobs:
 
       - name: Syntax check
         run: |
+          node --check location-core.js
           node --check app-base.js
           node --check v28.js
           node --check v28-runtime.js
@@ -53,6 +54,9 @@ jobs:
 
       - name: Test V29 integration
         run: node test_v29_integration.js
+
+      - name: Test coordinate parser
+        run: node test_location_core.js
 
       - name: Test R1
         run: node test_r1.js
