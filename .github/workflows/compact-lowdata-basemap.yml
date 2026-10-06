@@ -1,0 +1,127 @@
+name: Compact R1.6 Low Data Basemap
+
+on:
+  push:
+    branches:
+      - r1.6-local-basemap-grid
+    paths:
+      - '.github/workflows/compact-lowdata-basemap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          ref: r1.6-local-basemap-grid
+
+      - name: Install geometry tools
+        run: sudo apt-get update && sudo apt-get install -y python3-shapely
+
+      - name: Compact existing OSM extract
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from shapely.geometry import shape, mapping
+          from shapely.ops import unary_union, linemerge
+
+          path=Path('offline/kr-low.geojson')
+          raw=json.loads(path.read_text(encoding='utf-8'))
+
+          roads={k:[] for k in ('motorway','trunk','primary')}
+          water=[]
+          coast=[]
+          boundary=[]
+          places=[]
+
+          for feature in raw.get('features',[]):
+              p=feature.get('properties') or {}
+              kind=p.get('kind')
+              cls=p.get('class')
+              try:
+                  geom=shape(feature.get('geometry'))
+              except Exception:
+                  continue
+              if geom.is_empty:
+                  continue
+              if kind=='road' and cls in roads:
+                  roads[cls].append(geom)
+              elif kind=='water':
+                  water.append(geom)
+              elif kind=='coast':
+                  coast.append(geom)
+              elif kind=='boundary':
+                  boundary.append(geom)
+              elif kind=='place':
+                  places.append(feature)
+
+          def merge_lines(geoms,tolerance):
+              if not geoms:
+                  return None
+              geom=unary_union(geoms)
+              try:
+                  if geom.geom_type in ('MultiLineString','GeometryCollection'):
+                      geom=linemerge(geom)
+              except Exception:
+                  pass
+              geom=geom.simplify(tolerance,preserve_topology=False)
+              return None if geom.is_empty else geom
+
+          out=[]
+          for cls,tol in [('motorway',.0008),('trunk',.0010),('primary',.0015)]:
+              geom=merge_lines(roads[cls],tol)
+              if geom is not None:
+                  out.append({'type':'Feature','properties':{'kind':'road','class':cls},'geometry':mapping(geom)})
+
+          geom=merge_lines(water,.0020)
+          if geom is not None:
+              out.append({'type':'Feature','properties':{'kind':'water','class':'river'},'geometry':mapping(geom)})
+          geom=merge_lines(coast,.0015)
+          if geom is not None:
+              out.append({'type':'Feature','properties':{'kind':'coast','class':'coastline'},'geometry':mapping(geom)})
+
+          if boundary:
+              geom=unary_union(boundary).simplify(.0015,preserve_topology=True)
+              if not geom.is_empty:
+                  out.append({'type':'Feature','properties':{'kind':'boundary','class':'country'},'geometry':mapping(geom)})
+
+          # Keep named cities/towns. The renderer decides how many labels are visible by zoom.
+          out.extend([f for f in places if (f.get('properties') or {}).get('name')])
+
+          def quantize(v):
+              if isinstance(v,float): return round(v,4)
+              if isinstance(v,(list,tuple)): return [quantize(x) for x in v]
+              if isinstance(v,dict): return {k:quantize(x) for k,x in v.items()}
+              return v
+
+          for feature in out:
+              feature['geometry']=quantize(feature['geometry'])
+
+          final={
+              'type':'FeatureCollection',
+              'name':'TACTICAL RECON South Korea Low Data Basemap',
+              'source':'OpenStreetMap via Geofabrik',
+              'license':'ODbL 1.0',
+              'features':out
+          }
+          path.write_text(json.dumps(final,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+          size=path.stat().st_size
+          print('features',len(out))
+          print('bytes',size)
+          if size>9_000_000:
+              raise SystemExit('compacted basemap still exceeds 9 MB')
+          PY
+
+      - name: Commit compact basemap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add offline/kr-low.geojson
+          git commit -m "Compact South Korea low-data basemap"
+          git push origin HEAD:r1.6-local-basemap-grid
