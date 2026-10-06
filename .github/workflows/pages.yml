@@ -40,15 +40,26 @@ jobs:
           node --check test_r1.js
           node --check test_r2.js
 
-      - name: Run regression tests
-        run: |
-          node test_v28.js
-          node test_v28_runtime.js
-          node test_v28_integration.js
-          node test_v29.js
-          node test_v29_integration.js
-          node test_r1.js
-          node test_r2.js
+      - name: Test V28
+        run: node test_v28.js
+
+      - name: Test V28 runtime
+        run: node test_v28_runtime.js
+
+      - name: Test V28 integration
+        run: node test_v28_integration.js
+
+      - name: Test V29
+        run: node test_v29.js
+
+      - name: Test V29 integration
+        run: node test_v29_integration.js
+
+      - name: Test R1
+        run: node test_r1.js
+
+      - name: Test R2
+        run: node test_r2.js
 
   deploy:
     needs: validate
