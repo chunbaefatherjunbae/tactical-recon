@@ -1619,6 +1619,7 @@
   let lightMapSuppressedTiles=[];
   let lightMapGuardInstalled=false;
   let lightMapRefreshInstalled=false;
+  let lightMapRefreshTimer=null;
   const LOW_DATA_MAP_URL='./offline/kr-low.geojson';
   const LOW_DATA_ATTRIBUTION='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
   let activeOverlayType='REFERENCE';
@@ -2236,9 +2237,9 @@
   }
 
   function renderLowDataCoordinateGrid(){
-    const layer=ensureLightMapGridLayer();
-    if(!layer||!lightMapOpen||typeof map==='undefined')return;
-    layer.clearLayers();
+    if(!lightMapOpen||typeof L==='undefined'||typeof map==='undefined')return;
+    ensureLowDataPanes();
+    const nextLayer=L.layerGroup();
 
     const bounds=map.getBounds().pad(.18);
     const step=lowDataGridStep(bounds);
@@ -2254,14 +2255,14 @@
     let guard=0;
     while(lat<=north+1e-10&&guard++<24){
       const v=Number(lat.toFixed(8));
-      L.polyline([[v,west],[v,east]],style).addTo(layer);
+      L.polyline([[v,west],[v,east]],style).addTo(nextLayer);
       const label=lowDataGridLabel(v,'lat',decimals);
       L.marker([v,leftLabelLon],{
         pane:'r16LowDataLabelPane',
         interactive:false,
         keyboard:false,
         icon:L.divIcon({className:'r16-grid-label r16-grid-label-lat',html:'<span>'+label+'</span>',iconSize:null})
-      }).addTo(layer);
+      }).addTo(nextLayer);
       lat+=step;
     }
 
@@ -2269,18 +2270,21 @@
     guard=0;
     while(lon<=east+1e-10&&guard++<24){
       const v=Number(lon.toFixed(8));
-      L.polyline([[south,v],[north,v]],style).addTo(layer);
+      L.polyline([[south,v],[north,v]],style).addTo(nextLayer);
       const label=lowDataGridLabel(v,'lon',decimals);
       L.marker([bottomLabelLat,v],{
         pane:'r16LowDataLabelPane',
         interactive:false,
         keyboard:false,
         icon:L.divIcon({className:'r16-grid-label r16-grid-label-lon',html:'<span>'+label+'</span>',iconSize:null})
-      }).addTo(layer);
+      }).addTo(nextLayer);
       lon+=step;
     }
 
-    if(!map.hasLayer(layer))layer.addTo(map);
+    const previous=lightMapGridLayer;
+    lightMapGridLayer=nextLayer;
+    nextLayer.addTo(map);
+    if(previous&&previous!==nextLayer&&map.hasLayer(previous))map.removeLayer(previous);
   }
 
   function lowDataFeatureStyle(feature){
@@ -2290,10 +2294,10 @@
     const color=lowDataColor();
     if(kind==='road'){
       const road={
-        motorway:{weight:2.1,opacity:.48},
-        trunk:{weight:1.7,opacity:.40},
-        primary:{weight:1.25,opacity:.31}
-      }[cls]||{weight:1,opacity:.24};
+        motorway:{weight:2.4,opacity:.62},
+        trunk:{weight:1.9,opacity:.52},
+        primary:{weight:1.45,opacity:.42}
+      }[cls]||{weight:1,opacity:.28};
       return {pane:'r16LowDataBasePane',renderer:lightMapBaseRenderer,color,weight:road.weight,opacity:road.opacity,fill:false,interactive:false};
     }
     if(kind==='water')return {pane:'r16LowDataBasePane',renderer:lightMapBaseRenderer,color,weight:1,opacity:.26,fill:false,interactive:false};
@@ -2323,60 +2327,59 @@
   function refreshLowDataPlaces(){
     if(!lightMapOpen||!lightMapBaseData||typeof L==='undefined'||typeof map==='undefined')return;
     ensureLowDataPanes();
-    if(!lightMapPlaceLayer)lightMapPlaceLayer=L.layerGroup();
-    lightMapPlaceLayer.clearLayers();
-
+    const nextLayer=L.layerGroup();
     const zoom=map.getZoom();
-    if(zoom<7){
-      if(!map.hasLayer(lightMapPlaceLayer))lightMapPlaceLayer.addTo(map);
-      return;
+
+    if(zoom>=7){
+      const bounds=map.getBounds().pad(.08);
+      const limit=zoom<9?18:(zoom<11?32:56);
+      const candidates=lowDataPlaceFeatures()
+        .filter(feature=>{
+          if(zoom<9&&feature.properties?.class!=='city')return false;
+          const c=feature.geometry.coordinates;
+          return Array.isArray(c)&&c.length>=2&&bounds.contains([Number(c[1]),Number(c[0])]);
+        })
+        .sort((a,b)=>{
+          const ac=a.properties?.class==='city'?0:1;
+          const bc=b.properties?.class==='city'?0:1;
+          if(ac!==bc)return ac-bc;
+          return Number(b.properties?.population||0)-Number(a.properties?.population||0);
+        })
+        .slice(0,limit);
+
+      const color=lowDataColor();
+      candidates.forEach(feature=>{
+        const c=feature.geometry.coordinates;
+        const name=String(feature.properties?.name||'').trim();
+        if(!name)return;
+        const radius=feature.properties?.class==='city'?2.5:1.8;
+        const marker=L.circleMarker([Number(c[1]),Number(c[0])],{
+          pane:'r16LowDataLabelPane',
+          renderer:lightMapLabelRenderer||lightMapBaseRenderer,
+          radius,
+          weight:.8,
+          color,
+          opacity:.48,
+          fillColor:color,
+          fillOpacity:.28,
+          interactive:false
+        });
+        marker.bindTooltip(name,{
+          permanent:true,
+          direction:'right',
+          offset:[4,0],
+          opacity:1,
+          className:'r16-low-place-label',
+          pane:'r16LowDataLabelPane'
+        });
+        marker.addTo(nextLayer);
+      });
     }
 
-    const bounds=map.getBounds().pad(.08);
-    const limit=zoom<9?18:(zoom<11?32:56);
-    const candidates=lowDataPlaceFeatures()
-      .filter(feature=>{
-        if(zoom<9&&feature.properties?.class!=='city')return false;
-        const c=feature.geometry.coordinates;
-        return Array.isArray(c)&&c.length>=2&&bounds.contains([Number(c[1]),Number(c[0])]);
-      })
-      .sort((a,b)=>{
-        const ac=a.properties?.class==='city'?0:1;
-        const bc=b.properties?.class==='city'?0:1;
-        if(ac!==bc)return ac-bc;
-        return Number(b.properties?.population||0)-Number(a.properties?.population||0);
-      })
-      .slice(0,limit);
-
-    const color=lowDataColor();
-    candidates.forEach(feature=>{
-      const c=feature.geometry.coordinates;
-      const name=String(feature.properties?.name||'').trim();
-      if(!name)return;
-      const radius=feature.properties?.class==='city'?2.5:1.8;
-      const marker=L.circleMarker([Number(c[1]),Number(c[0])],{
-        pane:'r16LowDataLabelPane',
-        renderer:lightMapLabelRenderer||lightMapBaseRenderer,
-        radius,
-        weight:.8,
-        color,
-        opacity:.48,
-        fillColor:color,
-        fillOpacity:.28,
-        interactive:false
-      });
-      marker.bindTooltip(name,{
-        permanent:true,
-        direction:'right',
-        offset:[4,0],
-        opacity:1,
-        className:'r16-low-place-label',
-        pane:'r16LowDataLabelPane'
-      });
-      marker.addTo(lightMapPlaceLayer);
-    });
-
-    if(!map.hasLayer(lightMapPlaceLayer))lightMapPlaceLayer.addTo(map);
+    const previous=lightMapPlaceLayer;
+    lightMapPlaceLayer=nextLayer;
+    nextLayer.addTo(map);
+    if(previous&&previous!==nextLayer&&map.hasLayer(previous))map.removeLayer(previous);
   }
 
   function refreshLowDataBaseStyle(){
@@ -2419,8 +2422,13 @@
     lightMapRefreshInstalled=true;
     const refresh=()=>{
       if(!lightMapOpen)return;
-      renderLowDataCoordinateGrid();
-      refreshLowDataBaseStyle();
+      if(lightMapRefreshTimer)clearTimeout(lightMapRefreshTimer);
+      lightMapRefreshTimer=setTimeout(()=>{
+        lightMapRefreshTimer=null;
+        if(!lightMapOpen)return;
+        renderLowDataCoordinateGrid();
+        refreshLowDataPlaces();
+      },48);
     };
     map.on('moveend',refresh);
     map.on('zoomend',refresh);
@@ -2443,9 +2451,7 @@
       const layer=event?.layer;
       if(!lightMapOpen||!isNetworkTileLayer(layer))return;
       rememberLightMapTile(layer);
-      setTimeout(()=>{
-        if(lightMapOpen&&map?.hasLayer?.(layer))map.removeLayer(layer);
-      },0);
+      if(map?.hasLayer?.(layer))map.removeLayer(layer);
     });
   }
 
@@ -2477,6 +2483,7 @@
   function closeLightMap(){
     if(!lightMapOpen){syncMapModeButtons();return;}
     lightMapOpen=false;
+    if(lightMapRefreshTimer){clearTimeout(lightMapRefreshTimer);lightMapRefreshTimer=null;}
     document.body.classList.remove('r15-light-map','r16-light-map');
     if(lightMapGridLayer&&map?.hasLayer?.(lightMapGridLayer))map.removeLayer(lightMapGridLayer);
     if(lightMapBaseLayer&&map?.hasLayer?.(lightMapBaseLayer))map.removeLayer(lightMapBaseLayer);
@@ -2955,7 +2962,7 @@
         '<button class="osb-btn" data-r1-location-action="COPY" type="button"></button>'+
       '</div>';
     document.body.appendChild(card);
-    card.querySelector('.r1-location-close')?.addEventListener('click',()=>closeR1LocationCard(true));
+    card.querySelector('.r1-location-close')?.addEventListener('click',()=>closeR1LocationCard(card.dataset.ownsLegacyTarget==='1'));
     card.querySelector('#r1LocationObjective')?.addEventListener('click',setR1Objective);
     card.querySelector('#r1LocationSave')?.addEventListener('click',saveR1Location);
     card.querySelector('#r1LocationMore')?.addEventListener('click',()=>{
@@ -2979,14 +2986,16 @@
     return card;
   }
 
-  function showR1LocationCard(target,statusType='LOCATION'){
+  function showR1LocationCard(target,statusType='LOCATION',options={}){
     if(!target?.coords||!validCoords(target.coords))return;
     closeR1Records();
     r1LocationTarget={...target,coords:[Number(target.coords[0]),Number(target.coords[1])]};
     r1LocationStatus=String(statusType||target.status||'LOCATION').toUpperCase();
     r1LocationMoreOpen=false;
-    currentActiveTarget=target;
+    const activateLegacyTarget=options?.activateLegacyTarget!==false;
+    if(activateLegacyTarget)currentActiveTarget=target;
     const card=ensureR1LocationCard();
+    card.dataset.ownsLegacyTarget=activateLegacyTarget?'1':'0';
     const mgrsText=typeof calcMGRS==='function'?calcMGRS(target.coords[0],target.coords[1]):'';
     const ref=currentReference();
     const bundle=ref?.coords?core.geo.bearingBundle(ref.coords,target.coords,{date:new Date()}):null;
@@ -3306,7 +3315,7 @@
     openObjectiveInfo:openMissionObjectiveSheet
   };
 
-  root.r1={openRecords:openR1Records,openLocation:showR1LocationCard,closeLocation:closeR1LocationCard,setObjective:setR1Objective};
+  root.r1={openRecords:openR1Records,openLocation:showR1LocationCard,closeLocation:closeR1LocationCard,setObjective:setR1Objective,refreshLowDataStyle:refreshLowDataBaseStyle};
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
