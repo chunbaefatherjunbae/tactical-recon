@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'r2-1-hud-state-perf-20261006-1';
+const CACHE_VERSION = 'r2-2-gev-hud-20261006-1';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
