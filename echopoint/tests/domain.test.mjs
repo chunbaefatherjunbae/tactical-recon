@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import {parseWgs84,parseFullParts,expandShort} from '../src/coordinates.mjs';
 import {haversineKm,initialBearing} from '../src/geo.mjs';
 import {selectReference} from '../src/reference.mjs';
-import {createPlan,insertPoint,movePoint,roleForIndex,startMission,stepMission,addStroke,eraseRouteNear,importTrackAsRoute} from '../src/plan.mjs';
-import {createTrackRuntime,startTrack,recordGps,pauseTrack,resumeTrack,stopTrack,TRACK_STATE,measuredPointCount,recoveryPayload,recoverTrack} from '../src/track.mjs';
+import {createPlan,insertPoint,movePoint,roleForIndex,startMission,stepMission,removeFuturePoint,addStroke,eraseRouteNear,importTrackAsRoute} from '../src/plan.mjs';
+import {createTrackRuntime,startTrack,recordGps,recordTemp,pauseTrack,resumeTrack,stopTrack,TRACK_STATE,measuredPointCount,recoveryPayload,recoverTrack} from '../src/track.mjs';
 
 assert.deepEqual(parseWgs84('37.5, 127.0'),{lat:37.5,lon:127,source:'WGS84'});
 assert.equal(parseFullParts('52S CG 12345 67890').precision,5);
@@ -38,6 +38,8 @@ const mission=startMission(plan);
 assert.equal(mission.nextIndex,1);
 stepMission(mission,1);
 assert.equal(mission.nextIndex,2);
+assert(removeFuturePoint(mission,mission.activePlan.points[2].id));
+assert.equal(mission.nextIndex,1);
 
 const runtime=createTrackRuntime();
 startTrack(runtime,{missionId:'mission-1',startedAt:1000});
@@ -55,6 +57,12 @@ assert.equal(recovered.state,TRACK_STATE.PAUSED);
 const finished=stopTrack(runtime,9000);
 assert.equal(finished.originMissionId,'mission-1');
 assert.equal(runtime.state,TRACK_STATE.OFF);
+
+const bridgeRuntime=createTrackRuntime();
+startTrack(bridgeRuntime,{startedAt:1000});
+recordGps(bridgeRuntime,{lat:37,lon:127,timestamp:1000,accuracyM:10});
+recordTemp(bridgeRuntime,{lat:37.01,lon:127.01,timestamp:2000});
+assert.equal(bridgeRuntime.activeTrack.segments.find(s=>s.kind==='ESTIMATED').from.source,'GPS');
 
 const importPlan=createPlan({lat:37.5,lon:127.5,name:'D'},{lat:37.4,lon:127.4,name:'S'});
 const pointNames=importPlan.points.map(p=>p.name);

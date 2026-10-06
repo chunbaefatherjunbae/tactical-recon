@@ -238,6 +238,10 @@ function bindTrackLongPress(){
 function createDestinationFromSelected(){
   const s=store.getState();
   if(!s.selected)return;
+  if(s.mission){
+    setDestination(s.mission.activePlan,s.selected);
+    s.overlay='NONE';store.setState(s);return;
+  }
   if(!s.plan)s.plan=createPlan(s.selected,reference());
   else setDestination(s.plan,s.selected);
   s.surface='PLAN';s.overlay='NONE';s.planDraftSlot=null;
@@ -247,6 +251,7 @@ function createDestinationFromSelected(){
 function setStartFromSelected(){
   const s=store.getState();
   if(!s.selected)return;
+  if(s.mission){toast('임무 중 출발지는 기록으로 고정');return;}
   if(!s.plan){toast('먼저 목적지를 지정해');return;}
   setStart(s.plan,s.selected);
   s.surface='PLAN';s.overlay='NONE';store.setState(s);void persistPlan();
@@ -254,7 +259,13 @@ function setStartFromSelected(){
 
 function addViaFromSelected(){
   const s=store.getState();
-  if(!s.selected||!s.plan){toast('먼저 목적지를 지정해');return;}
+  if(!s.selected){return;}
+  if(s.mission){
+    const p=s.mission.activePlan;
+    insertPoint(p,s.selected,Math.max(s.mission.nextIndex,p.points.length-1));
+    s.overlay='NONE';store.setState(s);return;
+  }
+  if(!s.plan){toast('먼저 목적지를 지정해');return;}
   insertPoint(s.plan,s.selected,Math.max(0,s.plan.points.length-1));
   s.surface='PLAN';s.overlay='NONE';store.setState(s);void persistPlan();
 }
@@ -411,15 +422,30 @@ function eraseAt(e){
   if(eraseRouteNear(plan,center,radius))store.setState(store.getState());
 }
 
+function planPathLabel(plan){
+  const names=(plan?.points||[]).map(p=>p.name).filter(Boolean);
+  return names.length?names.join(' → '):'포인트 정보 없음';
+}
+
+function trackEndpoints(track){
+  const points=(track?.segments||[]).filter(s=>s.kind==='MEASURED').flatMap(s=>s.points||[]);
+  return points.length?{start:points[0],end:points[points.length-1]}:null;
+}
+
 async function openTrackImport(){
   const tracks=(await db.getAll('tracks')).filter(t=>t?.segments?.length);
+  const missions=await db.getAll('missions');
+  const missionById=new Map(missions.map(m=>[m.id,m]));
   const container=$('listContent');container.replaceChildren();$('listTitle').textContent='TRACK → ROUTE';
   if(!tracks.length){container.textContent='저장된 TRACK 없음';openOverlay('LIST');return;}
   tracks.sort((a,b)=>Number(b.startedAt||0)-Number(a.startedAt||0));
   for(const track of tracks){
+    const mission=track.originMissionId?missionById.get(track.originMissionId):null;
     const btn=document.createElement('button');btn.className='list-row';btn.type='button';
-    const title=document.createElement('strong');title.textContent=new Date(track.startedAt).toLocaleString('ko-KR');
-    const sub=document.createElement('small');sub.textContent=`${measuredPointCount(track)} pts · ${(Number(track.distance?.measuredKm||0)+Number(track.distance?.estimatedKm||0)).toFixed(2)} km`;
+    const title=document.createElement('strong');title.textContent=mission?'MISSION TRACK · '+new Date(track.startedAt).toLocaleString('ko-KR'):new Date(track.startedAt).toLocaleString('ko-KR');
+    const sub=document.createElement('small');
+    const route=mission?planPathLabel(mission.finalPlan||mission.activePlan||mission.initialPlan):'독립 TRACK';
+    sub.textContent=`${route} · ${measuredPointCount(track)} pts · ${(Number(track.distance?.measuredKm||0)+Number(track.distance?.estimatedKm||0)).toFixed(2)} km`;
     btn.append(title,sub);
     btn.onclick=()=>{
       const plan=activeEditablePlan();if(!plan)return;
@@ -434,10 +460,12 @@ async function openTrackImport(){
 async function openRecords(){
   const missions=await db.getAll('missions');
   const tracks=await db.getAll('tracks');
+  const missionIds=new Set(missions.map(m=>m.id));
+  const trackById=new Map(tracks.map(t=>[t.id,t]));
   const container=$('listContent');container.replaceChildren();$('listTitle').textContent='기록';
   const rows=[];
   for(const m of missions)rows.push({type:'MISSION',at:m.startedAt,data:m});
-  for(const t of tracks.filter(t=>t.endedAt))rows.push({type:'TRACK',at:t.startedAt,data:t});
+  for(const t of tracks.filter(t=>t.endedAt&&(!t.originMissionId||!missionIds.has(t.originMissionId))))rows.push({type:'TRACK',at:t.startedAt,data:t});
   rows.sort((a,b)=>Number(b.at||0)-Number(a.at||0));
   if(!rows.length){container.textContent='기록 없음';openOverlay('LIST');return;}
   for(const row of rows){
@@ -445,12 +473,15 @@ async function openRecords(){
     const title=document.createElement('strong');
     const sub=document.createElement('small');
     if(row.type==='MISSION'){
-      const pts=row.data.finalPlan?.points||row.data.activePlan?.points||[];
-      title.textContent='MISSION · '+new Date(row.data.startedAt).toLocaleString('ko-KR');
-      sub.textContent=pts.map(p=>p.name).join(' → ')||'포인트 없음';
+      const mission=row.data;
+      const linked=(mission.trackLinks||[]).map(l=>trackById.get(l.trackId)).filter(Boolean);
+      const distance=linked.reduce((sum,t)=>sum+Number(t.distance?.measuredKm||0)+Number(t.distance?.estimatedKm||0),0);
+      title.textContent=new Date(mission.startedAt).toLocaleString('ko-KR')+' · MISSION';
+      sub.textContent=`${planPathLabel(mission.finalPlan||mission.activePlan||mission.initialPlan)} · ${linked.length?'TRACK 있음':'TRACK 없음'}${linked.length?' · '+distance.toFixed(2)+' km':''}`;
     }else{
-      title.textContent='TRACK · '+new Date(row.data.startedAt).toLocaleString('ko-KR');
-      sub.textContent=`${measuredPointCount(row.data)} pts · ${Number(row.data.distance?.measuredKm||0).toFixed(2)} km`;
+      const endpoints=trackEndpoints(row.data);
+      title.textContent=new Date(row.data.startedAt).toLocaleString('ko-KR')+' · TRACK';
+      sub.textContent=endpoints?`${fmt(endpoints.start)} → ${fmt(endpoints.end)} · ${Number(row.data.distance?.measuredKm||0).toFixed(2)} km`:`${measuredPointCount(row.data)} pts`;
     }
     btn.append(title,sub);container.append(btn);
   }

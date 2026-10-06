@@ -31,7 +31,7 @@ function endpoint(anchor,sourceOverride){
 }
 
 function addEstimated(track,reason,fromAnchor,toAnchor){
-  const from=endpoint(fromAnchor,fromAnchor?.source==='GPS'?'LAST_FIX':undefined);
+  const from=endpoint(fromAnchor);
   const to=endpoint(toAnchor);
   if(!from||!to)return false;
   track.segments.push({kind:'ESTIMATED',reason,from,to});

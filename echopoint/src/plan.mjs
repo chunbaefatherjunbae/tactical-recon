@@ -168,7 +168,11 @@ export function moveFuturePoint(mission,from,to){
 export function removeFuturePoint(mission,pointId){
   const i=mission.activePlan.points.findIndex(p=>p.id===pointId);
   if(i<mission.nextIndex)return false;
-  return removePoint(mission.activePlan,pointId);
+  const removed=removePoint(mission.activePlan,pointId);
+  if(removed&&mission.nextIndex>=mission.activePlan.points.length){
+    mission.nextIndex=Math.max(0,mission.activePlan.points.length-1);
+  }
+  return removed;
 }
 
 export function elapsedMs(mission,at=Date.now()){

@@ -22,7 +22,7 @@ button{cursor:pointer}
 .reticle b:before,.reticle b:after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--active)}
 .reticle b:before{width:13px;height:1px}.reticle b:after{width:1px;height:13px}
 
-.top-hud{position:absolute;z-index:500;top:calc(var(--safe-top) + 2px);left:14px;right:104px;display:flex;justify-content:space-between;pointer-events:none;text-shadow:var(--shadow)}
+.top-hud{position:absolute;z-index:500;top:calc(var(--safe-top) + 2px);left:14px;right:104px;display:grid;gap:1px;pointer-events:none;text-shadow:var(--shadow)}
 .coord-readout{pointer-events:auto;border:0;background:transparent;padding:1px 0;text-align:left;display:grid;grid-template-columns:32px minmax(0,1fr);grid-template-areas:"label coord" ". meta";column-gap:6px;min-width:0}
 .coord-readout span{grid-area:label;color:var(--tactical);font-size:9px;letter-spacing:.18em}
 .coord-readout strong{grid-area:coord;font-size:12px;letter-spacing:.035em;white-space:nowrap}
