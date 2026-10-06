@@ -49,7 +49,7 @@ test('R2 adds position display controls under POSITION',()=>{
 
 test('Map selection is separate from the legacy active target until objective action',()=>{
   assert(r1.includes("function showR1LocationCard(target,statusType='LOCATION',options={})"));
-  assert(r1.includes("const activateLegacyTarget=options?.activateLegacyTarget!==false"));
+  assert(r1.includes("const activateLegacyTarget=options?.activateLegacyTarget===true"));
   assert(r1.includes("card.dataset.ownsLegacyTarget=activateLegacyTarget?'1':'0'"));
   assert(r2.includes("root.r1.openLocation(target,'LOCATION',{activateLegacyTarget:false})"));
   assert(r2.indexOf("if(r2CardTarget&&validCoords(r2CardTarget.coords))return r2CardTarget")<r2.indexOf("if(typeof currentActiveTarget!=='undefined'"));
