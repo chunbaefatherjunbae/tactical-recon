@@ -127,6 +127,7 @@ window.__reconRotateUnavailable = true;
     let tempMarkMarker = null;
     let homeMarker = null;
     let roadBoostEnabled = false;
+    let baseTileLayer = null;
     let roadBoostLayer = null;
 
     const ROTATION_AVAILABLE = Boolean(!window.__reconRotateUnavailable && L?.Map?.prototype && typeof L.Map.prototype.setBearing === 'function');
@@ -139,16 +140,25 @@ window.__reconRotateUnavailable = true;
     }
     const map = L.map('map', mapOptions);
 
-    L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    baseTileLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
       maxNativeZoom:17, maxZoom:19, attribution:'Map data © OpenStreetMap contributors · Map style © OpenTopoMap'
     }).addTo(map);
-    map.createPane('roadBoostPane');
-    map.getPane('roadBoostPane').style.zIndex = '250';
-    map.getPane('roadBoostPane').style.pointerEvents = 'none';
     roadBoostLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      minZoom:10, maxZoom:19, opacity:0.24, pane:'roadBoostPane', className:'road-boost-tiles',
-      attribution:'© OpenStreetMap contributors'
+      minZoom:10, maxZoom:19, attribution:'© OpenStreetMap contributors'
     });
+
+    function syncNetworkBasemap(){
+      const preferred=roadBoostEnabled?roadBoostLayer:baseTileLayer;
+      const inactive=roadBoostEnabled?baseTileLayer:roadBoostLayer;
+      if(inactive&&map.hasLayer(inactive))map.removeLayer(inactive);
+
+      const localMapActive=document.body.classList.contains('r16-light-map');
+      if(localMapActive){
+        if(preferred&&map.hasLayer(preferred))map.removeLayer(preferred);
+        return;
+      }
+      if(preferred&&!map.hasLayer(preferred))preferred.addTo(map);
+    }
     markersLayer = L.layerGroup().addTo(map);
     // 큰 NEARBY 원은 SVG보다 Canvas 렌더러가 iOS Safari 이동/줌에서 훨씬 가볍다.
     const radarRenderer = L.canvas({ padding: 0.25 });
@@ -2987,8 +2997,7 @@ window.__reconRotateUnavailable = true;
 
     function toggleRoadBoost(btn){
       roadBoostEnabled=!roadBoostEnabled;
-      if(roadBoostEnabled){ if(!map.hasLayer(roadBoostLayer)) roadBoostLayer.addTo(map); }
-      else if(map.hasLayer(roadBoostLayer)) map.removeLayer(roadBoostLayer);
+      syncNetworkBasemap();
       if(btn) btn.classList.toggle('active',roadBoostEnabled);
     }
 
