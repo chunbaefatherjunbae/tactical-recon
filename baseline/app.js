@@ -761,10 +761,12 @@
         '<div class="site-copy"><b>정보</b><br>' + esc(site.desc || '정보 없음') + '</div>' +
         '<div class="site-copy"><b>참고</b><br>' + esc(site.tips || '참고 없음') + '</div>' +
         '<div class="site-actions">' +
-          '<button type="button" id="siteMapGo">지도에서 보기</button>' +
-          '<button class="primary" type="button" id="siteDestinationSet">목적지 설정</button>' +
-          '<button type="button" id="siteSecureToggle">' + (secured ? '미개척으로' : '개척 완료') + '</button>' +
-          (editable ? '<button type="button" id="siteEditBtn">수정</button><button class="danger" type="button" id="siteDeleteBtn">삭제</button>' : '') +
+          '<button class="primary site-destination-action" type="button" id="siteDestinationSet">목적지 설정</button>' +
+          '<div class="site-actions-secondary">' +
+            '<button type="button" id="siteMapGo">지도에서 보기</button>' +
+            '<button type="button" id="siteSecureToggle">' + (secured ? '미개척으로' : '개척 완료') + '</button>' +
+          '</div>' +
+          (editable ? '<div class="site-actions-manage"><button type="button" id="siteEditBtn">수정</button><button class="danger" type="button" id="siteDeleteBtn">삭제</button></div>' : '') +
         '</div>' +
       '</div>';
 
@@ -846,15 +848,15 @@
     const refText = ref ? exploreReferenceText() : '기준 위치 없음 · 범위 탐색은 GPS/TEMP/LAST 필요';
     const rangeButtons = Explore.RADII.map(value => {
       const key = String(value);
-      const label = value === 'all' ? 'ALL' : value + ' KM';
+      const label = value === 'all' ? '전체' : value + 'km';
       return '<button type="button" data-explore-radius="' + key + '" class="' + (String(exploreRadius) === key ? 'active' : '') + '">' + label + '</button>';
     }).join('');
 
     return '<div class="explore-ref"><small>탐색 기준</small><strong id="exploreRefText">' + esc(refText) + '</strong></div>' +
       '<div class="explore-range">' + rangeButtons + '</div>' +
       '<div class="explore-actions">' +
-        '<button type="button" id="exploreRegisteredBtn">등록 거점<span>아직 개척하지 않은 등록 거점 중 무작위 선택</span></button>' +
-        '<button type="button" id="exploreWildBtn">미개척 좌표<span>새 탐색 좌표를 생성하고 내 거점에 저장</span></button>' +
+        '<button type="button" id="exploreRegisteredBtn">무작위 거점<span>아직 개척하지 않은 등록 거점 중 하나를 선택</span></button>' +
+        '<button type="button" id="exploreWildBtn">새 탐색 좌표<span>무작위 좌표를 생성하고 내 거점에 저장</span></button>' +
       '</div>' +
       '<div class="explore-foot">범위 지정 시 현재 기준 위치를 중심으로 탐색합니다. ALL은 등록 전체 또는 기존 전국 산악 탐색 권역을 사용합니다.</div>';
   }
