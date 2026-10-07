@@ -5,8 +5,10 @@
   --ep-safe-top:env(safe-area-inset-top,0px);
   --ep-safe-bottom:env(safe-area-inset-bottom,0px);
   --ep-toolbar-h:calc(54px + var(--ep-safe-bottom));
+}
+body{
   --ep-field-bg:var(--field-panel-solid,var(--bg-base,#07100a));
-  --ep-field-osd:rgba(3,8,5,.88);
+  --ep-field-osd:var(--field-panel,var(--bg-osd,rgba(3,8,5,.88)));
   --ep-field-text:var(--field-text,var(--text-main,#d5ddd7));
   --ep-field-dim:var(--field-dim,var(--text-dim,#8a968e));
   --ep-field-active:var(--field-active,var(--accent,#79e27d));
@@ -20,37 +22,57 @@ body.ep-shell-ready .global-gps-controls,
 body.ep-shell-ready .mfd-bottom-bar{display:none!important}
 
 body.ep-shell-ready .viewfinder-frame{
-  position:fixed!important;inset:0!important;padding:12px!important;z-index:850!important;
+  position:fixed!important;inset:0!important;padding:0!important;z-index:850!important;
   opacity:1!important;pointer-events:none!important;
 }
 body.ep-shell-ready .viewfinder-frame .bracket{
-  width:22px!important;height:22px!important;border:2px solid var(--ep-field-active)!important;
-  opacity:.65!important;filter:none!important;
+  width:34px!important;height:34px!important;border-width:1px!important;border-style:solid!important;
+  border-color:var(--ep-field-line-strong)!important;opacity:.78!important;filter:none!important;
 }
-body.ep-shell-ready .viewfinder-frame .bracket.tl{top:12px!important;left:12px!important;border-right:0!important;border-bottom:0!important}
-body.ep-shell-ready .viewfinder-frame .bracket.tr{top:12px!important;right:12px!important;border-left:0!important;border-bottom:0!important}
-body.ep-shell-ready .viewfinder-frame .bracket.bl{left:12px!important;bottom:calc(var(--ep-toolbar-h) + 10px)!important;border-right:0!important;border-top:0!important}
-body.ep-shell-ready .viewfinder-frame .bracket.br{right:12px!important;bottom:calc(var(--ep-toolbar-h) + 10px)!important;border-left:0!important;border-top:0!important}
-body.ep-shell-ready:not(.ep-surface-map) .viewfinder-frame .bracket.bl,
-body.ep-shell-ready:not(.ep-surface-map) .viewfinder-frame .bracket.br{bottom:12px!important}
+body.ep-shell-ready .viewfinder-frame .bracket.tl{top:14px!important;left:14px!important;border-right:0!important;border-bottom:0!important}
+body.ep-shell-ready .viewfinder-frame .bracket.tr{top:14px!important;right:14px!important;border-left:0!important;border-bottom:0!important}
+body.ep-shell-ready .viewfinder-frame .bracket.bl{bottom:calc(76px + var(--ep-safe-bottom))!important;left:14px!important;border-right:0!important;border-top:0!important}
+body.ep-shell-ready .viewfinder-frame .bracket.br{bottom:calc(76px + var(--ep-safe-bottom))!important;right:14px!important;border-left:0!important;border-top:0!important}
+body.ep-shell-ready .viewfinder-frame .bracket::after{
+  content:""!important;position:absolute!important;background:var(--ep-field-line-strong)!important;opacity:.55!important;
+}
+body.ep-shell-ready .viewfinder-frame .bracket.tl::after,
+body.ep-shell-ready .viewfinder-frame .bracket.tr::after{width:70px!important;height:1px!important;top:-1px!important}
+body.ep-shell-ready .viewfinder-frame .bracket.bl::after,
+body.ep-shell-ready .viewfinder-frame .bracket.br::after{width:70px!important;height:1px!important;bottom:-1px!important}
+body.ep-shell-ready .viewfinder-frame .bracket.tl::after,
+body.ep-shell-ready .viewfinder-frame .bracket.bl::after{left:-1px!important}
+body.ep-shell-ready .viewfinder-frame .bracket.tr::after,
+body.ep-shell-ready .viewfinder-frame .bracket.br::after{right:-1px!important}
 
 body.ep-shell-ready .reticle-container{
   position:fixed!important;top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important;
-  width:44px!important;height:44px!important;opacity:1!important;
-  filter:drop-shadow(0 0 2px color-mix(in srgb,var(--ep-field-active) 28%,transparent))!important;
+  width:112px!important;height:112px!important;opacity:1!important;filter:none!important;
   pointer-events:none!important;z-index:900!important;
 }
+body.ep-shell-ready .reticle-container::before,
+body.ep-shell-ready .reticle-container::after{display:none!important}
 body.ep-shell-ready .reticle-container .target-gate{
-  position:absolute!important;top:12px!important;left:12px!important;width:20px!important;height:20px!important;
-  border:1px solid var(--ep-field-active)!important;opacity:.88!important;box-shadow:none!important;
+  position:absolute!important;top:50%!important;left:50%!important;width:40px!important;height:40px!important;
+  transform:translate(-50%,-50%)!important;border:1px solid var(--ep-field-active)!important;opacity:.9!important;box-shadow:none!important;
 }
 body.ep-shell-ready .reticle-axis-v{
-  position:absolute!important;top:0!important;left:21px!important;width:2px!important;height:44px!important;
-  background:linear-gradient(to bottom,var(--ep-field-active) 0%,transparent 42%,transparent 58%,var(--ep-field-active) 100%)!important;opacity:.76!important;
+  position:absolute!important;left:50%!important;top:0!important;width:1px!important;height:100%!important;
+  transform:translateX(-50%)!important;opacity:.78!important;background:var(--ep-field-active)!important;
 }
 body.ep-shell-ready .reticle-axis-h{
-  position:absolute!important;top:21px!important;left:0!important;width:44px!important;height:2px!important;
-  background:linear-gradient(to right,var(--ep-field-active) 0%,transparent 42%,transparent 58%,var(--ep-field-active) 100%)!important;opacity:.76!important;
+  position:absolute!important;left:0!important;top:50%!important;width:100%!important;height:1px!important;
+  transform:translateY(-50%)!important;opacity:.78!important;background:var(--ep-field-active)!important;
+}
+body.ep-shell-ready .reticle-container .target-gate::before,
+body.ep-shell-ready .reticle-container .target-gate::after{
+  content:""!important;position:absolute!important;background:var(--ep-field-active)!important;opacity:1!important;
+}
+body.ep-shell-ready .reticle-container .target-gate::before{
+  width:8px!important;height:1px!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;
+}
+body.ep-shell-ready .reticle-container .target-gate::after{
+  width:1px!important;height:8px!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;
 }
 body.ep-shell-ready.route-drawing .reticle-container{opacity:.35!important}
 
