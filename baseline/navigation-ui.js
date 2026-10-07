@@ -880,8 +880,20 @@
           '<span>TRACK</span><b>' + (trackDistance/1000).toFixed(2) + ' KM · ' + trackPoints + ' PTS</b>' +
         '</div>' +
         '<div class="record-laps">' + laps + '</div>' +
-        '<button class="record-map-btn" id="recordMapView" type="button">지도에서 보기</button>' +
+        '<div class="record-actions">' +
+          '<button class="record-map-btn" id="recordMapView" type="button">지도에서 보기</button>' +
+          '<button class="record-delete-btn" id="recordDeleteBtn" type="button">삭제</button>' +
+        '</div>' +
       '</div>'
+    });
+
+    $('recordDeleteBtn')?.addEventListener('click',() => {
+      if(!confirm('이 기록을 삭제할까요?')) return;
+      if(Records.remove(record.id)){
+        recordPreviewLayer.clearLayers();
+        toast('기록 삭제');
+        openRecords();
+      }
     });
 
     $('recordMapView')?.addEventListener('click',() => {
