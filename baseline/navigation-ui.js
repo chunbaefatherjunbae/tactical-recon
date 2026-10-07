@@ -1100,6 +1100,7 @@
     if (!active) return false;
     draft=Plans.normalize(active.finalPlan || active.initialPlan || {});
     renderPlanMap();
+    renderActiveTrack();
     renderHud();
     toast(active.status === 'PAUSED' ? '일시정지 항법 복구' : '진행 중 항법 복구');
     return true;
