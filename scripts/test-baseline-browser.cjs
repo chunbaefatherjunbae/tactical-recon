@@ -431,11 +431,11 @@ const server = http.createServer((req, res) => {
       await page.locator('.bottom-nav button[data-panel="records"]').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '기록');
       assert.equal(await page.locator('.record-row').count(), 1);
-      assert.equal(await page.locator('.record-row').textContent().then(t => t.includes('TRACK')), true);
+      assert.equal(await page.locator('.record-row').textContent().then(t => t.includes('궤적')), true);
       await page.locator('.record-row').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '기록 상세');
       assert.equal(await page.locator('.record-lap').count(), 1);
-      assert.equal(await page.locator('.record-summary').textContent().then(t => t.includes('4 PTS')), true);
+      assert.equal(await page.locator('.record-summary').textContent().then(t => t.includes('4 지점')), true);
       assert.equal(await page.locator('#recordMapView').count(), 1);
       await page.screenshot({ path:`ui-results-baseline/${name}-navigation-record.png`, fullPage:true });
       await page.locator('#recordMapView').click();
