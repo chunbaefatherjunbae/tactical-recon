@@ -28,7 +28,9 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --top-gap: 14px;
   --bottom-h: calc(62px + var(--safe-bottom));
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-ui);
 }
 
 * { box-sizing: border-box; }
@@ -1285,4 +1287,208 @@ body.baseline-site-placement #map .leaflet-bottom.leaflet-right {
   white-space:normal;
   text-align:right;
   line-height:1.15;
+}
+
+
+/* ---------- iPhone readability / interaction audit ---------- */
+html, body, button, input, select, textarea {
+  font-family:var(--font-ui);
+}
+button {
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+input, select, textarea {
+  font-size:16px;
+}
+
+/* Keep technical values monospaced, use system text everywhere else. */
+.position-hud strong,
+.navigation-hud strong,
+.navigation-hud-sub,
+.navigation-timer,
+.scale-hud,
+.site-detail-grid strong,
+.site-form-position strong,
+.record-summary b,
+.point-address-results span,
+.site-add-results span {
+  font-family:var(--font-mono);
+}
+
+/* Top telemetry */
+.position-hud strong {
+  font-size:13px;
+  line-height:1.32;
+  letter-spacing:.15px;
+}
+.position-hud .reticle-coordinate {
+  margin-top:2px;
+  color:var(--text-main);
+  opacity:.88;
+}
+.position-hud span {
+  margin-top:4px;
+  font-size:11px;
+  line-height:1.3;
+  letter-spacing:.15px;
+}
+.position-hud .map-mode-status {
+  font-size:11px;
+  letter-spacing:.2px;
+}
+
+/* Primary navigation */
+.bottom-nav button {
+  font-size:14px;
+  letter-spacing:.1px;
+}
+.quick-btn .btn-label { font-size:11px; letter-spacing:.2px; }
+.scale-hud { font-size:10px; }
+
+/* Sheets and common controls */
+.sheet-head { min-height:52px; }
+.sheet-head small { font-size:11px; letter-spacing:.3px; }
+.sheet-head strong { font-size:16px; line-height:1.25; }
+.sheet-head button { width:44px; height:44px; }
+.sheet-body { font-size:14px; line-height:1.55; }
+.sheet-action strong { font-size:14px; }
+.sheet-action span { font-size:12px; line-height:1.4; }
+.toast { font-size:12px; }
+.sheet-note { font-size:12px; line-height:1.5; }
+
+/* Sites */
+.site-filter { min-height:44px; font-size:12px; }
+.site-row { min-height:66px; padding:10px; }
+.site-row strong { font-size:14px; }
+.site-row small, .site-row em { font-size:11px; }
+.site-empty { font-size:12px; }
+.site-detail-head small { font-size:11px; }
+.site-detail-head strong { font-size:16px; }
+.site-detail-grid { grid-template-columns:72px minmax(0,1fr); }
+.site-detail-grid span,
+.site-detail-grid strong { min-height:36px; font-size:12px; }
+.site-copy { font-size:13px; line-height:1.6; }
+.site-copy b { font-size:11px; }
+.site-actions button { font-size:13px; }
+
+/* Exploration */
+.explore-ref small { font-size:11px; }
+.explore-ref strong { font-size:13px; }
+.explore-range button { min-height:44px; font-size:12px; }
+.explore-actions button { font-size:13px; }
+.explore-actions button span,
+.explore-foot { font-size:11px; line-height:1.45; }
+
+/* Unified plan / navigation */
+.nav-route-summary {
+  top:calc(var(--safe-top) + 88px);
+  min-height:34px;
+  font-size:13px;
+}
+.nav-route-summary b { font-size:14px; }
+.navigation-hud {
+  top:calc(var(--safe-top) + 126px);
+  width:min(310px,calc(100vw - 82px));
+  gap:8px;
+}
+.navigation-hud small { font-size:11px; letter-spacing:.3px; }
+.navigation-hud strong { font-size:13px; line-height:1.35; }
+.navigation-hud .navigation-hud-sub { font-size:11px; }
+.navigation-timer { font-size:16px!important; }
+.nav-session-controls button,
+.drawing-controls button {
+  min-height:44px;
+  font-size:13px;
+}
+body.baseline-navigation-active .site-map-marker-wrap {
+  display:none!important;
+}
+
+/* Plan library/editor */
+.plan-library-actions button { min-height:44px; font-size:13px; }
+.plan-current {
+  width:100%;
+  min-height:58px;
+  margin-bottom:8px;
+  padding:9px 10px;
+  border:1px solid var(--border-accent);
+  background:var(--bg-osd);
+  color:var(--accent);
+  text-align:left;
+}
+.plan-current strong,
+.plan-current span { display:block; }
+.plan-current strong { font-size:14px; }
+.plan-current span {
+  margin-top:4px;
+  color:var(--text-dim);
+  font-size:11px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.plan-library-row { min-height:66px; grid-template-columns:minmax(0,1fr) 58px 52px; }
+.plan-library-row button { font-size:11px; }
+.plan-library-row .plan-open strong { font-size:14px; }
+.plan-library-row .plan-open span { font-size:11px; }
+.plan-name span,
+.plan-route-row > span { font-size:11px; }
+.plan-route-row { grid-template-columns:58px minmax(0,1fr) auto; }
+.plan-route-row > button { min-height:44px; font-size:13px; }
+.plan-row-tools button { width:34px; height:36px; }
+.plan-add-via { min-height:44px; margin-left:64px; font-size:12px; }
+.plan-editor-actions button { font-size:13px; }
+
+/* Location pickers */
+.point-picker-grid button { min-height:58px; font-size:13px; }
+.point-picker-grid span { font-size:11px; line-height:1.35; }
+.point-picker-address button,
+.point-picker-coord button,
+.point-picker-site button,
+.point-picker-random button,
+.point-picker-back { min-height:44px; font-size:12px; }
+.point-address-results button strong { font-size:13px; }
+.point-address-results button span,
+.point-address-empty { font-size:11px; }
+
+/* Records */
+.record-row { min-height:64px; }
+.record-row strong { font-size:14px; }
+.record-row span { font-size:11px; line-height:1.4; }
+.record-detail > strong { font-size:16px; }
+.record-summary { grid-template-columns:72px minmax(0,1fr); }
+.record-summary span,
+.record-summary b { font-size:12px; }
+.record-lap { min-height:42px; grid-template-columns:64px minmax(0,1fr); }
+.record-lap b, .record-lap span { font-size:11px; }
+
+/* User site add/manage */
+.site-add-source strong { font-size:13px; }
+.site-add-source span { font-size:11px; line-height:1.35; }
+.site-add-search button { font-size:12px; }
+.site-add-results strong { font-size:13px; }
+.site-add-results span,
+.site-add-empty { font-size:11px; }
+.site-placement-bar small { font-size:11px; }
+.site-placement-bar strong { font-size:12px; }
+.site-placement-bar button { font-size:12px; }
+.site-form label span { font-size:11px; }
+.site-form-actions button { font-size:12px; }
+
+/* Settings / map mode */
+.settings-section > small { font-size:11px; }
+.map-mode-options button { min-height:44px; font-size:13px; }
+.map-mode-readout { min-height:36px; font-size:12px; }
+.lite-pack-btn { font-size:13px; }
+
+/* Small-screen rule: preserve readable type, reduce only spacing. */
+@media(max-width:350px) {
+  .quick-btn { width:44px; height:44px; }
+  .navigation-hud { width:calc(100vw - 74px); left:9px; }
+  .nav-route-summary { left:9px; right:58px; }
+  .nav-session-controls,
+  .drawing-controls { left:5px; right:5px; gap:3px; }
+  .nav-session-controls button,
+  .drawing-controls button { font-size:12px; }
 }
