@@ -272,10 +272,10 @@
     const nextBlock = $('navNextBlock');
     if (nextBlock) nextBlock.hidden = true;
 
-    const decl = nowBundle?.declination;
-    $('navDeclination').textContent = Number.isFinite(decl)
-      ? '자편각 ' + (decl >= 0 ? '+' : '') + decl.toFixed(1) + '° · WMM2025'
-      : '자편각 --';
+    const gm = nowBundle?.gridMagneticAngle;
+    $('navDeclination').textContent = Number.isFinite(gm)
+      ? '도자각 ' + (gm < 0 ? 'W ' : gm > 0 ? 'E ' : '') + Math.abs(gm).toFixed(1) + '° · WMM2025'
+      : '도자각 --';
 
     renderTimer();
     renderSessionControls();
