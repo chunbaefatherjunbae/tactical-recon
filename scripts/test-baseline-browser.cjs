@@ -45,8 +45,12 @@ const server = http.createServer((req, res) => {
       await page.waitForFunction(() => window.BaselineApp?.version === 'R0.1-BASELINE');
 
       assert.equal(await page.locator('.bottom-nav button').count(), 4);
-      assert.deepEqual(await page.locator('.bottom-nav button').allTextContents(), ['◇거점','⌖탐색','⌁계획','≡기록']);
+      assert.deepEqual(await page.locator('.bottom-nav button').allTextContents(), ['거점','탐색','계획','기록']);
       assert.equal(await page.locator('.quick-stack .quick-btn').count(), 5);
+      assert.equal(await page.locator('.bottom-nav .nav-icon').count(), 0);
+      assert.equal(await page.locator('#followBtn svg').count(), 1);
+      assert.equal(await page.evaluate(() => BaselineApp.topoLayer?._url.includes('opentopomap.org')), true);
+      assert.equal(await page.evaluate(() => BaselineApp.roadBoostLayer?._url.includes('openstreetmap.org')), true);
       assert.equal(await page.locator('.reticle').count(), 1);
       assert.equal(await page.locator('[class*="corner"]').count(), 0);
 
