@@ -41,7 +41,7 @@
     const points=[];
     if(validPoint(reference))points.push(point({...reference,id:undefined,name:reference.name||'출발지'}));
     points.push(point({...destination,id:undefined}));
-    return {schemaVersion:1,id:id('plan'),createdAt:Date.now(),updatedAt:Date.now(),points,routeStrokes:[]};
+    return {schemaVersion:1,id:id('plan'),createdAt:Date.now(),updatedAt:Date.now(),points,routeStrokes:[],overlayStrokes:[]};
   }
 
   function setStart(plan,input){
@@ -78,11 +78,31 @@
     plan.points.splice(index,1);plan.updatedAt=Date.now();return true;
   }
 
+  function normalizeStrokes(strokes,prefix='stroke'){
+    return (Array.isArray(strokes)?strokes:[]).map((stroke,index)=>{
+      const raw=Array.isArray(stroke)?stroke:stroke?.points;
+      const points=(Array.isArray(raw)?raw:[]).filter(validPoint).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));
+      return points.length>=2?{id:String(stroke?.id||id(prefix+'_'+index)),points}:null;
+    }).filter(Boolean);
+  }
+
   function addStroke(plan,points){
     const clean=(Array.isArray(points)?points:[]).filter(validPoint).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));
     if(clean.length<2)return null;
     const stroke={id:id('stroke'),points:clean};
     plan.routeStrokes.push(stroke);plan.updatedAt=Date.now();return stroke;
+  }
+
+  function replaceRouteStrokes(plan,strokes){
+    plan.routeStrokes=normalizeStrokes(strokes,'route');
+    plan.updatedAt=Date.now();
+    return plan.routeStrokes;
+  }
+
+  function replaceOverlayStrokes(plan,strokes){
+    plan.overlayStrokes=normalizeStrokes(strokes,'overlay');
+    plan.updatedAt=Date.now();
+    return plan.overlayStrokes;
   }
 
   function startMission(plan){
@@ -105,5 +125,5 @@
     return movePoint(mission.activePlan,from,to);
   }
 
-  return {clone,point,roleAt,createPlan,setStart,setDestination,insertPoint,movePoint,removePoint,addStroke,startMission,stepMission,moveFuturePoint};
+  return {clone,point,roleAt,createPlan,setStart,setDestination,insertPoint,movePoint,removePoint,normalizeStrokes,addStroke,replaceRouteStrokes,replaceOverlayStrokes,startMission,stepMission,moveFuturePoint};
 });

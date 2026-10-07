@@ -5869,7 +5869,44 @@
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js?v=v29-track-context-hotfix-20261005-4', { scope: './', updateViaCache: 'none' })
+      // ECHOPOINT migration port: exposes V29 PLAN state without giving EP modules DOM ownership.
+    window.__v29PlanLegacy = {
+      snapshot() {
+        if (!targetModeActive || !targetModeTarget) return null;
+        return {
+          planId:String(targetModeTarget.id || ''),
+          target:cloneRouteEndpoint(targetModeTarget),
+          startPoint:cloneRouteEndpoint(routeStartPoint),
+          endPoint:cloneRouteEndpoint(routeEndPoint),
+          viaPoints:cloneRouteViaPoints(routeViaPoints),
+          routeSegments:cloneRouteSegments(routeDraftSegments),
+          overlaySegments:cloneRouteSegments(routeMarkSegments),
+          updatedAt:Date.now()
+        };
+      },
+      apply(snapshot, options = {}) {
+        if (!snapshot || !targetModeActive) return false;
+        routeStartPoint = cloneRouteEndpoint(snapshot.startPoint);
+        routeEndPoint = cloneRouteEndpoint(snapshot.endPoint);
+        routeViaPoints = cloneRouteViaPoints(snapshot.viaPoints);
+        routeDraftSegments = cloneRouteSegments(snapshot.routeSegments);
+        routeMarkSegments = cloneRouteSegments(snapshot.overlaySegments);
+        if (snapshot.target?.coords && validCoordinates(snapshot.target.coords)) {
+          targetModeTarget = {...targetModeTarget, ...cloneRouteEndpoint(snapshot.target), id:snapshot.target.id || targetModeTarget?.id};
+        }
+        routeDirty = options.dirty !== false;
+        if (options.render !== false) {
+          renderRouteDraft();
+          renderRouteEndpoints();
+          renderRouteViaPoints();
+          updateRoutePointsModal();
+          updateTargetModePanel();
+        }
+        return true;
+      }
+    };
+
+      navigator.serviceWorker.register('./service-worker.js?v=v29-track-context-hotfix-20261005-4', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
