@@ -92,6 +92,47 @@
     return { ...normalized };
   }
 
+  function updateUserSite(id, patch = {}) {
+    const key = String(id);
+    let updated = null;
+    userSites = userSites.map(item => {
+      if (String(item.id) !== key) return item;
+      const coords = Array.isArray(patch.coords) &&
+        Number.isFinite(Number(patch.coords[0])) &&
+        Number.isFinite(Number(patch.coords[1]))
+          ? [Number(patch.coords[0]), Number(patch.coords[1])]
+          : item.coords;
+      updated = {
+        ...item,
+        ...patch,
+        id:item.id,
+        coords,
+        name:String(patch.name ?? item.name ?? '새 거점'),
+        cat:String(patch.cat ?? item.cat ?? '사용자 거점'),
+        desc:String(patch.desc ?? item.desc ?? ''),
+        tips:String(patch.tips ?? item.tips ?? ''),
+        source:String(item.source || 'USER'),
+        createdAt:item.createdAt || new Date().toISOString(),
+        updatedAt:new Date().toISOString()
+      };
+      return updated;
+    });
+    if (!updated) return null;
+    persistUserSites();
+    emit('update-user-site');
+    return { ...updated };
+  }
+
+  function removeUserSite(id) {
+    const key = String(id);
+    const before = userSites.length;
+    userSites = userSites.filter(item => String(item.id) !== key);
+    if (userSites.length === before) return false;
+    persistUserSites();
+    emit('remove-user-site');
+    return true;
+  }
+
   function setLocalStatus(id, status) {
     const key = String(id);
     let changed = false;
@@ -133,6 +174,8 @@
     find,
     isSecured,
     addUserSite,
+    updateUserSite,
+    removeUserSite,
     secure:secureAny,
     unsecure:unsecureAny
   };
