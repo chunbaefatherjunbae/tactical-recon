@@ -503,6 +503,7 @@
 
   function beginSitePlacement(coords = null) {
     sitePlacementActive = true;
+    document.body.classList.add('baseline-site-placement');
     closeSheet();
     if (coords && Number.isFinite(Number(coords[0])) && Number.isFinite(Number(coords[1]))) {
       map.setView([Number(coords[0]),Number(coords[1])], Math.max(map.getZoom(), 16), {animate:false});
@@ -513,6 +514,7 @@
 
   function cancelSitePlacement() {
     sitePlacementActive = false;
+    document.body.classList.remove('baseline-site-placement');
     editingSiteId = null;
     updateSitePlacementBar();
     openSites('mine');
@@ -522,6 +524,7 @@
     if (!sitePlacementActive) return;
     const center = map.getCenter();
     sitePlacementActive = false;
+    document.body.classList.remove('baseline-site-placement');
     updateSitePlacementBar();
     openSiteForm([center.lat, center.lng], editingSiteId);
   }
@@ -849,6 +852,7 @@
   function openSheet(panel, custom) {
     if (sitePlacementActive) {
       sitePlacementActive = false;
+      document.body.classList.remove('baseline-site-placement');
       editingSiteId = null;
       updateSitePlacementBar();
     }
