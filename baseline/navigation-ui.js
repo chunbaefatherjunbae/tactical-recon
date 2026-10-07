@@ -646,6 +646,17 @@
     }));
   }
 
+  function setDestinationFromSite(site) {
+    const point = sitePoint(site,'DEST');
+    if (!point) return false;
+    if (!draft) draft = Plans.createDraft(referencePoint('START'));
+    draft.destination = point;
+    routeChanged('DEST_FROM_SITE');
+    openEditor();
+    toast('목적지 설정');
+    return true;
+  }
+
   function openPlans() {
     App.openSheet('plans',{title:'계획',html:plansLibraryHtml()});
     bindPlanLibrary();
@@ -987,7 +998,8 @@
     enterDrawing,
     exitDrawing,
     saveCurrent,
-    startSession
+    startSession,
+    setDestinationFromSite
   });
 
   restoreActiveSession();
