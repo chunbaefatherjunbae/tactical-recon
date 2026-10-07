@@ -43,6 +43,11 @@
       const ready=await navigator.serviceWorker.ready;
       state.controlled=Boolean(navigator.serviceWorker.controller);
       ready.active?.postMessage({type:'GET_LITE_PACK_STATUS'});
+      if(navigator.onLine){
+        const warm=()=>ready.active?.postMessage({type:'WARM_LITE_CORE'});
+        if('requestIdleCallback' in window) requestIdleCallback(warm,{timeout:2500});
+        else setTimeout(warm,800);
+      }
       return reg;
     }catch(error){
       state.error=String(error?.message||error);
