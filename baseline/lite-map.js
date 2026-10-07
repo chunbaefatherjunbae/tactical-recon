@@ -11,6 +11,7 @@
   }
 
   const map=App.map;
+  const LITE_VECTOR_ATTR='Map data © OpenStreetMap contributors';
   const MODE_KEY='tr_baseline_map_mode_v1';
   const VALID_MODES=new Set(['auto','online','lite']);
   const processedTerrain=new Map();
@@ -433,6 +434,7 @@
     const next=desiredEffective();
     effectiveMode=next;
     if(next==='lite'){
+      map.attributionControl?.addAttribution(LITE_VECTOR_ATTR);
       if(map.hasLayer(App.topoLayer))map.removeLayer(App.topoLayer);
       if(map.hasLayer(App.roadBoostLayer))map.removeLayer(App.roadBoostLayer);
       if(!map.hasLayer(terrainLayer))terrainLayer.addTo(map);
@@ -450,6 +452,7 @@
         emit('lite-data-error');
       });
     }else{
+      map.attributionControl?.removeAttribution(LITE_VECTOR_ATTR);
       if(map.hasLayer(terrainLayer))map.removeLayer(terrainLayer);
       if(map.hasLayer(vectorLayer))map.removeLayer(vectorLayer);
       if(map.hasLayer(gridLayer))map.removeLayer(gridLayer);
