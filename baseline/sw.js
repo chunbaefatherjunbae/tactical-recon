@@ -1,10 +1,11 @@
 'use strict';
 
-const VERSION='baseline-offline-v1';
+const VERSION='baseline-offline-v2';
 const SHELL_CACHE=VERSION+'-shell';
 const TERRAIN_CACHE=VERSION+'-terrain';
 const BASE=new URL('./',self.location.href);
 const local=path=>new URL(path,BASE).href;
+const CORE_MARKER=local('__lite_core_ready__');
 const PACK_MARKER=local('__lite_pack_ready__');
 
 const SHELL=[
@@ -39,10 +40,10 @@ function tileXY(lat,lon,z){
   return [x,y];
 }
 
-function koreaTerrainUrls(){
+function koreaTerrainUrls(levels=[5,6,7,8,9]){
   const bbox={south:32.8,west:124.0,north:39.6,east:132.2};
   const urls=[];
-  for(const z of [5,6,7,8,9]){
+  for(const z of levels){
     const [x1,ySouth]=tileXY(bbox.south,bbox.west,z);
     const [x2,yNorth]=tileXY(bbox.north,bbox.east,z);
     const minX=Math.min(x1,x2),maxX=Math.max(x1,x2);
@@ -61,23 +62,18 @@ async function notify(type,detail={}){
   clients.forEach(client=>client.postMessage({type,...detail}));
 }
 
-async function packReady(){
+async function markerReady(marker){
   const cache=await caches.open(TERRAIN_CACHE);
-  return Boolean(await cache.match(PACK_MARKER));
+  return Boolean(await cache.match(marker));
 }
 
-async function prepareLitePack(){
-  if(await packReady()){
-    await notify('LITE_PACK_STATUS',{status:'READY'});
-    return;
-  }
-  const urls=koreaTerrainUrls();
+async function cacheTerrainUrls(urls,{status='PREPARING',marker=null,concurrency=6}={}){
   const cache=await caches.open(TERRAIN_CACHE);
   let completed=0,failed=0;
-  await notify('LITE_PACK_STATUS',{status:'PREPARING',completed,total:urls.length,failed});
+  await notify('LITE_PACK_STATUS',{status,completed,total:urls.length,failed});
 
   const queue=urls.slice();
-  const workers=Array.from({length:6},async()=>{
+  const workers=Array.from({length:concurrency},async()=>{
     while(queue.length){
       const url=queue.shift();
       try{
@@ -92,20 +88,58 @@ async function prepareLitePack(){
         failed++;
       }
       completed++;
-      if(completed%12===0||completed===urls.length){
-        await notify('LITE_PACK_STATUS',{status:'PREPARING',completed,total:urls.length,failed});
+      if(completed%10===0||completed===urls.length){
+        await notify('LITE_PACK_STATUS',{status,completed,total:urls.length,failed});
       }
     }
   });
   await Promise.all(workers);
 
-  if(failed===0){
-    await cache.put(PACK_MARKER,new Response(JSON.stringify({readyAt:Date.now(),tiles:urls.length}),{
+  if(failed===0&&marker){
+    await cache.put(marker,new Response(JSON.stringify({readyAt:Date.now(),tiles:urls.length}),{
       headers:{'content-type':'application/json'}
     }));
-    await notify('LITE_PACK_STATUS',{status:'READY',completed,total:urls.length,failed:0});
+  }
+  return {completed,total:urls.length,failed};
+}
+
+async function coreReady(){return markerReady(CORE_MARKER);}
+async function packReady(){return markerReady(PACK_MARKER);}
+
+async function warmLiteCore(){
+  if(await coreReady()){
+    await notify('LITE_PACK_STATUS',{status:(await packReady())?'READY':'CORE_READY'});
+    return;
+  }
+  const result=await cacheTerrainUrls(koreaTerrainUrls([5,6,7]),{
+    status:'CORE_PREPARING',
+    marker:CORE_MARKER,
+    concurrency:4
+  });
+  await notify('LITE_PACK_STATUS',{
+    status:result.failed===0?'CORE_READY':'CORE_PARTIAL',
+    completed:result.completed,total:result.total,failed:result.failed
+  });
+}
+
+async function prepareLitePack(){
+  if(await packReady()){
+    await notify('LITE_PACK_STATUS',{status:'READY'});
+    return;
+  }
+  if(!(await coreReady())) await warmLiteCore();
+
+  const urls=koreaTerrainUrls([8,9]);
+  const result=await cacheTerrainUrls(urls,{
+    status:'PREPARING',
+    marker:PACK_MARKER,
+    concurrency:6
+  });
+
+  if(result.failed===0){
+    await notify('LITE_PACK_STATUS',{status:'READY',completed:result.completed,total:result.total,failed:0});
   }else{
-    await notify('LITE_PACK_STATUS',{status:'PARTIAL',completed,total:urls.length,failed});
+    await notify('LITE_PACK_STATUS',{status:'PARTIAL',completed:result.completed,total:result.total,failed:result.failed});
   }
 }
 
@@ -128,13 +162,17 @@ self.addEventListener('activate',event=>{
 
 self.addEventListener('message',event=>{
   const data=event.data||{};
+  if(data.type==='WARM_LITE_CORE'){
+    event.waitUntil(warmLiteCore());
+  }
   if(data.type==='PREPARE_LITE_PACK'){
     event.waitUntil(prepareLitePack());
   }
   if(data.type==='GET_LITE_PACK_STATUS'){
     event.waitUntil((async()=>{
       const ready=await packReady();
-      event.source?.postMessage({type:'LITE_PACK_STATUS',status:ready?'READY':'NOT_READY'});
+      const core=await coreReady();
+      event.source?.postMessage({type:'LITE_PACK_STATUS',status:ready?'READY':core?'CORE_READY':'NOT_READY'});
     })());
   }
 });
