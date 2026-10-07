@@ -3,7 +3,8 @@
 
   const S = window.BaselineState;
   const Sites = window.BaselineSites;
-  if (!S || !Sites || !window.L) {
+  const Explore = window.BaselineExplore;
+  if (!S || !Sites || !Explore || !window.L) {
     console.error('[BASELINE] runtime dependency missing');
     return;
   }
@@ -18,6 +19,8 @@
   let tempMarker = null;
   let gpsMarker = null;
   let activeSiteFilter = 'registered';
+  let exploreRadius = 'all';
+  let exploreCircle = null;
   const siteMarkers = new Map();
   const siteLayer = L.layerGroup();
 
@@ -145,19 +148,20 @@
 
   function makeSiteIcon(site) {
     const secured = site?.status === 'SECURED';
+    const sourceClass = site?.source === 'WILD' ? ' wild' : (site?.source === 'USER' ? ' user' : ' registered');
     return L.divIcon({
       className: 'site-map-marker-wrap',
-      html: '<span class="site-map-marker' + (secured ? ' secured' : '') + '"></span>',
+      html: '<span class="site-map-marker' + sourceClass + (secured ? ' secured' : '') + '"></span>',
       iconSize: [24, 24],
       iconAnchor: [12, 12]
     });
   }
 
   function renderSiteMarkers() {
-    const registered = Sites.getRegistered();
+    const sites = [...Sites.getRegistered(), ...Sites.getUserSites()];
     const liveIds = new Set();
 
-    registered.forEach(site => {
+    sites.forEach(site => {
       const id = String(site.id);
       liveIds.add(id);
       let marker = siteMarkers.get(id);
@@ -394,6 +398,13 @@
     return Sites.getRegistered();
   }
 
+  function siteStatusLabel(site) {
+    if (site?.status === 'SECURED') return '개척 완료';
+    if (site?.source === 'WILD') return '미개척';
+    if (site?.source === 'USER') return '내 거점';
+    return '등록 거점';
+  }
+
   function sitesHtml(filter) {
     const registeredCount = Sites.getRegistered().length;
     const mineCount = Sites.getUserSites().length;
@@ -406,7 +417,7 @@
           return '<button class="site-row' + (secured ? ' secured' : '') + '" type="button" data-site-id="' + esc(site.id) + '">' +
             '<strong>' + esc(site.name) + '</strong>' +
             '<small>' + esc(site.cat) + ' · ' + esc(site.opCode || site.id) + '</small>' +
-            '<em>' + (secured ? '개척 완료' : (site.source === 'USER' ? '내 거점' : '등록')) + '</em>' +
+            '<em>' + esc(siteStatusLabel(site)) + '</em>' +
           '</button>';
         }).join('')
       : '<div class="site-empty">' + (filter === 'mine' ? '내 거점 없음' : '개척 완료 거점 없음') + '</div>';
@@ -448,7 +459,7 @@
           '<strong>' + esc(site.name) + '</strong>' +
         '</div>' +
         '<div class="site-detail-grid">' +
-          '<span>상태</span><strong>' + (secured ? '개척 완료' : (site.source === 'USER' ? '내 거점' : '등록 거점')) + '</strong>' +
+          '<span>상태</span><strong>' + esc(siteStatusLabel(site)) + '</strong>' +
           '<span>MGRS</span><strong>' + esc(siteMgrs(site)) + '</strong>' +
           '<span>WGS84</span><strong>' + Number(site.coords[0]).toFixed(5) + ', ' + Number(site.coords[1]).toFixed(5) + '</strong>' +
         '</div>' +
@@ -456,9 +467,7 @@
         '<div class="site-copy"><b>참고</b><br>' + esc(site.tips || '참고 없음') + '</div>' +
         '<div class="site-actions">' +
           '<button type="button" id="siteMapGo">지도에서 보기</button>' +
-          (site.source === 'REGISTERED'
-            ? '<button class="primary" type="button" id="siteSecureToggle">' + (secured ? '미개척으로' : '개척 완료') + '</button>'
-            : '<button class="primary" type="button" disabled>내 거점</button>') +
+          '<button class="primary" type="button" id="siteSecureToggle">' + (secured ? '미개척으로' : '개척 완료') + '</button>' +
         '</div>' +
       '</div>';
 
@@ -482,14 +491,122 @@
     });
   }
 
+  function referenceCoords() {
+    const ref = S.reference();
+    return ref ? [Number(ref.lat), Number(ref.lon)] : null;
+  }
+
+  function exploreReferenceText() {
+    const ref = S.reference();
+    if (!ref) return '기준 위치 없음';
+    return String(ref.type) + ' · ' + formatMgrs(ref);
+  }
+
+  function clearExploreCircle() {
+    if (exploreCircle) {
+      exploreCircle.remove();
+      exploreCircle = null;
+    }
+  }
+
+  function renderExploreCircle() {
+    clearExploreCircle();
+    if (exploreRadius === 'all') return;
+    const coords = referenceCoords();
+    if (!coords) return;
+    exploreCircle = L.circle(coords, {
+      radius:Number(exploreRadius) * 1000,
+      interactive:false,
+      color:'#9de3a4',
+      weight:1,
+      opacity:.72,
+      fillColor:'#22ff66',
+      fillOpacity:.025,
+      dashArray:'7 7'
+    }).addTo(map);
+  }
+
+  function exploreHtml() {
+    const ref = S.reference();
+    const refText = ref ? exploreReferenceText() : '기준 위치 없음 · 범위 탐색은 GPS/TEMP/LAST 필요';
+    const rangeButtons = Explore.RADII.map(value => {
+      const key = String(value);
+      const label = value === 'all' ? 'ALL' : value + ' KM';
+      return '<button type="button" data-explore-radius="' + key + '" class="' + (String(exploreRadius) === key ? 'active' : '') + '">' + label + '</button>';
+    }).join('');
+
+    return '<div class="explore-ref"><small>탐색 기준</small><strong id="exploreRefText">' + esc(refText) + '</strong></div>' +
+      '<div class="explore-range">' + rangeButtons + '</div>' +
+      '<div class="explore-actions">' +
+        '<button type="button" id="exploreRegisteredBtn">등록 거점<span>아직 개척하지 않은 등록 거점 중 무작위 선택</span></button>' +
+        '<button type="button" id="exploreWildBtn">미개척 좌표<span>새 탐색 좌표를 생성하고 내 거점에 저장</span></button>' +
+      '</div>' +
+      '<div class="explore-foot">범위 지정 시 현재 기준 위치를 중심으로 탐색합니다. ALL은 등록 전체 또는 기존 전국 산악 탐색 권역을 사용합니다.</div>';
+  }
+
+  function updateExploreReference() {
+    const node = $('exploreRefText');
+    if (node) {
+      const ref = S.reference();
+      node.textContent = ref ? exploreReferenceText() : '기준 위치 없음 · 범위 탐색은 GPS/TEMP/LAST 필요';
+    }
+    renderExploreCircle();
+  }
+
+  function bindExplorePanel() {
+    document.querySelectorAll('[data-explore-radius]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const raw = btn.dataset.exploreRadius;
+        exploreRadius = raw === 'all' ? 'all' : Number(raw);
+        openExplore();
+      });
+    });
+
+    $('exploreRegisteredBtn')?.addEventListener('click', () => {
+      const ref = referenceCoords();
+      if (exploreRadius !== 'all' && !ref) {
+        toast('범위 탐색 기준 위치 없음');
+        return;
+      }
+
+      const available = Sites.getRegistered().filter(site => site.status !== 'SECURED');
+      const picked = Explore.randomRegistered(available, exploreRadius, ref);
+      if (!picked) {
+        toast('범위 내 미개척 등록 거점 없음');
+        return;
+      }
+      openSiteDetail(picked.id);
+    });
+
+    $('exploreWildBtn')?.addEventListener('click', () => {
+      const ref = referenceCoords();
+      if (exploreRadius !== 'all' && !ref) {
+        toast('범위 탐색 기준 위치 없음');
+        return;
+      }
+
+      const wild = Explore.randomWild(exploreRadius, ref);
+      if (!wild) {
+        toast('탐색 좌표 생성 실패');
+        return;
+      }
+      const saved = Sites.addUserSite(wild);
+      if (!saved) {
+        toast('미개척 좌표 저장 실패');
+        return;
+      }
+      openSiteDetail(saved.id);
+      toast('미개척 좌표 생성 · 저장');
+    });
+  }
+
+  function openExplore() {
+    openSheet('explore', { title:'탐색', html:exploreHtml() });
+    bindExplorePanel();
+    renderExploreCircle();
+  }
+
   const panels = {
-    explore: {
-      title: '탐색',
-      html: '<div class="sheet-grid">' +
-        '<button class="sheet-action" type="button" disabled><strong>등록 거점 탐색</strong><span>범위 안에서 무작위 거점 선택</span></button>' +
-        '<button class="sheet-action" type="button" disabled><strong>미개척 좌표</strong><span>새 무작위 좌표 생성</span></button>' +
-        '</div>'
-    },
     plans: {
       title: '계획',
       html: '<div class="sheet-grid">' +
@@ -517,6 +634,7 @@
   }
 
   function openSheet(panel, custom) {
+    if (panel !== 'explore') clearExploreCircle();
     const spec = custom || panels[panel];
     if (!spec) return;
     $('sheetTitle').textContent = spec.title;
@@ -527,6 +645,7 @@
   }
 
   function closeSheet() {
+    if (S.state.activePanel === 'explore') clearExploreCircle();
     $('sheet').hidden = true;
     S.setPanel(null);
     setActiveNav(null);
@@ -595,6 +714,7 @@
         return;
       }
       if (panel === 'sites') openSites();
+      else if (panel === 'explore') openExplore();
       else openSheet(panel);
     });
   });
@@ -609,7 +729,10 @@
     }
   });
 
-  window.addEventListener('baseline-state-change', refresh);
+  window.addEventListener('baseline-state-change', () => {
+    refresh();
+    if (S.state.activePanel === 'explore' && !$('sheet').hidden) updateExploreReference();
+  });
   window.addEventListener('baseline-sites-change', () => {
     renderSiteMarkers();
     if (S.state.activePanel === 'sites' && !$('sheet').hidden && $('sheetTitle')?.textContent === '거점') {
@@ -635,7 +758,9 @@
     moveToTemp,
     centerOnReference,
     openSheet,
-    closeSheet
+    closeSheet,
+    openSites,
+    openExplore
   });
 
   renderSiteMarkers();
