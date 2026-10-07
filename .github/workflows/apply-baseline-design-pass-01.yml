@@ -1,0 +1,41 @@
+name: Apply BASELINE design pass 01
+
+on:
+  push:
+    branches:
+      - rebuild/baseline
+    paths:
+      - scripts/apply-baseline-design-pass-01.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: rebuild/baseline
+          fetch-depth: 0
+
+      - name: Apply design pass
+        run: python scripts/apply-baseline-design-pass-01.py
+
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -q 'id="layerBtn"' baseline/index.html
+          grep -q 'RECON HUD DESIGN PASS 01' baseline/styles.css
+          grep -q 'baseline-layer-visibility-v1' baseline/app.js
+          grep -q 'baseline-plan-path' baseline/navigation-ui.js
+
+      - name: Commit applied design
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/index.html baseline/styles.css baseline/app.js baseline/navigation-ui.js scripts/test-baseline-browser.cjs
+          git rm scripts/apply-baseline-design-pass-01.py
+          git rm .github/workflows/apply-baseline-design-pass-01.yml
+          git commit -m "BASELINE: apply RECON HUD design pass 01"
+          git push origin HEAD:rebuild/baseline
