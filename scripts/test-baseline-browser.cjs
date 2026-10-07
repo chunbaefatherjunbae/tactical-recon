@@ -194,7 +194,7 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#navNowMetric').textContent().then(t => t.includes('MAG')), true);
       assert.equal(await page.locator('#navStartMetric').textContent().then(t => t.includes('GRID')), true);
       assert.equal(await page.locator('#navDeclination').textContent().then(t => t.includes('WMM2025')), true);
-      assert.equal(await page.locator('#navNextBlock').isHidden(), true);
+      assert.equal(await page.locator('#navNextBlock').count(), 0);
       assert.equal(await page.evaluate(() => Number.isFinite(BaselineNavigationCore.bearingBundle([37.5,127],[37.6,127.1]).magneticBearing)), true);
       const seoulDeclination = await page.evaluate(() => BaselineNavigationCore.wmmField(37.5665,126.9780,0,new Date('2026-10-07T00:00:00Z')).declination);
       assert(seoulDeclination < -7 && seoulDeclination > -11);
