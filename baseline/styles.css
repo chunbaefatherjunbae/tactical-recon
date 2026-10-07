@@ -1747,3 +1747,44 @@ body.baseline-navigation-active .site-map-marker-wrap {
   box-shadow:inset 0 2px 0 var(--accent);
   text-shadow:0 0 5px var(--accent-glow);
 }
+
+
+/* ---------- Integrated UX audit: site action hierarchy ---------- */
+.site-actions {
+  display:grid;
+  gap:7px;
+}
+.site-actions > button,
+.site-actions-secondary button,
+.site-actions-manage button {
+  min-height:44px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,.16);
+  color:var(--text-main);
+  font-weight:850;
+  font-size:13px;
+}
+.site-actions .site-destination-action {
+  min-height:48px;
+  width:100%;
+  border-color:var(--line-strong);
+  background:rgba(34,255,102,.055);
+  color:var(--accent);
+}
+.site-actions-secondary,
+.site-actions-manage {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+}
+.site-actions-manage {
+  padding-top:7px;
+  border-top:1px solid var(--border);
+}
+.site-actions-manage button {
+  color:var(--text-dim);
+}
+.site-actions-manage .danger {
+  color:#d98f8f;
+  border-color:rgba(217,143,143,.35);
+}
