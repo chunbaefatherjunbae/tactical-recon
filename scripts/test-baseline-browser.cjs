@@ -303,13 +303,21 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#sheet').isHidden(), true);
       assert.equal(await page.locator('#navRouteSummary').isVisible(), true);
       assert.equal(await page.locator('#navigationHud').isVisible(), true);
-      assert.equal(await page.locator('#navNowMetric').textContent().then(t => t.includes('MAG')), true);
-      assert.equal(await page.locator('#navStartMetric').textContent().then(t => t.includes('GRID')), true);
-      assert.equal(await page.locator('#navDeclination').textContent().then(t => t.includes('WMM2025')), true);
+      assert.equal(await page.locator('#navNowMetric').textContent().then(t => t.includes('자북')), true);
+      assert.equal(await page.locator('#navStartMetric').textContent().then(t => t.includes('도북')), true);
+      assert.equal(await page.locator('#navDeclination').textContent().then(t => t.includes('도자각') && t.includes('WMM2025')), true);
       assert.equal(await page.locator('#navNextBlock').count(), 0);
       assert.equal(await page.evaluate(() => Number.isFinite(BaselineNavigationCore.bearingBundle([37.5,127],[37.6,127.1]).magneticBearing)), true);
       const seoulDeclination = await page.evaluate(() => BaselineNavigationCore.wmmField(37.5665,126.9780,0,new Date('2026-10-07T00:00:00Z')).declination);
       assert(seoulDeclination < -7 && seoulDeclination > -11);
+      const seoulBundle = await page.evaluate(() => BaselineNavigationCore.bearingBundle(
+        [37.5665,126.9780],
+        [37.6665,127.0780],
+        {date:new Date('2026-10-07T00:00:00Z')}
+      ));
+      assert(Number.isFinite(seoulBundle.gridMagneticAngle));
+      assert(seoulBundle.gridMagneticAngle < -5 && seoulBundle.gridMagneticAngle > -9, 'Seoul grid-magnetic angle should be westward around 6-8°');
+      assert.equal(await page.locator('#navDeclination').textContent().then(t => /도자각 W \d+\.\d°/.test(t)), true);
       assert.equal(await page.locator('.site-map-marker-wrap').first().evaluate(el => getComputedStyle(el).display), 'none', 'site markers must hide in plan mode');
       assert.equal(await page.locator('.route-start-marker').count(), 1);
       assert.equal(await page.locator('.route-end-marker').count(), 1);
