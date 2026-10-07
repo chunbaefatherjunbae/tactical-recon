@@ -2143,6 +2143,18 @@
     let routeViaLayer = null;
     let routeLocateSelected = null;
     let routeLocateRole = 'VIA';
+
+    // ECHOPOINT surface is the semantic owner. Legacy TARGET phase remains only as a compatibility mirror.
+    function epSurfaceName() {
+      const owned = window.EpSurfaceBridge?.surface;
+      if (owned === 'MAP' || owned === 'PLAN' || owned === 'MISSION') return owned;
+      if (!targetModeActive) return 'MAP';
+      return targetModePhase === 'NAV' ? 'MISSION' : 'PLAN';
+    }
+    function epIsMapSurface() { return epSurfaceName() === 'MAP'; }
+    function epIsPlanSurface() { return epSurfaceName() === 'PLAN'; }
+    function epIsMissionSurface() { return epSurfaceName() === 'MISSION'; }
+
     let routeLocateSearchToken = 0;
     let targetReferenceLine = null;
     let routeDirty = false;
@@ -3198,7 +3210,7 @@
     }
 
     function resumeTrackUpRotation() {
-      if (!ROTATION_AVAILABLE || !targetModeActive || targetModePhase !== 'NAV' || navMapOrientation !== 'TRACK' || !gpsFollowEnabled) return;
+      if (!ROTATION_AVAILABLE || !epIsMissionSurface() || navMapOrientation !== 'TRACK' || !gpsFollowEnabled) return;
       if (!Number.isFinite(lastTrackHeading) || typeof map.setHeading !== 'function') return;
       try { map.setHeading(lastTrackHeading, { ease:0.72, deadzone:0.25 }); } catch (e) {}
     }
@@ -3211,7 +3223,7 @@
     }
 
     function toggleNavMapOrientation() {
-      if (!targetModeActive || targetModePhase !== 'NAV') return;
+      if (!epIsMissionSurface()) return;
       if (!ROTATION_AVAILABLE) {
         alert('TRACK UP 회전 모듈을 불러오지 못했습니다. 앱은 NORTH UP으로 계속 사용할 수 있습니다.');
         return;
@@ -3221,7 +3233,7 @@
 
     function updateTrackUpFromGps(pos) {
       latestGpsPosition = pos || latestGpsPosition;
-      if (!pos || !ROTATION_AVAILABLE || !targetModeActive || targetModePhase !== 'NAV' || navMapOrientation !== 'TRACK' || !gpsFollowEnabled) return;
+      if (!pos || !ROTATION_AVAILABLE || !epIsMissionSurface() || navMapOrientation !== 'TRACK' || !gpsFollowEnabled) return;
       if (typeof map.setHeading !== 'function') return;
       const now = Number(pos.timestamp) || Date.now();
       const lat = Number(pos.coords?.latitude);
@@ -3264,7 +3276,7 @@
 
     function toggleNavPanelCollapse(event) {
       if (event) { event.preventDefault(); event.stopPropagation(); }
-      if (!targetModeActive || targetModePhase !== 'NAV') return;
+      if (!epIsMissionSurface()) return;
       navPanelCollapsed = !navPanelCollapsed;
       updateTargetModePanel();
       updateMapScale();
@@ -3293,7 +3305,7 @@
       const drawKindBtn = document.getElementById('targetDrawKindBtn');
       const nextLegBtn = document.getElementById('targetNextLegBtn');
       const backtrackBtn = document.getElementById('targetBacktrackBtn');
-      const isNav = targetModeActive && targetModePhase === 'NAV';
+      const isNav = epIsMissionSurface();
 
       if (panel) panel.classList.toggle('active', targetModeActive);
       if (kicker) kicker.innerText = 'TARGET MODE // ROUTE PLAN';
@@ -3379,11 +3391,11 @@
       if (nextLegBtn) nextLegBtn.disabled = !routeEndPoint || navLegIndex >= 1 || backtrackActive;
       if (backtrackBtn) backtrackBtn.classList.toggle('active', backtrackActive);
 
-      document.body.classList.toggle('target-mode', targetModeActive);
+      document.body.classList.toggle('target-mode', !epIsMapSurface());
       document.body.classList.toggle('target-nav', isNav);
       document.body.classList.toggle('nav-panel-collapsed', isNav && navPanelCollapsed);
-      document.body.classList.toggle('route-drawing', targetModeActive && routeDrawEnabled);
-      document.body.classList.toggle('route-marking', targetModeActive && routeDrawEnabled && routeDrawKind === 'MARK');
+      document.body.classList.toggle('route-drawing', epIsPlanSurface() && routeDrawEnabled);
+      document.body.classList.toggle('route-marking', epIsPlanSurface() && routeDrawEnabled && routeDrawKind === 'MARK');
       document.body.classList.toggle('track-recording', isNav && (trackRecording || pendingTrackStart));
     }
 
@@ -3459,7 +3471,7 @@
     }
 
     function startTrackRecording() {
-      if (!targetModeActive || targetModePhase !== 'NAV') return;
+      if (!epIsMissionSurface()) return;
       if (!hasGpsFix || !latestGpsPosition) {
         pendingTrackStart = true;
         gpsLockState = 'ACQUIRING';
@@ -3499,13 +3511,13 @@
     }
 
     function toggleTrackRecording() {
-      if (!targetModeActive || targetModePhase !== 'NAV') return;
+      if (!epIsMissionSurface()) return;
       if (trackRecording || pendingTrackStart) stopTrackRecording(true, false);
       else startTrackRecording();
     }
 
     function recordTrackPoint(pos) {
-      if (!trackRecording || !targetModeActive || targetModePhase !== 'NAV' || !pos?.coords) return;
+      if (!trackRecording || !epIsMissionSurface() || !pos?.coords) return;
       const lat = Number(pos.coords.latitude), lon = Number(pos.coords.longitude);
       const accuracy = Number(pos.coords.accuracy);
       const ts = Number(pos.timestamp) || Date.now();
@@ -3552,7 +3564,7 @@
         const marker = L.marker(via.coords, { icon:routeViaIcon(via), keyboard:false, riseOnHover:true }).addTo(routeViaLayer);
         marker.on('click', e => {
           if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
-          if (targetModePhase !== 'PLAN' || routeDrawEnabled) return;
+          if (!epIsPlanSurface() || routeDrawEnabled) return;
           if (confirm(`${via.name} VIA를 ROUTE에서 삭제하시겠습니까?`)) removeRouteViaPoint(via.id);
         });
       });
@@ -3604,7 +3616,7 @@
     }
 
     function syncTargetReferenceLine() {
-      const shouldShow = targetModeActive && targetModePhase !== 'NAV' && targetModeTarget && targetModeShowGps && hasGpsFix;
+      const shouldShow = epIsPlanSurface() && targetModeTarget && targetModeShowGps && hasGpsFix;
       if (!shouldShow) {
         if (targetReferenceLine && map.hasLayer(targetReferenceLine)) map.removeLayer(targetReferenceLine);
         return;
@@ -3640,7 +3652,7 @@
 
     function setMapRouteDrawInteraction(enabled) {
       const container = map.getContainer();
-      routeDrawEnabled = Boolean(enabled && targetModeActive && targetModePhase === 'PLAN');
+      routeDrawEnabled = Boolean(enabled && epIsPlanSurface());
       container.classList.toggle('route-draw-active', routeDrawEnabled);
       resetRouteGestureState(true);
       if (routeDrawEnabled) {
@@ -3864,7 +3876,7 @@
     }
 
     function openRouteLocate(role = 'VIA') {
-      if (!targetModeActive || targetModePhase !== 'PLAN' || !['START','VIA','END'].includes(role)) return;
+      if (!epIsPlanSurface() || !['START','VIA','END'].includes(role)) return;
       routeLocateRole = role;
       closeRoutePoints();
       document.getElementById('routeLocateTitle').textContent = `PLAN INPUT / ${role}`;
@@ -3929,7 +3941,7 @@
     }
 
     async function searchRouteLocate() {
-      if (!targetModeActive || targetModePhase !== 'PLAN') return;
+      if (!epIsPlanSurface()) return;
       const input = document.getElementById('routeLocateInput');
       const resultsEl = document.getElementById('routeLocateResults');
       const button = document.getElementById('routeLocateSearchBtn');
@@ -3996,7 +4008,7 @@
     }
 
     function addRouteViaPoint() {
-      if (!targetModeActive || targetModePhase !== 'PLAN' || !routeLocateSelected) return;
+      if (!epIsPlanSurface() || !routeLocateSelected) return;
       const nameInput = document.getElementById('routeViaNameInput');
       const via = {
         name:(nameInput?.value.trim() || routeLocateRole).slice(0,60),
@@ -4054,7 +4066,7 @@
     }
 
     function recenterTargetNavigation() {
-      if (!targetModeActive || targetModePhase !== 'NAV') return;
+      if (!epIsMissionSurface()) return;
       const ref = getReferencePosition();
       if (!ref?.coords) { alert('GPS 또는 TEMP POS 위치가 필요합니다.'); return; }
       if (ref.type === 'GPS') {
@@ -4365,7 +4377,7 @@
       if (pendingNavStart && targetModeActive) {
         activateTargetNavigation();
       }
-      if (pendingTrackStart && targetModeActive && targetModePhase === 'NAV' && !trackRecording) {
+      if (pendingTrackStart && epIsMissionSurface() && !trackRecording) {
         startTrackRecording();
       }
       recordTrackPoint(pos);
@@ -5067,7 +5079,7 @@
     }
 
     function toggleDrawKind(){
-      if(!targetModeActive||targetModePhase!=='PLAN') return;
+      if(!epIsPlanSurface()) return;
       routeDrawKind=routeDrawKind==='ROUTE'?'MARK':'ROUTE';
       if(routeCurrentPolyline) cancelCurrentRouteStroke();
       updateTargetModePanel();
@@ -5089,7 +5101,7 @@
       document.getElementById('routeViaReadout').textContent = `${routeViaPoints.length} VIA`;
     }
     function assignPlanPoint(role, point) {
-      if (!targetModeActive || targetModePhase !== 'PLAN' || !validCoordinates(point?.coords)) return false;
+      if (!epIsPlanSurface() || !validCoordinates(point?.coords)) return false;
       const snapshot = cloneRouteEndpoint(point);
       if (role === 'START') routeStartPoint = snapshot;
       else if (role === 'END') routeEndPoint = snapshot;
@@ -5103,7 +5115,7 @@
     }
 
     function setPlanPointFromSource(role, source) {
-      if (!targetModeActive || targetModePhase !== 'PLAN') return;
+      if (!epIsPlanSurface()) return;
       if (source === 'INPUT') { openRouteLocate(role); return; }
       let coords;
       if (source === 'GPS' && gpsPowerEnabled && hasGpsFix) coords = baseLocation;
@@ -5113,7 +5125,7 @@
       if (!coords) { alert(`${source === 'TEMP' ? 'TEMP POS' : source} 위치를 사용할 수 없습니다.`); return; }
       assignPlanPoint(role, {name:`${source === 'TEMP' ? 'TEMP POS' : source} ${role}`,coords:[...coords],source});
     }
-    function openRoutePoints(){ if(!targetModeActive||targetModePhase!=='PLAN')return; setMapRouteDrawInteraction(false);updateRoutePointsModal();document.getElementById('routePointsBackdrop').style.display='flex'; }
+    function openRoutePoints(){ if(!epIsPlanSurface())return; setMapRouteDrawInteraction(false);updateRoutePointsModal();document.getElementById('routePointsBackdrop').style.display='flex'; }
     function closeRoutePoints(){ document.getElementById('routePointsBackdrop').style.display='none'; }
     function setRouteStartFromReference(){ const r=getReferencePosition(); if(!r){alert('GPS FIX 또는 TEMP POS가 필요합니다.');return;} routeStartPoint={name:r.type==='GPS'?'GPS START':'TEMP POS START',coords:[...r.coords],source:r.type};routeDirty=true;renderRouteEndpoints();updateRoutePointsModal();updateTargetModePanel(); }
     function setRouteStartFromReticle(){ const c=map.getCenter();routeStartPoint={name:'RETICLE START',coords:[c.lat,c.lng],source:'RETICLE'};routeDirty=true;renderRouteEndpoints();updateRoutePointsModal();updateTargetModePanel(); }
@@ -5130,11 +5142,11 @@
       const idx=Math.max(0,best-8); const p=trackLogPoints[idx]; return {name:idx===0?'BACKTRACK START':'BACKTRACK',coords:[p[0],p[1]]};
     }
     function getCurrentNavDestination(){ if(backtrackActive)return getBacktrackDestination(); if(navLegIndex>=1&&routeEndPoint)return routeEndPoint; return targetModeTarget; }
-    function nextNavLeg(){ if(!targetModeActive||targetModePhase!=='NAV'||!routeEndPoint||backtrackActive)return; if(navLegIndex===0){ navLegTimes[0]=Date.now()-(navLegStartedAt||Date.now()); navLegIndex=1;navLegStartedAt=Date.now();updateTargetModePanel(); } }
-    function toggleBacktrack(){ if(!targetModeActive||targetModePhase!=='NAV')return; if(!backtrackActive&&trackLogPoints.length<2){alert('BACKTRACK에 사용할 TRACK 기록이 없습니다.');return;} backtrackActive=!backtrackActive;gpsFollowEnabled=false;updateGpsTelemetry();updateTargetModePanel(); }
+    function nextNavLeg(){ if(!epIsMissionSurface()||!routeEndPoint||backtrackActive)return; if(navLegIndex===0){ navLegTimes[0]=Date.now()-(navLegStartedAt||Date.now()); navLegIndex=1;navLegStartedAt=Date.now();updateTargetModePanel(); } }
+    function toggleBacktrack(){ if(!epIsMissionSurface())return; if(!backtrackActive&&trackLogPoints.length<2){alert('BACKTRACK에 사용할 TRACK 기록이 없습니다.');return;} backtrackActive=!backtrackActive;gpsFollowEnabled=false;updateGpsTelemetry();updateTargetModePanel(); }
 
     function formatElapsed(ms){ const sec=Math.max(0,Math.floor(Number(ms||0)/1000));const h=Math.floor(sec/3600);const m=Math.floor((sec%3600)/60);const s=sec%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
-    function startNavElapsed(){ stopNavElapsed();navStartedAt=Date.now();navLegStartedAt=navStartedAt;navLegTimes=[];navElapsedTimer=setInterval(()=>{if(targetModeActive&&targetModePhase==='NAV')updateTargetModePanel();},1000); }
+    function startNavElapsed(){ stopNavElapsed();navStartedAt=Date.now();navLegStartedAt=navStartedAt;navLegTimes=[];navElapsedTimer=setInterval(()=>{if(epIsMissionSurface())updateTargetModePanel();},1000); }
     function stopNavElapsed(){ if(navElapsedTimer){clearInterval(navElapsedTimer);navElapsedTimer=null;} }
 
     function openNavOptic(){document.getElementById('navOpticBackdrop').style.display='flex';}
@@ -5174,7 +5186,7 @@
 
     // Target reference line can use TEMP when GPS is off.
     syncTargetReferenceLine=function(){
-      const ref=getReferencePosition(); const shouldShow=targetModeActive&&targetModePhase!=='NAV'&&targetModeTarget&&ref?.coords;
+      const ref=getReferencePosition(); const shouldShow=epIsPlanSurface()&&targetModeTarget&&ref?.coords;
       if(!shouldShow){if(targetReferenceLine&&map.hasLayer(targetReferenceLine))map.removeLayer(targetReferenceLine);return;}
       const pts=[ref.coords,targetModeTarget.coords];
       if(!targetReferenceLine) targetReferenceLine=L.polyline(pts,{renderer:routeRenderer,interactive:false,color:getOpticColor(),weight:1,opacity:.55,dashArray:'5,7'});
@@ -5195,7 +5207,7 @@
       v26BaseUpdateTargetModePanel();
       const dest=getCurrentNavDestination?.();
       const name=document.getElementById('navHudTarget');
-      if(targetModeActive&&targetModePhase==='NAV'&&name&&dest?.name) name.innerText=dest.name;
+      if(epIsMissionSurface()&&name&&dest?.name) name.innerText=dest.name;
       updateRoutePointsModal?.();
       refreshGpsPowerUi?.();
     };
@@ -5258,7 +5270,7 @@
     }
 
     function recordPlanUndo(snapshot) {
-      if (!snapshot || !targetModeActive || targetModePhase !== 'PLAN') return;
+      if (!snapshot || !epIsPlanSurface()) return;
       planUndoStack.push(snapshot);
       if (planUndoStack.length > 40) planUndoStack.shift();
       syncKnownActionAvailability();
@@ -5279,12 +5291,12 @@
     }
 
     function undoPlanEdit() {
-      if (!targetModeActive || targetModePhase !== 'PLAN' || !planUndoStack.length) return;
+      if (!epIsPlanSurface() || !planUndoStack.length) return;
       restorePlanEditState(planUndoStack.pop());
     }
 
     function enterPlanSetMode() {
-      if (!targetModeActive || targetModePhase !== 'PLAN') return;
+      if (!epIsPlanSurface()) return;
       closeV271Sheets();
       setMapRouteDrawInteraction(false);
       planUiSubmode = 'SET';
@@ -5292,7 +5304,7 @@
     }
 
     function enterPlanDrawMode() {
-      if (!targetModeActive || targetModePhase !== 'PLAN') return;
+      if (!epIsPlanSurface()) return;
       closeV271Sheets();
       routeDrawKind = 'ROUTE';
       planUiSubmode = 'DRAW';
@@ -5307,7 +5319,7 @@
     }
 
     function setPlanPointAtReticle(role) {
-      if (!targetModeActive || targetModePhase !== 'PLAN' || !['START','VIA','END'].includes(role)) return;
+      if (!epIsPlanSurface() || !['START','VIA','END'].includes(role)) return;
       const c = map.getCenter();
       const snapshot = capturePlanEditState();
       const coords = [c.lat, c.lng];
@@ -5336,7 +5348,7 @@
       if (event) {
         try { event.originalEvent && L.DomEvent.stopPropagation(event.originalEvent); } catch (e) {}
       }
-      if (!targetModeActive || targetModePhase !== 'PLAN' || routeDrawEnabled) return;
+      if (!targetModeActive || !epIsPlanSurface() || routeDrawEnabled) return;
       selectedPlanPointRef = { role, id };
       const point = selectedPlanPoint();
       if (!point?.coords) { closePlanPointInfo(); return; }
@@ -5411,7 +5423,7 @@
     };
 
     clearRouteDraft = function() {
-      if (!targetModeActive || targetModePhase !== 'PLAN') return;
+      if (!epIsPlanSurface()) return;
       const bucket = routeDrawKind === 'MARK' ? routeMarkSegments : routeDraftSegments;
       if (!bucket.length) return;
       const label = routeDrawKind === 'MARK' ? 'OVERLAY' : 'ROUTE';
@@ -5426,7 +5438,7 @@
 
     // Capture a PLAN snapshot before a stroke, then add it to the undo stack only when a stroke actually commits.
     routeMapContainer.addEventListener('pointerdown', event => {
-      if (!targetModeActive || targetModePhase !== 'PLAN' || !routeDrawEnabled) return;
+      if (!epIsPlanSurface() || !routeDrawEnabled) return;
       if (routeGestureMode || routeActivePointers.size > 1) { pendingDrawUndo = null; return; }
       if (routePointerId === event.pointerId) {
         pendingDrawUndo = {
@@ -5476,7 +5488,7 @@
     }
 
     function openPlanSearch() {
-      if (!targetModeActive || targetModePhase !== 'PLAN') return;
+      if (!epIsPlanSurface()) return;
       setMapRouteDrawInteraction(false);
       planUiSubmode = 'MAIN';
       closePlanPointInfo();
@@ -5526,7 +5538,7 @@
     }
 
     async function searchPlanLocation() {
-      if (!targetModeActive || targetModePhase !== 'PLAN') return;
+      if (!epIsPlanSurface()) return;
       const input = document.getElementById('planSearchInput');
       const results = document.getElementById('planSearchResults');
       const button = document.getElementById('planSearchGoBtn');
@@ -5624,7 +5636,7 @@
     }
 
     nextNavLeg = function() {
-      if (!targetModeActive || targetModePhase !== 'NAV' || !hasNextNavLeg()) return;
+      if (!epIsMissionSurface() || !hasNextNavLeg()) return;
       navLegTimes[navLegIndex] = Date.now() - (navLegStartedAt || Date.now());
       navLegIndex += 1;
       navLegStartedAt = Date.now();
@@ -5632,7 +5644,7 @@
     };
 
     startTargetNavigation = function() {
-      if (!targetModeActive || targetModePhase !== 'PLAN' || !targetModeTarget) return;
+      if (!epIsPlanSurface() || !targetModeTarget) return;
       const ref=getReferencePosition();
       if (!ref?.coords) return;
       if (!preserveActivePlan()) return;
@@ -5643,7 +5655,7 @@
     };
 
     function stopTargetNavigation() {
-      if (!targetModeActive || targetModePhase !== 'NAV') return;
+      if (!epIsMissionSurface()) return;
       navLegTimes[navLegIndex] = Date.now() - (navLegStartedAt || Date.now());
       closeNavMore();
       navPanelCollapsed=false;
@@ -5651,7 +5663,7 @@
     }
 
     function openNavMore() {
-      if (!targetModeActive || targetModePhase !== 'NAV' || navPanelCollapsed) return;
+      if (!epIsMissionSurface() || navPanelCollapsed) return;
       closePlanSearch(); closePlanPointInfo();
       setV271Sheet('navMoreSheet', true);
       syncKnownActionAvailability();
@@ -5694,7 +5706,7 @@
 
       const planHead=document.getElementById('planInfoTrigger');
       const hint=document.getElementById('planNavHint');
-      const navReady=Boolean(targetModeActive && targetModePhase==='PLAN' && ref?.coords);
+      const navReady=Boolean(epIsPlanSurface() && ref?.coords);
       if (!document.body.classList.contains('v28-integrated')) {
         if (planHead) {
           planHead.classList.toggle('nav-unavailable',!navReady);
@@ -5752,8 +5764,8 @@
     const v271UpdateTargetModePanel = updateTargetModePanel;
     updateTargetModePanel = function() {
       v271UpdateTargetModePanel();
-      document.body.classList.toggle('plan-set-submode',targetModeActive&&targetModePhase==='PLAN'&&planUiSubmode==='SET');
-      document.body.classList.toggle('plan-draw-submode',targetModeActive&&targetModePhase==='PLAN'&&planUiSubmode==='DRAW');
+      document.body.classList.toggle('plan-set-submode',epIsPlanSurface()&&planUiSubmode==='SET');
+      document.body.classList.toggle('plan-draw-submode',epIsPlanSurface()&&planUiSubmode==='DRAW');
       const kind=document.getElementById('targetDrawKindBtn');
       if (kind) {
         kind.textContent=routeDrawKind==='MARK'?'OVERLAY':'ROUTE';
@@ -5763,7 +5775,7 @@
       const dest=getCurrentNavDestination();
       const leg=document.getElementById('navHudLeg');
       const label=document.getElementById('navHudDistanceLabel');
-      if (targetModeActive&&targetModePhase==='NAV'&&!backtrackActive&&dest) {
+      if (epIsMissionSurface()&&!backtrackActive&&dest) {
         if (leg) leg.textContent=`LEG ${Math.min(navLegIndex+1,Math.max(seq.length,1))}/${Math.max(seq.length,1)} · ${dest.__navRole||'TARGET'}`;
         if (label) label.textContent=`DIRECT TO ${dest.__navRole||'TARGET'}`;
       }
@@ -5885,7 +5897,7 @@
         };
       },
       isEditable() {
-        return Boolean(targetModeActive && targetModePhase === 'PLAN');
+        return Boolean(epIsPlanSurface());
       },
       selectedPointRef() {
         return selectedPlanPointRef ? {...selectedPlanPointRef} : null;

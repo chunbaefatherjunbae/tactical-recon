@@ -1354,7 +1354,7 @@
     const layer=ensureMissionLayer();
     if(!layer)return;
     layer.clearLayers();
-    const planVisible=typeof targetModeActive!=='undefined'&&targetModeActive&&typeof targetModePhase!=='undefined'&&targetModePhase==='PLAN';
+    const planVisible=typeof epIsPlanSurface==='function'?epIsPlanSurface():(typeof targetModeActive!=='undefined'&&targetModeActive&&typeof targetModePhase!=='undefined'&&targetModePhase==='PLAN');
     const {ref,obj}=missionMetrics();
     if(!obj?.coords||(!missionMapMode&&!planVisible))return;
     const color=typeof getOpticColor==='function'?getOpticColor():'#93d7a0';
@@ -1447,7 +1447,7 @@
   function syncMissionMapModeUi(){
     const obj=activeObjective();
     if(!obj)missionMapMode=false;
-    if(typeof targetModePhase!=='undefined'&&targetModePhase==='NAV')missionMapMode=false;
+    if(typeof epIsMissionSurface==='function'?epIsMissionSurface():(typeof targetModePhase!=='undefined'&&targetModePhase==='NAV'))missionMapMode=false;
     document.body.classList.toggle('v29-mission-map',missionMapMode);
     const panel=document.getElementById('targetModePanel');
     if(missionMapMode){
@@ -1474,7 +1474,7 @@
   }
 
   function returnToMissionMap(options={}){
-    if(typeof targetModeActive!=='undefined'&&targetModeActive&&typeof targetModePhase!=='undefined'&&targetModePhase==='PLAN'&&typeof exitTargetMode==='function'){
+    if((typeof epIsPlanSurface==='function'?epIsPlanSurface():(typeof targetModeActive!=='undefined'&&targetModeActive&&typeof targetModePhase!=='undefined'&&targetModePhase==='PLAN'))&&typeof exitTargetMode==='function'){
       exitTargetMode(false);
     }
     setMissionMapMode(true,options);

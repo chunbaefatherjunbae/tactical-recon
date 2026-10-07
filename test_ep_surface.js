@@ -39,6 +39,30 @@ test('surface bridge is the new semantic owner and legacy phase is mirror only',
   assert(source.includes("phase:'PLAN'"));
 });
 
+test('runtime behavior gates prefer EP surface helpers',()=>{
+  const index=fs.readFileSync('index.html','utf8');
+  assert(index.includes('function epSurfaceName()'));
+  assert(index.includes('function epIsPlanSurface()'));
+  assert(index.includes('function epIsMissionSurface()'));
+  assert(index.includes("document.body.classList.toggle('target-mode', !epIsMapSurface())"));
+  assert(index.includes("routeDrawEnabled = Boolean(enabled && epIsPlanSurface())"));
+  assert(index.includes("if (!epIsMissionSurface() || navPanelCollapsed) return;"));
+});
+
+test('direct legacy phase reads are reduced to compatibility mirror and fallback',()=>{
+  const index=fs.readFileSync('index.html','utf8');
+  const lines=index.split('\n').filter(line=>line.includes('targetModePhase'));
+  const semanticReads=lines.filter(line=>
+    !line.includes("let targetModePhase") &&
+    !line.includes("targetModePhase = 'PLAN'") &&
+    !line.includes("targetModePhase = 'NAV'") &&
+    !line.includes("targetModePhase === 'NAV' ? 'MISSION' : 'PLAN'") &&
+    !line.includes("phase:String(targetModePhase") &&
+    !line.includes("targetModePhase=String(next.phase)")
+  );
+  assert.deepEqual(semanticReads,[]);
+});
+
 test('body receives EP surface state for progressive UI replacement',()=>{
   const source=fs.readFileSync('ep-surface-bridge.js','utf8');
   assert(source.includes("document.body.dataset.epSurface=state.surface"));
