@@ -41,6 +41,24 @@ test('service worker keeps EP shell as old-cache fallback',()=>{
   assert(sw.includes("html.includes('ep-ui-shell.js')"));
 });
 
+test('field polish restores V-style adaptive position and text-only bottom bar',()=>{
+  assert(shell.includes("if(typeof root.centerGpsNow==='function')root.centerGpsNow()"));
+  assert(shell.includes('id="epFollowGlyph"'));
+  assert(shell.includes('<b>TEMP</b><span>임시위치</span>'));
+  ['⌾','✣','≋','⌁'].forEach(icon=>assert.strictEqual(shell.includes(icon),false));
+  assert(css.includes('Bottom navigation: one segmented field bar, text only.'));
+  assert(css.includes('.ep-bottom-nav button b{display:none!important}'));
+});
+
+test('field polish removes scale card and restores compact V reticle geometry',()=>{
+  assert(css.includes('background:transparent!important'));
+  assert(css.includes('border:0!important'));
+  assert(css.includes('width:44px!important'));
+  assert(css.includes('height:44px!important'));
+  assert(css.includes('width:20px!important'));
+  assert(css.includes('height:20px!important'));
+});
+
 test('EP shell exposes required map-first controls',()=>{
   ['epPosReadout','epTgtReadout','epGpsBtn','epFollowBtn','epTempBtn','epTrackBtn','epPointsBtn','epRandomBtn','epRecordsBtn','epToolsBtn'].forEach(id=>{
     assert(shell.includes("id=\""+id+"\""));
