@@ -166,10 +166,11 @@
   }
 
   function mapPointIcon(role,index) {
-    const label = role === 'START' ? 'S' : role === 'DEST' ? 'D' : String(index + 1);
+    const label = role === 'START' ? 'S' : role === 'DEST' ? 'E' : String(index + 1);
+    const cls = role === 'START' ? 'route-start-marker' : role === 'DEST' ? 'route-end-marker' : 'route-via-marker';
     return L.divIcon({
-      className:'nav-point-wrap',
-      html:'<span class="nav-point nav-point-' + role.toLowerCase() + '">' + label + '</span>',
+      className:'tactical-route-wrapper',
+      html:'<span class="' + cls + '" data-label="' + label + '"></span>',
       iconSize:[26,26],
       iconAnchor:[13,13]
     });
