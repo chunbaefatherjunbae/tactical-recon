@@ -156,7 +156,7 @@
     const start = draft.start?.name || '출발지';
     const dest = draft.destination?.name || '목적지';
     return draft.vias.length
-      ? start + ' → VIA ' + draft.vias.length + ' → ' + dest
+      ? start + ' → 경유 ' + draft.vias.length + ' → ' + dest
       : start + ' → ' + dest;
   }
 
@@ -225,11 +225,11 @@
       ? Math.round(bundle.distanceKm * 1000) + ' M'
       : bundle.distanceKm.toFixed(bundle.distanceKm < 10 ? 2 : 1) + ' KM';
     const mag = Number.isFinite(bundle.magneticBearing)
-      ? String(Math.round(bundle.magneticBearing)).padStart(3,'0') + '° MAG'
-      : '-- MAG';
+      ? String(Math.round(bundle.magneticBearing)).padStart(3,'0') + '° 자북'
+      : '-- 자북';
     const grid = Number.isFinite(bundle.gridBearing)
-      ? String(Math.round(bundle.gridBearing)).padStart(3,'0') + '° GRID'
-      : '-- GRID';
+      ? String(Math.round(bundle.gridBearing)).padStart(3,'0') + '° 도북'
+      : '-- 도북';
     return dist + ' · ' + grid + ' · ' + mag;
   }
 
@@ -274,8 +274,8 @@
 
     const decl = nowBundle?.declination;
     $('navDeclination').textContent = Number.isFinite(decl)
-      ? 'DECL ' + (decl >= 0 ? '+' : '') + decl.toFixed(1) + '° · WMM2025'
-      : 'DECL --';
+      ? '자편각 ' + (decl >= 0 ? '+' : '') + decl.toFixed(1) + '° · WMM2025'
+      : '자편각 --';
 
     renderTimer();
     renderSessionControls();
@@ -618,7 +618,7 @@
       '<div class="plan-library-row">' +
         '<button type="button" class="plan-open" data-plan-open="' + esc(plan.id) + '">' +
           '<strong>' + esc(plan.name) + '</strong>' +
-          '<span>' + esc(pointShort(plan.start,'출발')) + ' → ' + esc(pointShort(plan.destination,'목적지')) + ' · VIA ' + plan.vias.length + '</span>' +
+          '<span>' + esc(pointShort(plan.start,'출발')) + ' → ' + esc(pointShort(plan.destination,'목적지')) + ' · 경유 ' + plan.vias.length + '</span>' +
         '</button>' +
         '<button type="button" data-plan-share="' + esc(plan.id) + '">공유</button>' +
         '<button type="button" data-plan-delete="' + esc(plan.id) + '">삭제</button>' +
@@ -823,11 +823,11 @@
     node.hidden=false;
     const session=sessionState();
     if (!session) {
-      node.innerHTML='<button type="button" data-nav-action="CLOSE">종료</button><button type="button" data-nav-action="DRAW">드로잉</button><button type="button" data-nav-action="SAVE">저장</button><button type="button" class="primary" data-nav-action="START">시작</button>';
+      node.innerHTML='<button type="button" data-nav-action="CLOSE">계획 닫기</button><button type="button" data-nav-action="DRAW">드로잉</button><button type="button" data-nav-action="SAVE">저장</button><button type="button" class="primary" data-nav-action="START">항법 시작</button>';
     } else if (session.status === 'PAUSED') {
-      node.innerHTML='<button type="button" data-nav-action="DRAW">드로잉</button><button type="button" class="primary" data-nav-action="PAUSE">재개</button><button type="button" data-nav-action="LAP">LAP</button><button type="button" data-nav-action="STOP">종료</button>';
+      node.innerHTML='<button type="button" data-nav-action="DRAW">드로잉</button><button type="button" class="primary" data-nav-action="PAUSE">재개</button><button type="button" data-nav-action="LAP">LAP</button><button type="button" data-nav-action="STOP">항법 종료</button>';
     } else {
-      node.innerHTML='<button type="button" data-nav-action="DRAW">드로잉</button><button type="button" class="primary" data-nav-action="PAUSE">일시정지</button><button type="button" data-nav-action="LAP">LAP</button><button type="button" data-nav-action="STOP">종료</button>';
+      node.innerHTML='<button type="button" data-nav-action="DRAW">드로잉</button><button type="button" class="primary" data-nav-action="PAUSE">일시정지</button><button type="button" data-nav-action="LAP">LAP</button><button type="button" data-nav-action="STOP">항법 종료</button>';
     }
     node.querySelectorAll('[data-nav-action]').forEach(btn => btn.addEventListener('click',() => {
       const action=btn.dataset.navAction;
