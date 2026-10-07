@@ -27,8 +27,10 @@
       <button class="quick-btn" id="gpsBtn" type="button" aria-label="GPS 켜기/끄기" aria-pressed="false" title="GPS">
         <span class="btn-label">GPS</span>
       </button>
-      <button class="quick-btn" id="followBtn" type="button" aria-label="센터 및 트래킹" aria-pressed="false" title="센터 및 트래킹">
-        <span aria-hidden="true">◎</span>
+      <button class="quick-btn follow-btn" id="followBtn" type="button" aria-label="센터 및 트래킹" aria-pressed="false" title="센터 및 트래킹">
+        <span id="followGlyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5" class="follow-core"/></svg>
+        </span>
       </button>
       <button class="quick-btn" id="tempBtn" type="button" aria-label="임시 좌표. 짧게 눌러 지정, 길게 눌러 이동" aria-pressed="false" title="TEMP">
         <span aria-hidden="true">◇</span>
@@ -58,10 +60,10 @@
     </section>
 
     <nav class="bottom-nav" aria-label="주요 기능">
-      <button type="button" data-panel="sites"><span class="nav-icon">◇</span><span>거점</span></button>
-      <button type="button" data-panel="explore"><span class="nav-icon">⌖</span><span>탐색</span></button>
-      <button type="button" data-panel="plans"><span class="nav-icon">⌁</span><span>계획</span></button>
-      <button type="button" data-panel="records"><span class="nav-icon">≡</span><span>기록</span></button>
+      <button type="button" data-panel="sites">거점</button>
+      <button type="button" data-panel="explore">탐색</button>
+      <button type="button" data-panel="plans">계획</button>
+      <button type="button" data-panel="records">기록</button>
     </nav>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
