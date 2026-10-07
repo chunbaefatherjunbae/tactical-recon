@@ -61,6 +61,7 @@ test('targetModeActive is reduced to transition mirror and migration-port compat
     !line.includes('const wasActive=targetModeActive') &&
     !line.includes('wasActive && !targetModeActive') &&
     !line.includes('if (!snapshot || !targetModeActive)') &&
+    !line.includes('if (!targetModeActive || !targetModeTarget) return null') &&
     !line.includes('if (!targetModeActive) return null') &&
     !line.includes('if (!targetModeActive) return false')
   );

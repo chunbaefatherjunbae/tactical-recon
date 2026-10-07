@@ -4598,7 +4598,7 @@
     }
 
     function buildRoutePackage() {
-      if (!targetModeActive || !targetModeTarget) return null;
+      if (epIsMapSurface() || !targetModeTarget) return null;
       if (!preserveActivePlan()) return null;
       const routePlan = getTargetRoutePlan(targetModeTarget) || {
         segments: cloneRouteSegments(routeDraftSegments),
@@ -4883,7 +4883,7 @@
     document.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return;
       if (routeDrawEnabled) setMapRouteDrawInteraction(false);
-      else if (targetModeActive) exitTargetMode();
+      else if (epHasActiveContext()) exitTargetMode();
       else closeFieldControls();
     });
     document.getElementById('routeLocateInput')?.addEventListener('keydown', event => {
