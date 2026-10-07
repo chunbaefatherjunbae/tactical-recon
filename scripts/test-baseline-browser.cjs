@@ -61,16 +61,20 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#followBtn svg').count(), 1);
       assert.equal(await page.evaluate(() => BaselineApp.topoLayer?._url.includes('opentopomap.org')), true);
       assert.equal(await page.evaluate(() => BaselineApp.roadBoostLayer?._url.includes('openstreetmap.org')), true);
-      assert.equal(await page.evaluate(() => BaselineApp.map.hasLayer(BaselineApp.roadBoostLayer)), false, 'legacy road boost must stay off by default');
+      assert.equal(await page.evaluate(() => BaselineApp.map.hasLayer(BaselineApp.roadBoostLayer)), true, 'subtle facility/road label overlay must stay available online');
+      assert.equal(await page.evaluate(() => BaselineApp.roadBoostLayer.options.opacity), 0.14);
       assert.equal(await page.locator('#tempBtn').evaluate(el => getComputedStyle(el).touchAction), 'manipulation');
       assert(parseFloat(await page.locator('.bottom-nav button').first().evaluate(el => getComputedStyle(el).fontSize)) >= 14);
       assert(parseFloat(await page.locator('#positionCoord').evaluate(el => getComputedStyle(el).fontSize)) >= 13);
       assert(parseFloat(await page.locator('#positionMeta').evaluate(el => getComputedStyle(el).fontSize)) >= 11);
       assert.equal(await page.locator('#reticleCoord').count(), 1);
+      assert.equal(await page.locator('#gpsBtn').evaluate(el => el.classList.contains('inactive-state')), true);
+      assert.equal(await page.locator('#followBtn').evaluate(el => el.classList.contains('inactive-state')), true);
       assert.equal(await page.evaluate(() => document.body.classList.contains('theme-nvg-green')), true);
       assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--bg-base').trim()), '#020904');
       assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text-main').trim()), '#22ff66');
       assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim()), '#9de3a4');
+      assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text-dim').trim()), '#4f9a63');
       assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--map-filter').includes('hue-rotate(76deg)')), true);
       assert.equal(await page.evaluate(() => getComputedStyle(document.body, '::after').opacity), '0.18');
       await page.waitForTimeout(120);
@@ -80,6 +84,9 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('.site-map-marker').count(), 24);
       assert.equal(await page.locator('.reticle').count(), 1);
       assert.equal(await page.locator('[class*="corner"]').count(), 0);
+      const attributionText = await page.locator('.leaflet-control-attribution').textContent();
+      assert.equal(attributionText.includes('Leaflet'), false, 'Leaflet prefix should be removed to reduce clutter');
+      assert.equal(attributionText.includes('OpenStreetMap'), true, 'required map attribution must remain');
 
       const resources = await page.evaluate(() => performance.getEntriesByType('resource').map(x => x.name));
       assert.equal(resources.some(url => /\/(?:v27|v28|v29|ep-ui|ep-runtime|ep-overlay|ep-plan|ep-mission|ep-surface)/.test(url)), false, 'BASELINE must not load legacy runtime/UI layers');
@@ -136,6 +143,9 @@ const server = http.createServer((req, res) => {
         BaselineState.setFollow(true);
         BaselineApp.map.setView([35.0, 129.0], 11, { animate:false });
       });
+      await page.waitForTimeout(20);
+      assert.equal(await page.locator('.baseline-marker.last').count(), 1, 'GPS off must keep LAST FIX marker');
+      assert.equal(await page.locator('#gpsBtn').evaluate(el => el.classList.contains('inactive-state')), true);
       const savedTemp = await page.evaluate(() => BaselineState.state.temp);
       await page.locator('#tempBtn').dispatchEvent('pointerdown', { pointerType:'touch', pointerId:1, isPrimary:true });
       await page.waitForTimeout(620);
@@ -147,6 +157,7 @@ const server = http.createServer((req, res) => {
       });
       assert(Math.abs(center.lat - savedTemp.lat) < 0.002 && Math.abs(center.lon - savedTemp.lon) < 0.002, 'TEMP hold must move map to saved TEMP');
       assert.equal(await page.evaluate(() => BaselineState.state.gps.follow), false, 'TEMP hold must suspend follow');
+      assert.equal(await page.locator('#followBtn').evaluate(el => el.classList.contains('inactive-state')), true);
       await page.waitForTimeout(40);
       const topCoords = await page.evaluate(() => ({
         pos:document.getElementById('positionCoord')?.textContent || '',
@@ -408,6 +419,14 @@ const server = http.createServer((req, res) => {
       await page.locator('#recordMapView').click();
       assert.equal(await page.locator('#sheet').isHidden(), true);
       assert.equal(await page.evaluate(() => BaselineNavigationUI.recordPreviewLayer.getLayers().length >= 3), true);
+
+      await page.locator('.bottom-nav button[data-panel="records"]').click();
+      await page.locator('.record-row').click();
+      assert.equal(await page.locator('#recordDeleteBtn').count(), 1);
+      page.once('dialog', dialog => dialog.accept());
+      await page.locator('#recordDeleteBtn').click();
+      assert.equal(await page.evaluate(() => BaselineRecordStore.list().length), 0);
+      assert.equal(await page.locator('.record-row').count(), 0);
 
       await page.locator('.bottom-nav button[data-panel="plans"]').click();
       assert.equal(await page.locator('.plan-library-row').count(), 1);
