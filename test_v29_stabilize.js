@@ -428,5 +428,24 @@ test('DISPLAY belongs to SYSTEM instead of MAP or NAV quick controls',()=>{
   assert(stabilize.includes("systemGrid.appendChild(language)"));
 });
 
+test('user-facing terminology stays canonical',()=>{
+  assert(stabilize.includes("recon:'무작위'"));
+  assert(stabilize.includes("reconRecorded:'등록 거점'"));
+  assert(stabilize.includes("reconWild:'미개척 좌표'"));
+  assert(stabilize.includes("reconRange:'범위'"));
+  assert(stabilize.includes("objectiveInfo:'목적지 정보'"));
+  assert(stabilize.includes("sourceBuiltin:'등록 거점'"));
+  assert(stabilize.includes("sourceLocal:'내 거점'"));
+});
+
+test('range-based recon uses current reference instead of GPS-only gating',()=>{
+  assert(stabilize.includes("const rangeRef=typeof getReferencePosition==='function'?getReferencePosition():null"));
+  assert(stabilize.includes("RANGE REQUIRES GPS, TEMP, OR LAST FIX"));
+  const index=fs.readFileSync('index.html','utf8');
+  assert(index.includes('function getRangeReferencePosition()'));
+  assert(index.includes("alert('범위를 사용하려면 GPS, TEMP 또는 마지막 위치가 필요합니다.')"));
+  assert(index.includes('const origin = rangeRef.coords'));
+});
+
 console.log('\nV29 stabilization tests completed: '+passed+' passed, '+failed+' failed.');
 if(failed>0)process.exit(1);
