@@ -280,37 +280,83 @@ const server = http.createServer((req, res) => {
       await page.locator('#drawDoneBtn').click();
       assert.equal(await page.locator('#drawingCapture').isHidden(), true);
 
-      // Session lifecycle: start -> lap -> pause -> resume -> stop -> record.
+      // Session lifecycle + TRACK v1: GPS-only points, pause segmentation, reload recovery.
       await page.locator('[data-nav-action="START"]').click();
       assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'RUNNING');
       assert.equal(await page.locator('#navTimer').isVisible(), true);
+
+      await page.evaluate(() => {
+        BaselineState.setGpsEnabled(true);
+        BaselineState.setGpsFix({ lat:37.50000, lon:127.00000, accuracy:5, altitude:100 });
+      });
+      await page.waitForTimeout(25);
+      await page.evaluate(() => BaselineState.setGpsFix({ lat:37.50010, lon:127.00000, accuracy:5, altitude:101 }));
+      await page.waitForTimeout(30);
+      assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.track?.points?.length), 2);
+      assert.equal(await page.evaluate(() => BaselineNavigationUI.trackLayer.getLayers().length), 1);
+      assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.track?.distanceMeters > 8), true);
+
       await page.locator('[data-nav-action="LAP"]').click();
       assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.laps.length), 1);
       await page.locator('[data-nav-action="PAUSE"]').click();
       assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'PAUSED');
       assert.equal(await page.locator('[data-nav-action="PAUSE"]').textContent(), '재개');
 
+      const trackCountAtPause = await page.evaluate(() => BaselineRecordStore.getActive()?.track?.points?.length);
+      await page.evaluate(() => BaselineState.setGpsFix({ lat:37.51000, lon:127.01000, accuracy:5, altitude:120 }));
+      await page.waitForTimeout(25);
+      assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.track?.points?.length), trackCountAtPause, 'paused GPS fixes must not append track points');
+
       await page.reload();
       await page.waitForFunction(() => window.BaselineApp?.version === 'R0.1-BASELINE');
       assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'PAUSED');
       assert.equal(await page.locator('#navRouteSummary').isVisible(), true);
       assert.equal(await page.locator('[data-nav-action="PAUSE"]').textContent(), '재개');
+      assert.equal(await page.evaluate(() => BaselineNavigationUI.trackLayer.getLayers().length), 1, 'saved live track must restore after reload');
 
       await page.locator('[data-nav-action="PAUSE"]').click();
       assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'RUNNING');
+      await page.evaluate(() => {
+        BaselineState.setGpsEnabled(true);
+        BaselineState.setGpsFix({ lat:37.51000, lon:127.01000, accuracy:5, altitude:120 });
+      });
+      await page.waitForTimeout(25);
+      await page.evaluate(() => BaselineState.setGpsFix({ lat:37.51010, lon:127.01000, accuracy:5, altitude:121 }));
+      await page.waitForTimeout(30);
+      const trackCheck = await page.evaluate(() => {
+        const track=BaselineRecordStore.getActive()?.track;
+        return {
+          points:track?.points?.length || 0,
+          segments:[...new Set((track?.points || []).map(p => p.segment))],
+          distance:track?.distanceMeters || 0
+        };
+      });
+      assert.equal(trackCheck.points, 4);
+      assert.equal(trackCheck.segments.length, 2);
+      assert(trackCheck.distance > 15 && trackCheck.distance < 100, 'paused gap must not inflate track distance');
+      assert.equal(await page.evaluate(() => BaselineNavigationUI.trackLayer.getLayers().length), 2);
+
       page.once('dialog', dialog => dialog.accept());
       await page.locator('[data-nav-action="STOP"]').click();
       assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()), null);
       assert.equal(await page.evaluate(() => BaselineRecordStore.list().length), 1);
+      const finishedTrack = await page.evaluate(() => BaselineRecordStore.list()[0].track);
+      assert.equal(finishedTrack.points.length, 4);
+      assert.equal(new Set(finishedTrack.points.map(p => p.segment)).size, 2);
 
       await page.locator('.bottom-nav button[data-panel="records"]').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '기록');
       assert.equal(await page.locator('.record-row').count(), 1);
+      assert.equal(await page.locator('.record-row').textContent().then(t => t.includes('TRACK')), true);
       await page.locator('.record-row').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '기록 상세');
       assert.equal(await page.locator('.record-lap').count(), 1);
+      assert.equal(await page.locator('.record-summary').textContent().then(t => t.includes('4 PTS')), true);
+      assert.equal(await page.locator('#recordMapView').count(), 1);
       await page.screenshot({ path:`ui-results-baseline/${name}-navigation-record.png`, fullPage:true });
-      await page.locator('#sheetClose').click();
+      await page.locator('#recordMapView').click();
+      assert.equal(await page.locator('#sheet').isHidden(), true);
+      assert.equal(await page.evaluate(() => BaselineNavigationUI.recordPreviewLayer.getLayers().length >= 3), true);
 
       await page.locator('.bottom-nav button[data-panel="plans"]').click();
       assert.equal(await page.locator('.plan-library-row').count(), 1);
