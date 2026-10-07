@@ -158,12 +158,15 @@
       };
 
       (async()=>{
-        try{
-          await drawFrom(preferredZ);
-        }catch(error){
-          if(preferredZ>9){
-            try{await drawFrom(9);}catch{}
-          }
+        const candidates=[preferredZ,9,8,7,6,5]
+          .filter((z,index,list)=>z<=targetZ&&z>=5&&list.indexOf(z)===index)
+          .sort((a,b)=>b-a);
+        for(const sourceZ of candidates){
+          try{
+            await drawFrom(sourceZ);
+            tile.dataset.terrainSourceZoom=String(sourceZ);
+            break;
+          }catch{}
         }
         done(null,tile);
       })();
@@ -334,7 +337,8 @@
   }
 
   function mapStatusLabel(){
-    return 'MAP · '+(effectiveMode==='lite'?'LITE':'ONLINE');
+    if(effectiveMode==='lite') return 'MAP · LITE';
+    return navigator.onLine ? 'MAP · ONLINE' : 'MAP · CACHED';
   }
 
   function updateStatusHud(){
@@ -352,8 +356,9 @@
   function desiredEffective(){
     if(requestedMode==='lite')return 'lite';
     if(requestedMode==='online')return 'online';
-    if(!navigator.onLine)return 'lite';
     if(fallbackReason==='tile-errors')return 'lite';
+    // AUTO tries already-viewed cached online tiles first, even without network.
+    // Missing cached coverage produces tile errors and then falls back to LITE.
     return 'online';
   }
 
@@ -431,7 +436,14 @@
     fallbackReason=null;
     applyMode('online');
   });
-  window.addEventListener('offline',()=>applyMode('offline'));
+  window.addEventListener('offline',()=>{
+    fallbackReason=null;
+    applyMode('offline');
+    if(requestedMode==='auto'&&effectiveMode==='online'){
+      App.topoLayer.redraw();
+      App.roadBoostLayer.redraw();
+    }
+  });
   map.on('zoomend moveend',()=>{
     if(effectiveMode==='lite'){
       rebuildGrid();
