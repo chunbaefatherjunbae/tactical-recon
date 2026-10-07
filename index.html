@@ -2545,19 +2545,34 @@
       return 'UNEXPLORED';
     }
 
+    function getRangeReferencePosition() {
+      try {
+        const ref = typeof getReferencePosition === 'function' ? getReferencePosition() : null;
+        const lat = Number(ref?.coords?.[0]);
+        const lon = Number(ref?.coords?.[1]);
+        if (Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+          return { type: ref?.type || 'REF', coords: [lat, lon] };
+        }
+      } catch (e) {}
+      if (hasGpsFix && Array.isArray(baseLocation)) return { type:'GPS', coords:[baseLocation[0], baseLocation[1]] };
+      return null;
+    }
+
     function updateRegisteredDistanceCache(force = false) {
-      if (!hasGpsFix) return false;
+      const ref = getRangeReferencePosition();
+      if (!ref?.coords) return false;
+      const origin = ref.coords;
       const now = Date.now();
       const movedKm = lastRadarDistanceOrigin
-        ? calcDistanceKmRaw(lastRadarDistanceOrigin[0], lastRadarDistanceOrigin[1], baseLocation[0], baseLocation[1])
+        ? calcDistanceKmRaw(lastRadarDistanceOrigin[0], lastRadarDistanceOrigin[1], origin[0], origin[1])
         : Infinity;
       if (!force && movedKm < 0.05 && (now - lastRadarDistanceUpdateAt) < 5000) return false;
 
       registeredDistanceCache.clear();
       RECON_TARGETS.forEach(t => {
-        registeredDistanceCache.set(String(t.id), calcDistanceKmRaw(baseLocation[0], baseLocation[1], t.coords[0], t.coords[1]));
+        registeredDistanceCache.set(String(t.id), calcDistanceKmRaw(origin[0], origin[1], t.coords[0], t.coords[1]));
       });
-      lastRadarDistanceOrigin = [...baseLocation];
+      lastRadarDistanceOrigin = [...origin];
       lastRadarDistanceUpdateAt = now;
       return true;
     }
@@ -2570,7 +2585,8 @@
       if (!markerLayerVisibility[layerKey]) return false;
       // NEARBY는 REGISTERED DB에만 적용. 저장된 POINTS는 거리와 무관하게 유지.
       if (layerKey !== 'REGISTERED') return true;
-      if (selectedRadius === 'all' || !hasGpsFix) return true;
+      if (selectedRadius === 'all') return true;
+      if (!getRangeReferencePosition()?.coords) return true;
       const id = String(entry.data?.id || '');
       const d = registeredDistanceCache.get(id);
       return Number.isFinite(d) ? d <= selectedRadius : true;
@@ -2587,13 +2603,14 @@
     }
 
     function syncRadiusCirclePosition() {
-      const shouldShowRadius = epIsMapSurface() && selectedRadius !== 'all' && hasGpsFix && markerLayerVisibility.REGISTERED;
+      const ref = getRangeReferencePosition();
+      const shouldShowRadius = epIsMapSurface() && selectedRadius !== 'all' && Boolean(ref?.coords) && markerLayerVisibility.REGISTERED;
       if (!shouldShowRadius) {
         if (radiusCircle && map.hasLayer(radiusCircle)) map.removeLayer(radiusCircle);
         return;
       }
       if (!radiusCircle) {
-        radiusCircle = L.circle(baseLocation, {
+        radiusCircle = L.circle(ref.coords, {
           renderer: radarRenderer,
           interactive: false,
           radius: selectedRadius * 1000,
@@ -2601,7 +2618,7 @@
           fillOpacity:0.025, weight:1, dashArray:'3, 6'
         });
       }
-      radiusCircle.setLatLng(baseLocation);
+      radiusCircle.setLatLng(ref.coords);
       radiusCircle.setRadius(selectedRadius * 1000);
       if (!map.hasLayer(radiusCircle)) radiusCircle.addTo(map);
     }
@@ -3065,8 +3082,8 @@
     }
 
     function deployRegisteredRecon() {
-      if (selectedRadius !== 'all' && !hasGpsFix) {
-        alert('거리 기반 거점 탐색은 GPS FIX 이후 사용할 수 있습니다.');
+      if (selectedRadius !== 'all' && !getRangeReferencePosition()?.coords) {
+        alert('범위를 사용하려면 GPS, TEMP 또는 마지막 위치가 필요합니다.');
         return;
       }
       if (selectedRadius !== 'all') updateRegisteredDistanceCache(true);
@@ -3085,8 +3102,9 @@
     }
 
     function deployWildRecon() {
-      if (selectedRadius !== 'all' && !hasGpsFix) {
-        alert('거리 기반 미개척 정찰은 GPS FIX 이후 사용할 수 있습니다.');
+      const rangeRef = getRangeReferencePosition();
+      if (selectedRadius !== 'all' && !rangeRef?.coords) {
+        alert('범위를 사용하려면 GPS, TEMP 또는 마지막 위치가 필요합니다.');
         return;
       }
       let lat, lon;
@@ -3094,8 +3112,9 @@
         const maxDist = selectedRadius;
         const r = (Math.random() * 0.75 + 0.25) * (maxDist / 111);
         const theta = Math.random() * 2 * Math.PI;
-        lat = baseLocation[0] + r * Math.cos(theta);
-        lon = baseLocation[1] + (r * Math.sin(theta)) / Math.cos(baseLocation[0] * Math.PI / 180);
+        const origin = rangeRef.coords;
+        lat = origin[0] + r * Math.cos(theta);
+        lon = origin[1] + (r * Math.sin(theta)) / Math.cos(origin[0] * Math.PI / 180);
       } else {
         const mountainZones = [
           { minLat: 37.6, maxLat: 38.2, minLon: 127.3, maxLon: 128.6 },
@@ -4321,8 +4340,8 @@
     }
 
     function setRadar(r, btn) {
-      if (r !== 'all' && !hasGpsFix) {
-        alert('NEARBY 거리 필터는 GPS FIX 이후 사용할 수 있습니다.');
+      if (r !== 'all' && !getRangeReferencePosition()?.coords) {
+        alert('범위를 사용하려면 GPS, TEMP 또는 마지막 위치가 필요합니다.');
         return;
       }
       selectedRadius = r;
@@ -5737,8 +5756,10 @@
       const back=document.getElementById('targetBacktrackBtn');
       if (back) back.disabled=!backtrackActive && trackLogPoints.length<2;
 
-      document.querySelectorAll('[data-radius]').forEach(btn => {
-        btn.disabled = String(btn.dataset.radius) !== 'all' && !gpsReady;
+      const rangeReady=Boolean(ref?.coords);
+      document.querySelectorAll('[data-radius],[data-v29-range]').forEach(btn => {
+        const value=String(btn.dataset.radius ?? btn.dataset.v29Range ?? 'all');
+        btn.disabled = value !== 'all' && !rangeReady;
       });
       const centerHomeBtn=document.querySelector('button[onclick*="centerHome()"]');
       const clearHomeBtn=document.querySelector('button[onclick*="clearHomePoint()"]');
@@ -5749,7 +5770,7 @@
       if (clearTempBtn) clearTempBtn.disabled=!tempMarkPoint?.coords;
       if (quickMarkBtn) quickMarkBtn.disabled=!ref?.coords;
       document.querySelectorAll('button[onclick*="deployRegisteredRecon"],button[onclick*="deployWildRecon"]').forEach(btn => {
-        btn.disabled = selectedRadius !== 'all' && !gpsReady;
+        btn.disabled = selectedRadius !== 'all' && !rangeReady;
       });
 
       renderPlanSearchPoints();
@@ -5969,13 +5990,13 @@
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js?v=ep-v6-frameless-hud-20261007-4', { scope: './', updateViaCache: 'none' })
+      navigator.serviceWorker.register('./service-worker.js?v=ep-v7-usability-pass-20261007-1', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-ep-v6-frameless-hud-20261007-4';
+        const reloadKey = 'tactical-recon-sw-reload-ep-v7-usability-pass-20261007-1';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();

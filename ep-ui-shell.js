@@ -88,10 +88,11 @@
   }
 
   function runRandom(){
-    root.EpOverlayBridge?.closeAllLegacy?.();
-    root.EpOverlayBridge?.closeOverlay?.(null,{source:'RANDOM'});
+    if(typeof root.openFieldControls==='function'){
+      root.openFieldControls('recon');
+      return;
+    }
     if(typeof root.deployRegisteredRecon==='function')root.deployRegisteredRecon();
-    else if(typeof root.deployWildRecon==='function')root.deployWildRecon();
   }
 
   function openRecords(){
@@ -191,7 +192,7 @@
       '</aside>'+
       '<nav class="ep-bottom-nav" aria-label="주요 기능">'+
         '<button id="epPointsBtn" type="button"><span>거점</span></button>'+
-        '<button id="epRandomBtn" type="button"><span>무작위</span></button>'+
+        '<button id="epRandomBtn" type="button" aria-label="무작위 및 범위 선택"><span id="epRandomLabel">무작위</span></button>'+
         '<button id="epRecordsBtn" type="button"><span>기록</span></button>'+
       '</nav>'+
       '<div class="ep-shell-toast" id="epShellToast"></div>';
@@ -249,6 +250,10 @@
     trackBtn.classList.toggle('active',trackState!=='OFF');
     trackBtn.classList.toggle('recording',trackState==='RECORDING');
     el('epTrackState').textContent=trackState==='RECORDING'?'●':trackState==='PAUSED'?'◐':'○';
+
+    const range=typeof selectedRadius!=='undefined'?String(selectedRadius):'all';
+    const randomLabel=el('epRandomLabel');
+    if(randomLabel)randomLabel.textContent=range==='all'?'무작위':'무작위 · '+range+'KM';
 
     const overlay=state()?.overlay||'NONE';
     for(const pair of [

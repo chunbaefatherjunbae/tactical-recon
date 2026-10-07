@@ -33,9 +33,9 @@ test('Offline vendor dependencies are local static assets',()=>{
 });
 
 test('Index and service worker use one EP root cache identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'ep-v6-frameless-hud-20261007-4';"));
-  assert(index.includes('service-worker.js?v=ep-v6-frameless-hud-20261007-4'));
-  assert(index.includes('tactical-recon-sw-reload-ep-v6-frameless-hud-20261007-4'));
+  assert(sw.includes("const CACHE_VERSION = 'ep-v7-usability-pass-20261007-1';"));
+  assert(index.includes('service-worker.js?v=ep-v7-usability-pass-20261007-1'));
+  assert(index.includes('tactical-recon-sw-reload-ep-v7-usability-pass-20261007-1'));
   assert.strictEqual(index.includes('service-worker.js?v=v29-interaction-hotfix-20261005-3'),false);
 });
 
@@ -80,7 +80,7 @@ test('TRACK persistence batches checkpoints and preserves delete semantics',()=>
 test('PLAN header splits objective and NAV actions and removes extra NAV button',()=>{
   assert(stabilize.includes("copy.classList.add('v29-objective-area')"));
   assert(stabilize.includes("navArea.className='v29-plan-nav-area'"));
-  assert(stabilize.includes("objectiveRequired:'목표 지정 필요'"));
+  assert(stabilize.includes("objectiveRequired:'목적지 지정 필요'"));
   assert(stabilize.includes('base.ui.openObjective();'));
   assert(stabilize.includes("if(typeof startTargetNavigation==='function')startTargetNavigation();"));
   assert(stabilize.includes("document.getElementById('v28PlanNavBtn')?.remove()"));
@@ -205,8 +205,8 @@ test('Home bar exposes mission-first RECON SITES PLAN MENU',()=>{
 test('RECON treats recorded sites and unexplored coordinates as peer exploration sources',()=>{
   assert(stabilize.includes("id=\"v29RecordedRecon\""));
   assert(stabilize.includes("id=\"v29WildRecon\""));
-  assert(stabilize.includes("reconRecorded:'기록 거점 탐색'"));
-  assert(stabilize.includes("reconWild:'미개척 탐색'"));
+  assert(stabilize.includes("reconRecorded:'등록 거점'"));
+  assert(stabilize.includes("reconWild:'미개척 좌표'"));
   assert(stabilize.includes("item?.source==='REGISTERED_VERIFICATION'"));
   assert(stabilize.includes("lastReconMode='RECORDED'"));
   assert(stabilize.includes("lastReconMode='WILD'"));

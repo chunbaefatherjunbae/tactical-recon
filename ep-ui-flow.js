@@ -33,6 +33,16 @@
     };
   }
 
+  function sourceLabel(point){
+    const source=String(point?.source||'').toUpperCase();
+    if(source==='REGISTERED'||source==='BUILTIN')return '등록 거점';
+    if(source==='USER'||source==='USER_PLACED'||source==='SAVED')return '내 거점';
+    if(source==='SEARCH'||source==='ADDRESS')return '검색 위치';
+    if(source==='UNEXPLORED'||source==='WILD')return '미개척';
+    if(source==='PLAN')return '계획 지점';
+    return '위치';
+  }
+
   function mgrs(point){
     const c=coordsOf(point);
     if(!c)return '--';
@@ -220,7 +230,7 @@
         '</div>'+
       '</section>'+
       '<section class="ep-plan-shell" id="epPlanShell" hidden>'+
-        '<div class="ep-plan-head"><div><span class="ep-flow-kicker">PLAN</span><br><strong id="epPlanName">--</strong></div><small id="epPlanCount">0 POINT</small></div>'+
+        '<div class="ep-plan-head"><div><span class="ep-flow-kicker">계획</span><br><strong id="epPlanName">--</strong></div><small id="epPlanCount">0 지점</small></div>'+
         '<div class="ep-plan-list" id="epPlanList"></div>'+
         '<button class="ep-plan-add" id="epPlanAdd" type="button">＋ 위치</button>'+
         '<nav class="ep-plan-actions" id="epPlanActions">'+
@@ -237,7 +247,7 @@
       '</section>'+
       '<section class="ep-mission-shell" id="epMissionShell" hidden>'+
         '<div class="ep-mission-next">'+
-          '<span class="ep-flow-kicker">NEXT</span>'+
+          '<span class="ep-flow-kicker">다음</span>'+
           '<strong id="epMissionName">--</strong>'+
           '<span class="ep-mission-metrics" id="epMissionMetrics">--</span>'+
           '<span class="ep-mission-ref" id="epMissionRef">REF --</span>'+
@@ -282,7 +292,7 @@
     card.hidden=!visible;
     if(!visible)return;
 
-    $('epLocationKind').textContent=String(point.source||'LOCATION').toUpperCase();
+    $('epLocationKind').textContent=sourceLabel(point);
     $('epLocationName').textContent=point.name||'선택 위치';
     $('epLocationMgrs').textContent=mgrs(point);
 
@@ -314,7 +324,7 @@
     const objectiveId=p.compatibility?.targetId;
     const objective=points.find(item=>String(item.id)===String(objectiveId));
     $('epPlanName').textContent=objective?.name||points[points.length-1]?.name||'PLAN';
-    $('epPlanCount').textContent=points.length+' POINT';
+    $('epPlanCount').textContent=points.length+' 지점';
 
     const list=$('epPlanList');
     list.replaceChildren();
@@ -325,7 +335,7 @@
       row.innerHTML='<span class="num">'+String(index+1).padStart(2,'0')+'</span><span><strong></strong><small></small></span><span class="role"></span>';
       row.querySelector('strong').textContent=point.name||'POINT';
       row.querySelector('small').textContent=mgrs(point);
-      row.querySelector('.role').textContent=String(point.id)===String(objectiveId)?'TGT':role;
+      row.querySelector('.role').textContent=String(point.id)===String(objectiveId)?'목적':(role==='START'?'출발':role==='END'?'종료':'경유');
       row.onclick=()=>setSelectedPoint(point,'PLAN');
       list.appendChild(row);
     });
@@ -355,7 +365,7 @@
 
     const ref=root.EpRuntimeBridge?.getReference?.();
     $('epMissionRef').textContent=ref?.coords?(String(ref.type||'REF')+' · '+mgrs({lat:ref.coords[0],lon:ref.coords[1]})):'REF --';
-    $('epMissionTime').textContent='MISSION '+formatElapsed(Date.now()-Number(m.startedAt||Date.now()));
+    $('epMissionTime').textContent='임무 '+formatElapsed(Date.now()-Number(m.startedAt||Date.now()));
 
     const count=m.activePlan?.points?.length||0;
     $('epMissionIndex').textContent=(Number(m.currentIndex||0)+1)+' / '+count;
