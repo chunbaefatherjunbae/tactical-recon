@@ -217,7 +217,7 @@
     const secured = site?.status === 'SECURED';
     const type = secured ? 'SECURED' : (site?.source === 'WILD' ? 'UNEXPLORED' : (site?.source === 'USER' ? 'USER' : 'REGISTERED'));
     return L.divIcon({
-      className:'tactical-pin-wrapper',
+      className:'tactical-pin-wrapper site-map-marker-wrap',
       html:legacySiteSvg(type),
       iconSize:[28,28],
       iconAnchor:[14,14]
