@@ -5866,10 +5866,7 @@
     if (initialOpticLabel) initialOpticLabel.innerText = currentOpticMode;
     renderAllMarkers();
 
-    /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
-    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      window.addEventListener('load', () => {
-      // ECHOPOINT migration port: exposes V29 PLAN state without giving EP modules DOM ownership.
+    // ECHOPOINT migration port: V29 PLAN data is exposed before EP bridge scripts execute.
     window.__v29PlanLegacy = {
       snapshot() {
         if (!targetModeActive || !targetModeTarget) return null;
@@ -5906,6 +5903,9 @@
       }
     };
 
+    /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => {
       navigator.serviceWorker.register('./service-worker.js?v=v29-track-context-hotfix-20261005-4', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
