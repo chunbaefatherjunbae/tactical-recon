@@ -56,6 +56,18 @@ test('EP PLAN converts back to V29 shape without losing objective',()=>{
   assert.equal(back.overlaySegments.length,1);
 });
 
+test('PLAN migration port exists before service-worker registration',()=>{
+  const index=fs.readFileSync('index.html','utf8');
+  const port=index.indexOf('window.__v29PlanLegacy =');
+  const pwa=index.indexOf("navigator.serviceWorker.register('./service-worker.js");
+  assert(port>=0&&pwa>port);
+});
+
+test('PLAN bridge loads after runtime bridge',()=>{
+  const sw=fs.readFileSync('service-worker.js','utf8');
+  assert(sw.indexOf("html.includes('ep-plan-bridge.js')")>sw.indexOf("html.includes('ep-runtime-bridge.js')"));
+});
+
 test('plan core normalizes route and overlay stroke sets',()=>{
   const p=Plan.createPlan({lat:37.3,lon:127.3,name:'D'},{lat:37,lon:127,name:'S'});
   Plan.replaceRouteStrokes(p,[[{lat:37,lon:127},{lat:37.1,lon:127.1}]]);
