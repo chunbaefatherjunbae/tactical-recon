@@ -34,8 +34,8 @@ test('Offline vendor dependencies are local static assets',()=>{
 
 test('Index and service worker use one EP root cache identity',()=>{
   assert(sw.includes("const CACHE_VERSION = 'ep-v7-usability-pass-20261007-1';"));
-  assert(index.includes('service-worker.js?v=ep-v6-frameless-hud-20261007-4'));
-  assert(index.includes('tactical-recon-sw-reload-ep-v6-frameless-hud-20261007-4'));
+  assert(index.includes('service-worker.js?v=ep-v7-usability-pass-20261007-1'));
+  assert(index.includes('tactical-recon-sw-reload-ep-v7-usability-pass-20261007-1'));
   assert.strictEqual(index.includes('service-worker.js?v=v29-interaction-hotfix-20261005-3'),false);
 });
 
