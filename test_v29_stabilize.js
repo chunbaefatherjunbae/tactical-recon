@@ -32,10 +32,10 @@ test('Offline vendor dependencies are local static assets',()=>{
   assert.strictEqual(sw.includes('VENDOR_ASSETS'),false);
 });
 
-test('Index and service worker use one track-context hotfix cache identity',()=>{
-  assert(sw.includes("const CACHE_VERSION = 'v29-track-context-hotfix-20261005-4';"));
-  assert(index.includes('service-worker.js?v=v29-track-context-hotfix-20261005-4'));
-  assert(index.includes('tactical-recon-sw-reload-v29-track-context-hotfix-20261005-4'));
+test('Index and service worker use one EP root cache identity',()=>{
+  assert(sw.includes("const CACHE_VERSION = 'ep-v5-v29-stable-20261007-1';"));
+  assert(index.includes('service-worker.js?v=ep-v5-v29-stable-20261007-1'));
+  assert(index.includes('tactical-recon-sw-reload-ep-v5-v29-stable-20261007-1'));
   assert.strictEqual(index.includes('service-worker.js?v=v29-interaction-hotfix-20261005-3'),false);
 });
 
