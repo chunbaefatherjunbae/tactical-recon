@@ -2,7 +2,7 @@
 
 .ep-flow{position:fixed;inset:0;z-index:1450;pointer-events:none;color:var(--ep-field-text);font-family:var(--font-mono)}
 .ep-flow button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-.ep-flow[hidden],.ep-location-card[hidden],.ep-plan-shell[hidden],.ep-mission-shell[hidden]{display:none!important}
+.ep-flow[hidden],.ep-flow [hidden]{display:none!important}
 .ep-flow-kicker{color:var(--ep-field-dim);font-size:9px;font-weight:900;letter-spacing:1px}
 
 .ep-location-card{
@@ -22,7 +22,7 @@
 
 .ep-plan-shell{
   position:fixed;left:8px;right:8px;bottom:var(--ep-toolbar-h);width:auto;max-height:48dvh;padding:9px 10px;
-  background:rgba(4,10,6,.97);border:1px solid var(--ep-field-line-strong);border-bottom:0;pointer-events:auto;
+  background:var(--ep-field-bg);border:1px solid var(--ep-field-line-strong);border-bottom:0;pointer-events:auto;
 }
 .ep-plan-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;margin:0;padding:2px 1px 7px;border-bottom:1px solid var(--ep-field-line)}
 .ep-plan-head strong{display:block;margin-top:2px;max-width:none;color:var(--ep-field-active);font-size:13px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -38,10 +38,10 @@
 
 .ep-plan-actions,.ep-draw-actions{
   position:fixed;left:0;right:0;bottom:0;z-index:2360;min-height:var(--ep-toolbar-h);margin:0;
-  padding:5px 6px max(5px,var(--ep-safe-bottom));background:rgba(3,8,5,.96);border:0;border-top:1px solid var(--ep-field-line-strong);
+  padding:5px 6px max(5px,var(--ep-safe-bottom));background:var(--ep-field-bg);border:0;border-top:1px solid var(--ep-field-line-strong);
   display:grid;gap:4px;pointer-events:auto;
 }
-.ep-plan-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ep-plan-actions{grid-template-columns:repeat(4,minmax(0,1fr))}
 .ep-draw-actions{grid-template-columns:repeat(4,minmax(0,1fr))}
 .ep-plan-actions button,.ep-draw-actions button{
   min-width:0;min-height:42px;padding:0 3px;border:0;border-right:1px solid var(--ep-field-line);background:transparent;color:var(--ep-field-dim);font-size:10px;font-weight:900;
@@ -52,18 +52,18 @@
 
 .ep-mission-shell{
   position:fixed;left:0;right:0;bottom:var(--ep-toolbar-h);width:auto;max-width:none;padding:8px 10px 9px;
-  background:rgba(4,10,6,.97);border:1px solid var(--ep-field-active);border-left:0;border-right:0;pointer-events:auto;
+  background:var(--ep-field-bg);border:1px solid var(--ep-field-active);border-left:0;border-right:0;pointer-events:auto;
 }
-.ep-mission-next{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"kicker time" "name time" "metric ref";gap:2px 10px;align-items:end}
+.ep-mission-next{padding-right:44px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"kicker time" "name time" "metric ref";gap:2px 10px;align-items:end}
 .ep-mission-next .ep-flow-kicker{grid-area:kicker}
 .ep-mission-next strong{grid-area:name;color:var(--ep-field-active);font-size:12px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ep-mission-metrics{grid-area:metric;margin-top:4px;padding-top:5px;border-top:1px solid var(--ep-field-line);color:var(--ep-field-active);font-size:22px;line-height:1;font-weight:950;letter-spacing:-.4px}
 .ep-mission-ref{grid-area:ref;align-self:end;max-width:48vw;color:var(--ep-field-dim);font-size:8.5px;font-weight:800;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ep-mission-time{grid-area:time;align-self:start;color:var(--ep-field-dim);font-size:8px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
-.ep-mission-more{position:absolute;top:3px;right:3px;width:42px;height:36px;border:0;background:transparent;color:var(--ep-field-dim)!important;font-size:18px!important}
+.ep-mission-more{position:absolute;top:3px;right:3px;width:44px;height:44px;border:0;background:transparent;color:var(--ep-field-dim)!important;font-size:18px!important}
 .ep-mission-stepper{
   position:fixed;left:0;right:0;bottom:0;transform:none;min-height:var(--ep-toolbar-h);padding:5px 6px max(5px,var(--ep-safe-bottom));
-  display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:4px;background:rgba(3,8,5,.96);border-top:1px solid var(--ep-field-line-strong);pointer-events:auto;
+  display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:4px;background:var(--ep-field-bg);border-top:1px solid var(--ep-field-line-strong);pointer-events:auto;
 }
 .ep-mission-stepper button{min-height:42px;border:0;border-right:1px solid var(--ep-field-line);background:transparent;color:var(--ep-field-dim);font-size:18px;font-weight:900}
 .ep-mission-stepper button:last-child{border-right:0}
@@ -87,3 +87,10 @@ body.ep-surface-plan #epShell .ep-bottom-nav,body.ep-surface-mission #epShell .e
   .ep-mission-shell{padding-left:8px;padding-right:8px}
   .ep-mission-metrics{font-size:20px}
 }
+
+/* Location detail is the only interactive flow panel while an overlay is open. */
+body:not(.ep-overlay-none) .ep-plan-shell,body:not(.ep-overlay-none) .ep-mission-shell{display:none!important}
+.ep-location-detail{margin:8px 0 0;color:var(--ep-field-text);font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.ep-location-detail.tips{color:var(--ep-field-dim)}
+.ep-location-actions button{font-size:12px}
+.ep-location-meta{font-size:11px}

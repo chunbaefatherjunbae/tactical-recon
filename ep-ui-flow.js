@@ -35,6 +35,7 @@
 
   function sourceLabel(point){
     const source=String(point?.source||'').toUpperCase();
+    if(point?.status==='SECURED')return '개척 완료';
     if(source==='REGISTERED'||source==='BUILTIN')return '등록 거점';
     if(source==='USER'||source==='USER_PLACED'||source==='SAVED')return '내 거점';
     if(source==='SEARCH'||source==='ADDRESS')return '검색 위치';
@@ -220,6 +221,8 @@
         '<strong class="ep-location-mgrs" id="epLocationMgrs">--</strong>'+
         '<span class="ep-location-meta" id="epLocationAddress"></span>'+
         '<span class="ep-location-meta" id="epLocationMetrics">기준위치 없음</span>'+
+        '<p class="ep-location-detail" id="epLocationDesc" hidden></p>'+
+        '<p class="ep-location-detail tips" id="epLocationTips" hidden></p>'+
         '<div class="ep-location-actions">'+
           '<button id="epLocStart" type="button">출발</button>'+
           '<button id="epLocVia" type="button">경유</button>'+
@@ -227,6 +230,9 @@
           '<button id="epLocTemp" type="button">TEMP</button>'+
           '<button id="epLocSave" type="button">저장</button>'+
           '<button id="epLocRemove" type="button">계획삭제</button>'+
+          '<button id="epLocPromote" type="button" hidden>개척 완료</button>'+
+          '<button id="epLocEdit" type="button" hidden>내용 수정</button>'+
+          '<button id="epLocRevert" type="button" hidden>미확인으로</button>'+
         '</div>'+
       '</section>'+
       '<section class="ep-plan-shell" id="epPlanShell" hidden>'+
@@ -237,6 +243,7 @@
           '<button id="epPlanDraw" type="button">경로</button>'+
           '<button id="epPlanImport" type="button">불러오기</button>'+
           '<button id="epPlanStart" class="primary" type="button">▶ 시작</button>'+
+          '<button id="epPlanExit" type="button">종료</button>'+
         '</nav>'+
         '<nav class="ep-draw-actions" id="epDrawActions" hidden>'+
           '<button id="epDrawRoute" type="button">경로선</button>'+
@@ -270,6 +277,10 @@
     $('epLocTemp').onclick=setTemp;
     $('epLocSave').onclick=saveSelected;
     $('epLocRemove').onclick=removeFromPlan;
+    $('epLocPromote').onclick=()=>root.openPromotionModal?.();
+    $('epLocEdit').onclick=()=>$('v28EditSecuredSiteBtn')?.click();
+    $('epLocRevert').onclick=()=>$('v28RevertSecuredSiteBtn')?.click();
+    $('epPlanExit').onclick=()=>{root.exitTargetMode?.();refresh();};
 
     $('epPlanAdd').onclick=openViaSearch;
     $('epPlanDraw').onclick=beginDraw;
@@ -303,8 +314,17 @@
     }
     $('epLocationAddress').textContent=address;
     $('epLocationMetrics').textContent=distanceBearing(point);
+    for(const [id,value] of [['epLocationDesc',point.desc],['epLocationTips',point.tips]]){
+      $(id).textContent=value||'';$(id).hidden=!value;
+    }
+    $('epLocPromote').hidden=!['REGISTERED','UNEXPLORED'].includes(point.status);
+    $('epLocEdit').hidden=point.status!=='SECURED';
+    $('epLocRevert').hidden=point.status!=='SECURED';
 
     const p=plan(),s=surface();
+    $('epLocStart').hidden=s!=='PLAN';
+    $('epLocVia').hidden=s!=='PLAN';
+    $('epLocRemove').hidden=s!=='PLAN';
     $('epLocStart').disabled=s!=='PLAN'||!p;
     $('epLocVia').disabled=s!=='PLAN'||!p;
     $('epLocDest').disabled=s==='MISSION';
@@ -399,6 +419,7 @@
     installed=true;
     build();
     refresh();
+    document.body.classList.add('ep-flow-ready');
     root.addEventListener?.('ep-state-change',refresh);
     root.addEventListener?.('ep-track-lifecycle',refresh);
     setInterval(refresh,1000);

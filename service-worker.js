@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ep-v7-usability-pass-20261007-1';
+const CACHE_VERSION = 'ep-v7-overlay-fix-20261007-2';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
@@ -38,7 +38,7 @@ const STATIC_ASSETS = [
   './ep-overlay-bridge.js',
   './ep-ui-shell.js',
   './ep-ui-flow.js'
-];
+].map(asset => /\.(js|css)$/.test(asset) ? `${asset}?v=${CACHE_VERSION}` : asset);
 
 self.addEventListener('install', event => {
   event.waitUntil(Promise.all([
@@ -77,94 +77,94 @@ async function injectStableOverlay(response) {
     .replace(/\s*<script[^>]+src=["']\.\/v27-3\.js["'][^>]*><\/script>\s*/g, '\n');
 
   if (!html.includes('v27-stable.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-stable.css" />\n</head>');
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-stable.css?v=ep-v7-overlay-fix-20261007-2" />\n</head>');
   }
   if (!html.includes('v27-stable.js')) {
-    html = html.replace('</body>', '  <script src="./v27-stable.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./v27-stable.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('v28.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./v28.css" />\n</head>');
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v28.css?v=ep-v7-overlay-fix-20261007-2" />\n</head>');
   }
   if (!html.includes('v28.js')) {
-    html = html.replace('</body>', '  <script src="./v28.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./v28.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('v29-storage.js')) {
-    html = html.replace('</body>', '  <script src="./v29-storage.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./v29-storage.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('v28-runtime.js')) {
-    html = html.replace('</body>', '  <script src="./v28-runtime.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./v28-runtime.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('v29.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./v29.css" />\n</head>');
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v29.css?v=ep-v7-overlay-fix-20261007-2" />\n</head>');
   }
   if (!html.includes('v29.js')) {
-    html = html.replace('</body>', '  <script src="./v29.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./v29.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('v29-ui.js')) {
-    html = html.replace('</body>', '  <script src="./v29-ui.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./v29-ui.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('v29-stabilize.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./v29-stabilize.css" />\n</head>');
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v29-stabilize.css?v=ep-v7-overlay-fix-20261007-2" />\n</head>');
   }
   if (!html.includes('ep-ui.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./ep-ui.css" />\n</head>');
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./ep-ui.css?v=ep-v7-overlay-fix-20261007-2" />\n</head>');
   }
   if (!html.includes('ep-ui-flow.css')) {
-    html = html.replace('</head>', '  <link rel="stylesheet" href="./ep-ui-flow.css" />\n</head>');
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./ep-ui-flow.css?v=ep-v7-overlay-fix-20261007-2" />\n</head>');
   }
   if (!html.includes('v29-stabilize.js')) {
-    html = html.replace('</body>', '  <script src="./v29-stabilize.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./v29-stabilize.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/location-core.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/location-core.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/location-core.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/search-core.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/search-core.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/search-core.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/reference-core.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/reference-core.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/reference-core.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/plan-core.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/plan-core.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/plan-core.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/mission-core.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/mission-core.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/mission-core.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/plan-legacy-adapter.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/plan-legacy-adapter.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/plan-legacy-adapter.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/state-core.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/state-core.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/state-core.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/surface-core.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/surface-core.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/surface-core.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/overlay-core.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/overlay-core.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/overlay-core.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-core/legacy-adapter.js')) {
-    html = html.replace('</body>', '  <script src="./ep-core/legacy-adapter.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-core/legacy-adapter.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-runtime-bridge.js')) {
-    html = html.replace('</body>', '  <script src="./ep-runtime-bridge.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-runtime-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-plan-bridge.js')) {
-    html = html.replace('</body>', '  <script src="./ep-plan-bridge.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-plan-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-mission-bridge.js')) {
-    html = html.replace('</body>', '  <script src="./ep-mission-bridge.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-mission-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-surface-bridge.js')) {
-    html = html.replace('</body>', '  <script src="./ep-surface-bridge.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-surface-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-overlay-bridge.js')) {
-    html = html.replace('</body>', '  <script src="./ep-overlay-bridge.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-overlay-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-ui-shell.js')) {
-    html = html.replace('</body>', '  <script src="./ep-ui-shell.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-ui-shell.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   if (!html.includes('ep-ui-flow.js')) {
-    html = html.replace('</body>', '  <script src="./ep-ui-flow.js"></script>\n</body>');
+    html = html.replace('</body>', '  <script src="./ep-ui-flow.js?v=ep-v7-overlay-fix-20261007-2"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');

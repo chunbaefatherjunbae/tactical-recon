@@ -138,7 +138,7 @@
     if(typeof openSitrep==='function'&&!openSitrep.__epSelectionCapture){
       const previous=openSitrep;
       const wrapped=function(target,statusType){
-        setSelected(target,{source:target?.source||'SITREP',status:statusType});
+        setSelected(target,{source:target?.source||(statusType==='REGISTERED'?'REGISTERED':'SITREP'),status:statusType});
         return previous.apply(this,arguments);
       };
       wrapped.__epSelectionCapture=true;

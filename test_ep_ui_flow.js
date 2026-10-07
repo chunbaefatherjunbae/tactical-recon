@@ -16,7 +16,7 @@ test('V skin keeps PLAN and MISSION as bottom field panels',()=>{
   assert(css.includes('.ep-plan-shell{'));
   assert(css.includes('bottom:var(--ep-toolbar-h)'));
   assert(css.includes('.ep-mission-shell{'));
-  assert(css.includes('background:rgba(4,10,6,.97)'));
+  assert(css.includes('background:var(--ep-field-bg)'));
   assert(css.includes('.ep-plan-actions,.ep-draw-actions'));
   assert(css.includes('.ep-mission-stepper{'));
 });
@@ -54,8 +54,8 @@ test('MISSION shell uses MissionCore manual NEXT PREV',()=>{
 
 test('legacy target panel and SITREP are hidden by the V shell owner',()=>{
   const shellCss=fs.readFileSync('ep-ui.css','utf8');
-  assert(shellCss.includes('body.ep-shell-ready .sitrep-panel'));
-  assert(shellCss.includes('body.ep-shell-ready .target-mode-panel'));
+  assert(shellCss.includes('body.ep-shell-ready.ep-flow-ready .sitrep-panel'));
+  assert(shellCss.includes('body.ep-shell-ready.ep-flow-ready .target-mode-panel'));
 });
 
 test('surface transitions do not stop global TrackV2',()=>{

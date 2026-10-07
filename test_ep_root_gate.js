@@ -1,7 +1,7 @@
 const fs=require('fs');
 const assert=require('assert');
 
-const index=fs.readFileSync('index.html','utf8');
+const index=fs.readFileSync('index.html','utf8').replace(/\?v=[^"']+/g,'');
 const sw=fs.readFileSync('service-worker.js','utf8');
 
 let passed=0,failed=0;

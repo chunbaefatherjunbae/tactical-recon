@@ -28,6 +28,8 @@
       id:value.id!==undefined?String(value.id):undefined,
       name:String(value.name||value.address||'선택 위치'),
       address:value.address?String(value.address):'',
+      desc:String(value.desc||''),
+      tips:String(value.tips||''),
       source:String(value.source||extra?.source||'LEGACY'),
       status:value.status?String(value.status):extra?.status,
       selectedAt:Number(extra?.selectedAt||Date.now())
