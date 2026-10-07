@@ -65,6 +65,7 @@ jobs:
           node --check test_ep_overlay.js
           node --check test_ep_ui_shell.js
           node --check test_ep_ui_flow.js
+          node --check test_ep_usability.js
           node --check test_ep_root_gate.js
           node --check test_r1.js
           node --check test_r2.js
@@ -106,6 +107,7 @@ jobs:
           node test_ep_overlay.js
           node test_ep_ui_shell.js
           node test_ep_ui_flow.js
+          node test_ep_usability.js
           node test_ep_root_gate.js
 
 
