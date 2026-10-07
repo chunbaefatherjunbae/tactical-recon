@@ -216,6 +216,7 @@
     const summary = $('navRouteSummary');
     const hud = $('navigationHud');
     const controls = $('navSessionControls');
+    document.body.classList.toggle('baseline-navigation-active',Boolean(draft));
     if (!draft) {
       if (summary) summary.hidden = true;
       if (hud) hud.hidden = true;
