@@ -183,47 +183,113 @@
   });
 
   const vectorLayer=L.layerGroup();
+  const secondaryRoadLayer=L.layerGroup();
   const gridLayer=L.layerGroup();
   const placeLayer=L.layerGroup();
+  const decodedCache=new Map();
 
   function roadStyle(cls){
-    if(cls==='M') return {color:'#9de3a4',weight:2.3,opacity:.92};
-    if(cls==='T') return {color:'#70bc7b',weight:1.9,opacity:.86};
-    if(cls==='P') return {color:'#4e945b',weight:1.45,opacity:.82};
-    return {color:'#2f6e3d',weight:1.0,opacity:.78};
+    if(cls==='M') return {color:'#9de3a4',weight:2.35,opacity:.94};
+    if(cls==='T') return {color:'#70bc7b',weight:1.9,opacity:.88};
+    if(cls==='P') return {color:'#4e945b',weight:1.45,opacity:.84};
+    return {color:'#2f6e3d',weight:1.0,opacity:.72,dashArray:'3 5'};
+  }
+
+  function decodePolyline(encoded,precision=Number(Data.precision)||4){
+    const factor=10**precision;
+    let index=0,lat=0,lon=0;
+    const points=[];
+    while(index<encoded.length){
+      let result=0,shift=0,b;
+      do{
+        b=encoded.charCodeAt(index++)-63;
+        result|=(b&0x1f)<<shift;
+        shift+=5;
+      }while(b>=0x20&&index<=encoded.length);
+      const dlat=(result&1)?~(result>>1):(result>>1);
+      lat+=dlat;
+
+      result=0;shift=0;
+      do{
+        b=encoded.charCodeAt(index++)-63;
+        result|=(b&0x1f)<<shift;
+        shift+=5;
+      }while(b>=0x20&&index<=encoded.length);
+      const dlon=(result&1)?~(result>>1):(result>>1);
+      lon+=dlon;
+      points.push([lat/factor,lon/factor]);
+    }
+    return points;
+  }
+
+  function decodedLines(key,value){
+    if(decodedCache.has(key))return decodedCache.get(key);
+    let lines=[];
+    if(Array.isArray(value)){
+      if(value.length&&typeof value[0]==='string'){
+        lines=value.map(encoded=>decodePolyline(encoded)).filter(line=>line.length>=2);
+      }else{
+        // Backward compatibility with the first generated bundle.
+        lines=value.map(item=>item?.p).filter(line=>Array.isArray(line)&&line.length>=2);
+      }
+    }
+    decodedCache.set(key,lines);
+    return lines;
+  }
+
+  function roadLines(cls){
+    if(Data.roads && !Array.isArray(Data.roads)){
+      return decodedLines('road-'+cls,Data.roads[cls]||[]);
+    }
+    return decodedLines('road-'+cls,(Data.roads||[]).filter(item=>item?.c===cls));
+  }
+
+  function updateSecondaryRoadVisibility(){
+    if(effectiveMode!=='lite')return;
+    if(map.getZoom()>=10){
+      if(!vectorLayer.hasLayer(secondaryRoadLayer))vectorLayer.addLayer(secondaryRoadLayer);
+    }else if(vectorLayer.hasLayer(secondaryRoadLayer)){
+      vectorLayer.removeLayer(secondaryRoadLayer);
+    }
   }
 
   function renderVectors(){
     if(vectorReady)return;
     vectorReady=true;
 
-    (Data.coast||[]).forEach(item=>{
-      if(item?.p?.length>=2)L.polyline(item.p,{interactive:false,color:'#386d48',weight:1.25,opacity:.8}).addTo(vectorLayer);
+    const coastLines=decodedLines('coast',Data.coast||[]);
+    if(coastLines.length)L.polyline(coastLines,{interactive:false,color:'#386d48',weight:1.25,opacity:.82}).addTo(vectorLayer);
+
+    const riverLines=decodedLines('rivers',Data.rivers||[]);
+    if(riverLines.length)L.polyline(riverLines,{interactive:false,color:'#1e6043',weight:1.15,opacity:.84}).addTo(vectorLayer);
+
+    const railLines=decodedLines('rails',Data.rails||[]);
+    if(railLines.length)L.polyline(railLines,{interactive:false,color:'#5f8f67',weight:.9,opacity:.72,dashArray:'5 5'}).addTo(vectorLayer);
+
+    ['M','T','P'].forEach(cls=>{
+      const lines=roadLines(cls);
+      if(lines.length)L.polyline(lines,{interactive:false,...roadStyle(cls)}).addTo(vectorLayer);
     });
 
-    (Data.rivers||[]).forEach(item=>{
-      if(item?.p?.length>=2)L.polyline(item.p,{
-        interactive:false,color:'#1e6043',weight:item.c==='R'?1.15:.8,opacity:.82
-      }).addTo(vectorLayer);
-    });
-
-    (Data.rails||[]).forEach(item=>{
-      if(item?.p?.length>=2)L.polyline(item.p,{
-        interactive:false,color:'#5f8f67',weight:.9,opacity:.72,dashArray:'5 5'
-      }).addTo(vectorLayer);
-    });
-
-    (Data.roads||[]).forEach(item=>{
-      if(item?.p?.length>=2)L.polyline(item.p,{interactive:false,...roadStyle(item.c)}).addTo(vectorLayer);
-    });
+    const secondary=roadLines('S');
+    if(secondary.length)L.polyline(secondary,{interactive:false,...roadStyle('S')}).addTo(secondaryRoadLayer);
 
     rebuildPlaces();
+    updateSecondaryRoadVisibility();
+  }
+
+  function normalizedPlace(item){
+    if(Array.isArray(item)){
+      return {n:item[0],c:item[1],p:[Number(item[2]),Number(item[3])]};
+    }
+    return item||{};
   }
 
   function placeIcon(item){
+    const safe=String(item.n||'').replace(/[&<>"]/g,'');
     return L.divIcon({
       className:'lite-place-wrap',
-      html:'<span class="lite-place-dot"></span><b>'+String(item.n||'').replace(/[&<>"]/g,'')+'</b>',
+      html:'<span class="lite-place-dot"></span><b>'+safe+'</b>',
       iconSize:[90,18],
       iconAnchor:[4,9]
     });
@@ -232,7 +298,7 @@
   function rebuildPlaces(){
     placeLayer.clearLayers();
     const z=map.getZoom();
-    (Data.places||[]).forEach(item=>{
+    (Data.places||[]).map(normalizedPlace).forEach(item=>{
       if(!item?.p||!item.n)return;
       if(item.c==='T'&&z<10)return;
       L.marker(item.p,{icon:placeIcon(item),interactive:false,zIndexOffset:-100}).addTo(placeLayer);
@@ -304,6 +370,7 @@
       if(!map.hasLayer(placeLayer))placeLayer.addTo(map);
       rebuildGrid();
       rebuildPlaces();
+      updateSecondaryRoadVisibility();
     }else{
       if(map.hasLayer(terrainLayer))map.removeLayer(terrainLayer);
       if(map.hasLayer(vectorLayer))map.removeLayer(vectorLayer);
@@ -330,7 +397,10 @@
       requested:requestedMode,
       effective:effectiveMode,
       label:mapStatusLabel(),
-      dataReady:Boolean((Data.roads||[]).length||(Data.rivers||[]).length),
+      dataReady:Boolean(
+        (Array.isArray(Data.roads) ? Data.roads.length : Object.values(Data.roads||{}).some(list=>list?.length)) ||
+        (Data.rivers||[]).length
+      ),
       dataGeneratedAt:Data.generatedAt||null,
       dataSource:Data.source||null,
       packStatus:offline?.packStatus||'UNKNOWN',
@@ -366,6 +436,7 @@
     if(effectiveMode==='lite'){
       rebuildGrid();
       rebuildPlaces();
+      updateSecondaryRoadVisibility();
     }
   });
 
@@ -375,6 +446,7 @@
     applyMode,
     terrainLayer,
     vectorLayer,
+    secondaryRoadLayer,
     gridLayer,
     placeLayer,
     prepareLitePack:()=>Offline?.prepareLitePack?.()
