@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#0b0f0c">
+  <title>TACTICAL RECON // BASELINE</title>
+  <link rel="stylesheet" href="../vendor/leaflet-1.9.4.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main id="app" aria-label="TACTICAL RECON BASELINE">
+    <div id="map" aria-label="지도"></div>
+
+    <section class="position-hud" id="positionHud" aria-live="polite">
+      <strong id="positionCoord">POSITION --</strong>
+      <span id="positionMeta">NO REFERENCE</span>
+    </section>
+
+    <nav class="quick-stack" aria-label="지도 빠른 조작">
+      <button class="quick-btn" id="searchBtn" type="button" aria-label="검색" title="검색">
+        <span aria-hidden="true">⌕</span>
+      </button>
+      <button class="quick-btn" id="settingsBtn" type="button" aria-label="설정" title="설정">
+        <span aria-hidden="true">⋮</span>
+      </button>
+      <button class="quick-btn" id="gpsBtn" type="button" aria-label="GPS 켜기/끄기" aria-pressed="false" title="GPS">
+        <span class="btn-label">GPS</span>
+      </button>
+      <button class="quick-btn" id="followBtn" type="button" aria-label="센터 및 트래킹" aria-pressed="false" title="센터 및 트래킹">
+        <span aria-hidden="true">◎</span>
+      </button>
+      <button class="quick-btn" id="tempBtn" type="button" aria-label="임시 좌표. 짧게 눌러 지정, 길게 눌러 이동" aria-pressed="false" title="TEMP">
+        <span aria-hidden="true">◇</span>
+      </button>
+    </nav>
+
+    <div class="reticle" aria-hidden="true">
+      <i class="reticle-h"></i>
+      <i class="reticle-v"></i>
+      <i class="reticle-core"></i>
+    </div>
+
+    <div class="scale-hud" id="scaleHud" aria-hidden="true">
+      <span class="scale-line" id="scaleLine"></span>
+      <strong id="scaleText">--</strong>
+    </div>
+
+    <section class="sheet" id="sheet" hidden aria-modal="true" role="dialog">
+      <header class="sheet-head">
+        <div>
+          <small>BASELINE</small>
+          <strong id="sheetTitle">패널</strong>
+        </div>
+        <button id="sheetClose" type="button" aria-label="닫기">×</button>
+      </header>
+      <div class="sheet-body" id="sheetBody"></div>
+    </section>
+
+    <nav class="bottom-nav" aria-label="주요 기능">
+      <button type="button" data-panel="sites"><span class="nav-icon">◇</span><span>거점</span></button>
+      <button type="button" data-panel="explore"><span class="nav-icon">⌖</span><span>탐색</span></button>
+      <button type="button" data-panel="plans"><span class="nav-icon">⌁</span><span>계획</span></button>
+      <button type="button" data-panel="records"><span class="nav-icon">≡</span><span>기록</span></button>
+    </nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script src="../vendor/leaflet-1.9.4.js"></script>
+  <script src="../vendor/mgrs-1.0.0.js"></script>
+  <script src="./state.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
