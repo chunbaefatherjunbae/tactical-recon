@@ -771,7 +771,7 @@
 
     capture.addEventListener('pointerdown',event => {
       if (!drawingMode) return;
-      capture.setPointerCapture?.(event.pointerId);
+      try { capture.setPointerCapture?.(event.pointerId); } catch {}
       pointerState.set(event.pointerId,{x:event.clientX,y:event.clientY});
 
       if (pointerState.size === 1 && !gestureUntilClear) {
