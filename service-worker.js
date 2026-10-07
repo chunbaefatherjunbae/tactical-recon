@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ep-v6-ui-control-audit-20261007-3';
+const CACHE_VERSION = 'ep-v6-frameless-hud-20261007-4';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
