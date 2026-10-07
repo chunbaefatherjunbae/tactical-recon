@@ -52,9 +52,10 @@ test('MISSION shell uses MissionCore manual NEXT PREV',()=>{
   assert(flow.includes('epMissionIndex'));
 });
 
-test('legacy target panel and SITREP are hidden after EP flow mounts',()=>{
-  assert(css.includes('body.ep-shell-ready .sitrep-panel'));
-  assert(css.includes('body.ep-shell-ready .target-mode-panel'));
+test('legacy target panel and SITREP are hidden by the V shell owner',()=>{
+  const shellCss=fs.readFileSync('ep-ui.css','utf8');
+  assert(shellCss.includes('body.ep-shell-ready .sitrep-panel'));
+  assert(shellCss.includes('body.ep-shell-ready .target-mode-panel'));
 });
 
 test('surface transitions do not stop global TrackV2',()=>{
