@@ -86,11 +86,37 @@
     }).filter(Boolean);
   }
 
-  function addStroke(plan,points){
+  function cleanStroke(points,idPrefix='stroke'){
     const clean=(Array.isArray(points)?points:[]).filter(validPoint).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));
-    if(clean.length<2)return null;
-    const stroke={id:id('stroke'),points:clean};
+    return clean.length>=2?{id:id(idPrefix),points:clean}:null;
+  }
+
+  function addStroke(plan,points){
+    const stroke=cleanStroke(points,'route');
+    if(!stroke)return null;
     plan.routeStrokes.push(stroke);plan.updatedAt=Date.now();return stroke;
+  }
+
+  function addOverlayStroke(plan,points){
+    const stroke=cleanStroke(points,'overlay');
+    if(!stroke)return null;
+    if(!Array.isArray(plan.overlayStrokes))plan.overlayStrokes=[];
+    plan.overlayStrokes.push(stroke);plan.updatedAt=Date.now();return stroke;
+  }
+
+  function undoStroke(plan,kind='ROUTE'){
+    const key=String(kind).toUpperCase()==='MARK'||String(kind).toUpperCase()==='OVERLAY'?'overlayStrokes':'routeStrokes';
+    const bucket=Array.isArray(plan[key])?plan[key]:[];
+    const removed=bucket.pop()||null;
+    if(removed)plan.updatedAt=Date.now();
+    return removed;
+  }
+
+  function clearStrokes(plan,kind='ROUTE'){
+    const key=String(kind).toUpperCase()==='MARK'||String(kind).toUpperCase()==='OVERLAY'?'overlayStrokes':'routeStrokes';
+    const bucket=Array.isArray(plan[key])?plan[key]:[];
+    if(!bucket.length)return false;
+    plan[key]=[];plan.updatedAt=Date.now();return true;
   }
 
   function replaceRouteStrokes(plan,strokes){
@@ -125,5 +151,5 @@
     return movePoint(mission.activePlan,from,to);
   }
 
-  return {clone,point,roleAt,createPlan,setStart,setDestination,insertPoint,movePoint,removePoint,normalizeStrokes,addStroke,replaceRouteStrokes,replaceOverlayStrokes,startMission,stepMission,moveFuturePoint};
+  return {clone,point,roleAt,createPlan,setStart,setDestination,insertPoint,movePoint,removePoint,normalizeStrokes,cleanStroke,addStroke,addOverlayStroke,undoStroke,clearStrokes,replaceRouteStrokes,replaceOverlayStrokes,startMission,stepMission,moveFuturePoint};
 });

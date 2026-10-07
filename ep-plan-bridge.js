@@ -128,6 +128,61 @@
     return applyPlan(plan);
   }
 
+  function captureStroke(segment,kind='ROUTE'){
+    const p=port();
+    if(!p?.isEditable?.()||!Array.isArray(segment))return false;
+    const plan=syncFromLegacy(true);
+    if(!plan)return false;
+    const points=segment.map(coords=>({lat:Number(coords?.[0]),lon:Number(coords?.[1])}));
+    const stroke=String(kind).toUpperCase()==='MARK'
+      ? Plan.addOverlayStroke(plan,points)
+      : Plan.addStroke(plan,points);
+    return Boolean(stroke&&applyPlan(plan));
+  }
+
+  function undoStroke(kind){
+    const p=port();
+    if(!p?.isEditable?.())return false;
+    const plan=syncFromLegacy(true);
+    if(!plan||!Plan.undoStroke(plan,kind))return false;
+    return applyPlan(plan);
+  }
+
+  function clearStrokes(kind){
+    const p=port();
+    if(!p?.isEditable?.())return false;
+    const plan=syncFromLegacy(true);
+    if(!plan||!Plan.clearStrokes(plan,kind))return false;
+    return applyPlan(plan);
+  }
+
+  function installStrokeOwners(){
+    const undo=root.undoRouteStroke;
+    if(typeof undo==='function'&&!undo.__epStrokeOwner){
+      const wrapped=function(){
+        const kind=port()?.drawKind?.()||'ROUTE';
+        if(undoStroke(kind))return;
+        return undo.apply(this,arguments);
+      };
+      wrapped.__epStrokeOwner=true;wrapped.__epLegacy=undo;root.undoRouteStroke=wrapped;
+    }
+
+    const clear=root.clearRouteDraft;
+    if(typeof clear==='function'&&!clear.__epStrokeOwner){
+      const wrapped=function(){
+        const kind=port()?.drawKind?.()||'ROUTE';
+        const plan=syncFromLegacy(true);
+        const bucket=String(kind).toUpperCase()==='MARK'?plan?.overlayStrokes:plan?.routeStrokes;
+        if(!Array.isArray(bucket)||!bucket.length)return clear.apply(this,arguments);
+        const label=String(kind).toUpperCase()==='MARK'?'OVERLAY':'ROUTE';
+        if(typeof confirm==='function'&&!confirm(label+' 선을 모두 지우시겠습니까?'))return;
+        if(clearStrokes(kind))return;
+        return clear.apply(this,arguments);
+      };
+      wrapped.__epStrokeOwner=true;wrapped.__epLegacy=clear;root.clearRouteDraft=wrapped;
+    }
+  }
+
   function installPointOwners(){
     const assign=root.assignPlanPoint;
     if(typeof assign==='function'&&!assign.__epPointOwner){
@@ -217,6 +272,7 @@
   function install(){
     ['enterTargetMode','saveTargetRoute','restorePlanEditState','updateTargetModePanel','exitTargetMode'].forEach(installSyncWrapper);
     installPointOwners();
+    installStrokeOwners();
     syncFromLegacy(true);
   }
 
@@ -227,6 +283,9 @@
     mutate,
     setRole,
     clearRole,
+    captureStroke,
+    undoStroke,
+    clearStrokes,
     getPlan:()=>runtime.state.plan,
     install
   };

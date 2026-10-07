@@ -85,12 +85,37 @@ test('PLAN bridge loads after runtime bridge',()=>{
   assert(sw.indexOf("html.includes('ep-plan-bridge.js')")>sw.indexOf("html.includes('ep-runtime-bridge.js')"));
 });
 
+test('route capture is owned by EP PlanCore while V keeps gesture input',()=>{
+  const index=fs.readFileSync('index.html','utf8');
+  const bridge=fs.readFileSync('ep-plan-bridge.js','utf8');
+  assert(index.includes('window.EpPlanBridge?.captureStroke?.(cleanSegment, routeDrawKind)'));
+  assert(bridge.includes('function captureStroke(segment,kind='));
+  assert(bridge.includes('Plan.addOverlayStroke(plan,points)'));
+  assert(bridge.includes('Plan.addStroke(plan,points)'));
+});
+
+test('route undo and clear actions are owned by EP PlanCore',()=>{
+  const bridge=fs.readFileSync('ep-plan-bridge.js','utf8');
+  assert(bridge.includes('function undoStroke(kind)'));
+  assert(bridge.includes('function clearStrokes(kind)'));
+  assert(bridge.includes('root.undoRouteStroke=wrapped'));
+  assert(bridge.includes('root.clearRouteDraft=wrapped'));
+});
+
 test('plan core normalizes route and overlay stroke sets',()=>{
   const p=Plan.createPlan({lat:37.3,lon:127.3,name:'D'},{lat:37,lon:127,name:'S'});
   Plan.replaceRouteStrokes(p,[[{lat:37,lon:127},{lat:37.1,lon:127.1}]]);
   Plan.replaceOverlayStrokes(p,[[{lat:37.2,lon:127.2},{lat:37.3,lon:127.3}]]);
   assert.equal(p.routeStrokes.length,1);
   assert.equal(p.overlayStrokes.length,1);
+  Plan.addStroke(p,[{lat:37.31,lon:127.31},{lat:37.32,lon:127.32}]);
+  Plan.addOverlayStroke(p,[{lat:37.21,lon:127.21},{lat:37.22,lon:127.22}]);
+  assert.equal(p.routeStrokes.length,2);
+  assert.equal(p.overlayStrokes.length,2);
+  assert(Plan.undoStroke(p,'ROUTE'));
+  assert.equal(p.routeStrokes.length,1);
+  assert(Plan.clearStrokes(p,'MARK'));
+  assert.equal(p.overlayStrokes.length,0);
 });
 
 if(failed){console.error('EP plan bridge failed: '+failed);process.exit(1);}

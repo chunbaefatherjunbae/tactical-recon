@@ -4207,9 +4207,12 @@
 
       if (routeCurrentSegment && routeCurrentSegment.length >= 2) {
         const cleanSegment = routeCurrentSegment.map(pt => [pt[0], pt[1]]);
-        if (routeDrawKind === 'MARK') routeMarkSegments.push(cleanSegment);
-        else routeDraftSegments.push(cleanSegment);
-        routeDirty = true;
+        const epHandled = window.EpPlanBridge?.captureStroke?.(cleanSegment, routeDrawKind);
+        if (!epHandled) {
+          if (routeDrawKind === 'MARK') routeMarkSegments.push(cleanSegment);
+          else routeDraftSegments.push(cleanSegment);
+          routeDirty = true;
+        }
       } else if (routeCurrentPolyline) {
         routeDraftLayer.removeLayer(routeCurrentPolyline);
       }
@@ -5894,6 +5897,9 @@
       mapCenter() {
         const c=map.getCenter();
         return {coords:[Number(c.lat),Number(c.lng)]};
+      },
+      drawKind() {
+        return routeDrawKind;
       },
       apply(snapshot, options = {}) {
         if (!snapshot || !targetModeActive) return false;
