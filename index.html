@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>TACTICAL RECON // FIELD TERMINAL V29</title>
+  <title>TACTICAL RECON // ECHOPOINT</title>
   <meta name="theme-color" content="#020904" id="appThemeColor" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -1501,6 +1501,11 @@
     }
 
   </style>
+  <link rel="stylesheet" href="./v27-stable.css" />
+  <link rel="stylesheet" href="./v28.css" />
+  <link rel="stylesheet" href="./v29.css" />
+  <link rel="stylesheet" href="./v29-stabilize.css" />
+  <link rel="stylesheet" href="./ep-ui.css" />
 </head>
 <body class="theme-nvg-green">
 
@@ -5981,5 +5986,29 @@
       });
     }
   </script>
+  <!-- Deterministic runtime order. Service-worker injection remains only as an old-cache fallback. -->
+  <script src="./v27-stable.js"></script>
+  <script src="./v28.js"></script>
+  <script src="./v29-storage.js"></script>
+  <script src="./v28-runtime.js"></script>
+  <script src="./v29.js"></script>
+  <script src="./v29-ui.js"></script>
+  <script src="./v29-stabilize.js"></script>
+  <script src="./ep-core/location-core.js"></script>
+  <script src="./ep-core/search-core.js"></script>
+  <script src="./ep-core/reference-core.js"></script>
+  <script src="./ep-core/plan-core.js"></script>
+  <script src="./ep-core/mission-core.js"></script>
+  <script src="./ep-core/plan-legacy-adapter.js"></script>
+  <script src="./ep-core/state-core.js"></script>
+  <script src="./ep-core/surface-core.js"></script>
+  <script src="./ep-core/overlay-core.js"></script>
+  <script src="./ep-core/legacy-adapter.js"></script>
+  <script src="./ep-runtime-bridge.js"></script>
+  <script src="./ep-plan-bridge.js"></script>
+  <script src="./ep-mission-bridge.js"></script>
+  <script src="./ep-surface-bridge.js"></script>
+  <script src="./ep-overlay-bridge.js"></script>
+  <script src="./ep-ui-shell.js"></script>
 </body>
 </html>

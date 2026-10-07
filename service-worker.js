@@ -19,6 +19,7 @@ const STATIC_ASSETS = [
   './vendor/leaflet-1.9.4.css',
   './v29-stabilize.css',
   './v29-stabilize.js',
+  './ep-ui.css',
   './ep-core/location-core.js',
   './ep-core/search-core.js',
   './ep-core/reference-core.js',
@@ -33,7 +34,8 @@ const STATIC_ASSETS = [
   './ep-plan-bridge.js',
   './ep-mission-bridge.js',
   './ep-surface-bridge.js',
-  './ep-overlay-bridge.js'
+  './ep-overlay-bridge.js',
+  './ep-ui-shell.js'
 ];
 
 self.addEventListener('install', event => {
@@ -102,6 +104,9 @@ async function injectStableOverlay(response) {
   if (!html.includes('v29-stabilize.css')) {
     html = html.replace('</head>', '  <link rel="stylesheet" href="./v29-stabilize.css" />\n</head>');
   }
+  if (!html.includes('ep-ui.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./ep-ui.css" />\n</head>');
+  }
   if (!html.includes('v29-stabilize.js')) {
     html = html.replace('</body>', '  <script src="./v29-stabilize.js"></script>\n</body>');
   }
@@ -149,6 +154,9 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('ep-overlay-bridge.js')) {
     html = html.replace('</body>', '  <script src="./ep-overlay-bridge.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-ui-shell.js')) {
+    html = html.replace('</body>', '  <script src="./ep-ui-shell.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
