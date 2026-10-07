@@ -35,24 +35,24 @@
       gpsPower:'GPS 전원',nearby:'주변 탐색',layers:'레이어',roads:'도로 강조',display:'표시 모드',
       reuse:'재활용/궤적',gpx:'GPX 반출',backup:'전체 백업',restore:'백업 복원',
       freeTrack:'자유 궤적 시작',freeTrackManage:'자유 궤적 관리',
-      recon:'탐색',records:'기록',lightMap:'경량 지도',standardMap:'일반 지도',language:'언어',
-      reconRecorded:'기록 거점 탐색',reconWild:'미개척 탐색',reconRange:'탐색 반경',
-      objectiveInfo:'목표 정보',objectiveChange:'목표 변경',planAction:'계획',navAction:'항법',bearingAction:'방위각',mapFit:'지도 맞춤',
+      recon:'무작위',records:'기록',lightMap:'경량 지도',standardMap:'일반 지도',language:'언어',
+      reconRecorded:'등록 거점',reconWild:'미개척 좌표',reconRange:'범위',
+      objectiveInfo:'목적지 정보',objectiveChange:'목적지 변경',planAction:'계획',navAction:'항법',bearingAction:'방위각',mapFit:'지도 맞춤',
       drawRoute:'ROUTE',drawDanger:'위험',drawBlocked:'차단',drawObservation:'관측',drawReference:'참고',drawOther:'기타',
-      pickerSearch:'위치 검색',pickerCancel:'취소',pickerSite:'이 위치 선택',pickerObjective:'목표로 지정',
+      pickerSearch:'위치 검색',pickerCancel:'취소',pickerSite:'이 위치 선택',pickerObjective:'목적지로 지정',
       pickerTemp:'TEMP로 지정',pickerHome:'HOME으로 지정',
-      objectiveHint:'탭하여 목표 변경',objectiveRequired:'목표 지정 필요',navStart:'탭하여 항법 시작',positionRequired:'위치 기준 필요',
-      noObjective:'목표 미지정',sensorOff:'센서 OFF',sensorOn:'센서 ON',sensorUse:'센서 나침반 사용',
+      objectiveHint:'탭하여 목적지 변경',objectiveRequired:'목적지 지정 필요',navStart:'탭하여 항법 시작',positionRequired:'위치 기준 필요',
+      noObjective:'목적지 미지정',sensorOff:'센서 OFF',sensorOn:'센서 ON',sensorUse:'센서 나침반 사용',
       sensorStop:'센서 끄기',sensorUnavailable:'이 기기/브라우저에서 절대방위 센서를 사용할 수 없습니다.',
       sensorDenied:'센서 권한이 허용되지 않았습니다.',sensorNote:'기본은 계산형 방위각입니다. 센서는 필요할 때만 직접 켜며 이 화면을 벗어나면 자동으로 꺼집니다.',
-      grid:'GRID',true:'TRUE',mag:'MAG',device:'기기 자북',targetDelta:'목표까지 회전',
+      grid:'GRID',true:'TRUE',mag:'MAG',device:'기기 자북',targetDelta:'목적지까지 회전',
       backupDone:'백업 파일을 만들었습니다.',restoreDone:'백업을 복원했습니다. 앱을 다시 엽니다.',
       invalidBackup:'올바른 TACTICAL RECON 백업 파일이 아닙니다.',
       storageFail:'저장 실패 · 기록을 확인하세요',storageFailBody:'브라우저 저장공간 쓰기에 실패했습니다. TRACK은 IndexedDB 안전 미러를 시도했지만, 계속 이동하기 전에 백업/저장 상태를 확인하세요.',
       navRecovery:'이전 항법 세션',restoreNav:'복원',discardNav:'종료',
       restoredNav:'항법 세션을 복원했습니다. GPS/센서는 자동으로 켜지지 않았습니다.',
       lastFix:'LAST FIX',statusAll:'전체',statusUnverified:'미확인',statusVerified:'확인완료',
-      sourceAll:'전체 출처',sourceBuiltin:'기본 DB',sourceLocal:'내 기록',
+      sourceAll:'전체 출처',sourceBuiltin:'등록 거점',sourceLocal:'내 거점',
       freePlan:'자유 궤적',freeStarted:'자유 궤적 기록을 시작했습니다.',trackPaused:'궤적 일시정지',trackResumed:'궤적 기록 재개',
       saveBeforeDelete:'삭제 전 전체 백업을 권장합니다.'
     },
@@ -1688,8 +1688,9 @@
 
   function runRecordedRecon(){
     try{
-      if(typeof selectedRadius!=='undefined'&&selectedRadius!=='all'&&typeof hasGpsFix!=='undefined'&&!hasGpsFix){
-        alert(lang()==='ko'?'거리 기반 기록 거점 탐색은 GPS FIX 이후 사용할 수 있습니다.':'RANGE-BASED RECORDED SITE RECON REQUIRES GPS FIX.');
+      const rangeRef=typeof getReferencePosition==='function'?getReferencePosition():null;
+      if(typeof selectedRadius!=='undefined'&&selectedRadius!=='all'&&!rangeRef?.coords){
+        alert(lang()==='ko'?'범위를 사용하려면 GPS, TEMP 또는 마지막 위치가 필요합니다.':'RANGE REQUIRES GPS, TEMP, OR LAST FIX.');
         return;
       }
       const claimed=new Set((typeof getLocalIntel==='function'?getLocalIntel():[])
@@ -1698,11 +1699,11 @@
       const pool=(typeof RECON_TARGETS!=='undefined'&&Array.isArray(RECON_TARGETS)?RECON_TARGETS:[]).filter(site=>{
         if(claimed.has(String(site.id)))return false;
         if(typeof selectedRadius==='undefined'||selectedRadius==='all')return true;
-        if(typeof baseLocation==='undefined'||typeof calcDistanceKmRaw!=='function')return false;
-        return calcDistanceKmRaw(baseLocation[0],baseLocation[1],site.coords[0],site.coords[1])<=Number(selectedRadius);
+        if(!rangeRef?.coords||typeof calcDistanceKmRaw!=='function')return false;
+        return calcDistanceKmRaw(rangeRef.coords[0],rangeRef.coords[1],site.coords[0],site.coords[1])<=Number(selectedRadius);
       });
       if(!pool.length){
-        alert(lang()==='ko'?'선택 반경에 아직 확인하지 않은 기록 거점이 없습니다.':'NO UNVERIFIED RECORDED SITES IN THIS RANGE.');
+        alert(lang()==='ko'?'선택 범위에 아직 확인하지 않은 등록 거점이 없습니다.':'NO UNVERIFIED REGISTERED SITES IN THIS RANGE.');
         return;
       }
       lastReconMode='RECORDED';
@@ -1715,7 +1716,7 @@
   }
 
   function installReconPanel(){
-    const section=makeSection('control-recon','RECON',
+    const section=makeSection('control-recon',lang()==='ko'?'무작위':'RANDOM',
       '<div class="v29-recon-note"></div>'+
       '<div class="v29-control-label" id="v29ReconRangeLabel"></div>'+
       '<div class="field-control-grid v29-recon-range">'+
@@ -1744,7 +1745,7 @@
     const section=document.getElementById('control-recon');if(!section)return;
     const note=section.querySelector('.v29-recon-note');
     if(note)note.textContent=lang()==='ko'
-      ? '기록 거점은 현대 지도에서 잊힌 장소를 다시 찾고, 미개척 탐색은 무작위 좌표를 직접 개척합니다.'
+      ? '등록 거점은 아직 확인하지 않은 저장 DB에서 고르고, 미개척 좌표는 선택 범위 안에서 새 좌표를 생성합니다.'
       : 'RECORDED SITES REDISCOVER FORGOTTEN PLACES. UNEXPLORED RECON GENERATES A NEW RANDOM COORDINATE.';
     const label=document.getElementById('v29ReconRangeLabel');if(label)label.textContent=t('reconRange');
     const current=typeof selectedRadius!=='undefined'?String(selectedRadius):'all';
