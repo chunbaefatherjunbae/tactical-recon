@@ -39,6 +39,15 @@ test('legacy panels map into EP overlay axis',()=>{
   assert(source.includes('closeAllLegacy(next)'));
 });
 
+test('V29 record sheet class is observed so close always restores bottom controls',()=>{
+  const source=fs.readFileSync('ep-overlay-bridge.js','utf8');
+  assert(source.includes('function installV29SheetObserver()'));
+  assert(source.includes("attributeFilter:['class']"));
+  assert(source.includes("if(state.overlay!=='RECORDS')setOverlay('RECORDS'"));
+  assert(source.includes("else if(state.overlay==='RECORDS')"));
+  assert(source.includes("closeOverlay('RECORDS'"));
+});
+
 test('overlay state is exposed on body for shell CSS',()=>{
   const source=fs.readFileSync('ep-overlay-bridge.js','utf8');
   assert(source.includes('document.body.dataset.epOverlay=state.overlay'));
