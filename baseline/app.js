@@ -24,6 +24,7 @@
   let exploreCircle = null;
   let sitePlacementActive = false;
   let sitePlacementAddressToken = 0;
+  let mapSearchAddressToken = 0;
   let editingSiteId = null;
   const siteMarkers = new Map();
   const siteLayer = L.layerGroup();
@@ -523,6 +524,19 @@
     return display.length ? display.reverse().join(' ') : fallback;
   }
 
+  async function searchAddressOnline(query, limit = 6) {
+    const clean=String(query || '').trim();
+    if(!clean || !navigator.onLine) return [];
+    const res=await fetch(
+      'https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=' +
+      encodeURIComponent(limit) + '&addressdetails=1&accept-language=ko&q=' + encodeURIComponent(clean),
+      {headers:{Accept:'application/json'}}
+    );
+    if(!res.ok) throw new Error('search failed');
+    const data=await res.json();
+    return Array.isArray(data) ? data : [];
+  }
+
   function sitesHtml(filter) {
     const registeredCount = Sites.getRegistered().length;
     const mineCount = Sites.getUserSites().length;
@@ -659,9 +673,7 @@
       const token = ++sitePlacementAddressToken;
       results.innerHTML = '<div class="site-add-empty">SEARCHING...</div>';
       try {
-        const res = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=6&addressdetails=1&accept-language=ko&q=' + encodeURIComponent(query), {headers:{Accept:'application/json'}});
-        if (!res.ok) throw new Error('search failed');
-        const data = await res.json();
+        const data = await searchAddressOnline(query,6);
         if (token !== sitePlacementAddressToken) return;
         if (!Array.isArray(data) || !data.length) {
           results.innerHTML = '<div class="site-add-empty">검색 결과 없음</div>';
@@ -936,6 +948,11 @@
     });
   }
 
+  function setActiveQuick(panel) {
+    $('searchBtn')?.classList.toggle('active',panel === 'search');
+    $('settingsBtn')?.classList.toggle('active',panel === 'settings');
+  }
+
   function openSheet(panel, custom) {
     if (sitePlacementActive) {
       sitePlacementActive = false;
@@ -951,6 +968,7 @@
     $('sheet').hidden = false;
     S.setPanel(panel);
     setActiveNav(panel);
+    setActiveQuick(panel);
   }
 
   function closeSheet() {
@@ -958,6 +976,7 @@
     $('sheet').hidden = true;
     S.setPanel(null);
     setActiveNav(null);
+    setActiveQuick(null);
   }
 
   function parseDirectLocation(raw) {
@@ -1028,29 +1047,74 @@
 
   function openSearch() {
     openSheet('search', {
-      title: '검색',
-      html: '<div class="search-row">' +
-        '<input id="baselineSearchInput" type="search" autocomplete="off" placeholder="MGRS / 37.12345, 127.12345">' +
-        '<button id="baselineSearchGo" type="button">이동</button>' +
-        '</div><p class="sheet-note">초기모델은 좌표 이동부터 제공. 주소/장소 검색은 검색 모듈에서 별도로 재구축.</p>'
+      title:'검색',
+      html:'<div class="search-row">' +
+        '<input id="baselineSearchInput" type="search" autocomplete="off" placeholder="주소 · 시설명 · MGRS · WGS84">' +
+        '<button id="baselineSearchGo" type="button">검색</button>' +
+        '</div>' +
+        '<div class="site-add-results map-search-results" id="baselineSearchResults"></div>' +
+        '<p class="sheet-note">좌표는 오프라인에서도 바로 이동합니다. 주소·시설 검색은 온라인 연결이 필요합니다.</p>'
     });
 
-    const input = $('baselineSearchInput');
-    const run = () => {
-      const result = parseDirectLocation(input?.value);
-      if (!result) {
-        toast('좌표 확인 필요');
+    const input=$('baselineSearchInput');
+    const results=$('baselineSearchResults');
+
+    const moveTo=(lat,lon,label='위치') => {
+      map.setView([Number(lat),Number(lon)],Math.max(map.getZoom(),16),{animate:false});
+      closeSheet();
+      toast(label + ' 이동');
+    };
+
+    const run=async () => {
+      const query=String(input?.value || '').trim();
+      if(!query) return input?.focus();
+
+      const direct=parseDirectLocation(query);
+      if(direct){
+        moveTo(direct.lat,direct.lon,direct.kind);
         return;
       }
-      map.setView([result.lat, result.lon], 16, { animate: true });
-      closeSheet();
-      toast(result.kind + ' 이동');
+
+      if(!navigator.onLine){
+        results.innerHTML='<div class="site-add-empty">OFFLINE · 주소/시설 검색은 네트워크가 필요합니다.</div>';
+        return;
+      }
+
+      const token=++mapSearchAddressToken;
+      results.innerHTML='<div class="site-add-empty">SEARCHING...</div>';
+      try{
+        const data=await searchAddressOnline(query,6);
+        if(token!==mapSearchAddressToken)return;
+        if(!data.length){
+          results.innerHTML='<div class="site-add-empty">검색 결과 없음</div>';
+          return;
+        }
+        results.innerHTML=data.map((row,index)=>{
+          const lat=Number(row.lat),lon=Number(row.lon);
+          if(!Number.isFinite(lat)||!Number.isFinite(lon))return '';
+          const address=normalizeKoreanAddress(row,row.display_name || query);
+          const label=String(row.name || row.display_name || address || query).split(',')[0].trim();
+          return '<button type="button" data-map-search-result="' + index + '">' +
+            '<strong>' + esc(label || address || query) + '</strong>' +
+            '<span>' + esc(address || query) + ' · ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '</span>' +
+          '</button>';
+        }).join('');
+        results.querySelectorAll('[data-map-search-result]').forEach(btn=>btn.addEventListener('click',()=>{
+          const row=data[Number(btn.dataset.mapSearchResult)];
+          const lat=Number(row?.lat),lon=Number(row?.lon);
+          const label=String(row?.name || row?.display_name || '위치').split(',')[0].trim();
+          if(Number.isFinite(lat)&&Number.isFinite(lon))moveTo(lat,lon,label);
+        }));
+      }catch{
+        if(token===mapSearchAddressToken)results.innerHTML='<div class="site-add-empty">검색 실패 · 네트워크 상태 확인</div>';
+      }
     };
-    $('baselineSearchGo')?.addEventListener('click', run);
-    input?.addEventListener('keydown', event => {
-      if (event.key === 'Enter') run();
+
+    $('baselineSearchGo')?.addEventListener('click',run);
+    input?.addEventListener('keydown',event=>{
+      if(event.key==='Enter'){event.preventDefault();run();}
     });
-    setTimeout(() => input?.focus(), 0);
+    setTimeout(()=>input?.focus(),0);
   }
 
   $('searchBtn')?.addEventListener('click', openSearch);
