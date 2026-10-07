@@ -390,7 +390,7 @@
       viaRows +
       '<button class="plan-add-via" type="button" id="planAddVia">+ 경유지 추가</button>' +
       '<div class="plan-route-row">' +
-        '<span>도착지</span><button type="button" data-edit-point="DEST">' + esc(pointShort(draft.destination,'선택')) + '</button>' +
+        '<span>목적지</span><button type="button" data-edit-point="DEST">' + esc(pointShort(draft.destination,'선택')) + '</button>' +
       '</div>';
   }
 
@@ -456,7 +456,7 @@
       if ($('planNameInput')) draft.name = $('planNameInput').value.trim();
       if (!draft.start) draft.start=referencePoint('START');
       if (!draft.start) return toast('출발지 기준 위치 필요');
-      if (!draft.destination) return toast('도착지 선택 필요');
+      if (!draft.destination) return toast('목적지 선택 필요');
       routeChanged('PLAN_CONFIRM');
       App.closeSheet();
     });
@@ -516,7 +516,7 @@
   }
 
   function openPointPicker(role,index = null) {
-    App.openSheet('plans',{title:(role === 'START' ? '출발지' : role === 'DEST' ? '도착지' : '경유지') + ' 선택',html:pointPickerHtml(role,index)});
+    App.openSheet('plans',{title:(role === 'START' ? '출발지' : role === 'DEST' ? '목적지' : '경유지') + ' 선택',html:pointPickerHtml(role,index)});
 
     document.querySelectorAll('[data-point-source]').forEach(btn => {
       btn.addEventListener('click',() => {
@@ -753,7 +753,7 @@
   }
 
   function startSession() {
-    if (!draft?.destination) return toast('도착지 필요');
+    if (!draft?.destination) return toast('목적지 필요');
     if (!draft.start) {
       draft.start=referencePoint('START');
       if (!draft.start) return toast('출발지 필요');
@@ -881,7 +881,7 @@
         '<strong>' + esc(record.name) + '</strong>' +
         '<div class="record-summary">' +
           '<span>출발</span><b>' + esc(pointShort(plan.start,'--')) + '</b>' +
-          '<span>도착</span><b>' + esc(pointShort(plan.destination,'--')) + '</b>' +
+          '<span>목적지</span><b>' + esc(pointShort(plan.destination,'--')) + '</b>' +
           '<span>운용시간</span><b>' + formatDuration(record.elapsedMs) + '</b>' +
           '<span>정지시간</span><b>' + formatDuration(pauseMs) + '</b>' +
           '<span>LAP</span><b>' + record.laps.length + '</b>' +
