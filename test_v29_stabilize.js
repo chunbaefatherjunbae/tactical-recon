@@ -416,5 +416,17 @@ test('Mobile controls use field-readable sizes',()=>{
   assert(css.includes('--field-dim-readable'));
 });
 
+test('DISPLAY belongs to SYSTEM instead of MAP or NAV quick controls',()=>{
+  const mapStart=stabilize.indexOf("const mapSection=makeSection('control-maptools'");
+  const dataStart=stabilize.indexOf("const data=makeSection('control-data'",mapStart);
+  const mapBlock=stabilize.slice(mapStart,dataStart);
+  assert.strictEqual(mapBlock.includes('v29DisplayBtn'),false);
+  assert(stabilize.includes('id="v29SystemDisplayBtn"'));
+  assert(stabilize.includes("system.querySelector('#v29SystemDisplayBtn')?.addEventListener('click',()=>openFieldControls('optic'))"));
+  assert(stabilize.includes("document.getElementById('targetNavOpticBtn')?.remove()"));
+  assert.strictEqual(stabilize.includes("systemGrid.innerHTML='<button class=\"osb-btn\" id=\"v29LanguageBtn\""),false);
+  assert(stabilize.includes("systemGrid.appendChild(language)"));
+});
+
 console.log('\nV29 stabilization tests completed: '+passed+' passed, '+failed+' failed.');
 if(failed>0)process.exit(1);
