@@ -36,8 +36,11 @@ jobs:
           node --check ep-core/reference-core.js
           node --check ep-core/plan-core.js
           node --check ep-core/state-core.js
+          node --check ep-core/legacy-adapter.js
+          node --check ep-runtime-bridge.js
           node --check test_v29_stabilize.js
           node --check test_ep_core.js
+          node --check test_ep_bridge.js
 
       - name: Run regression tests
         run: |
@@ -48,6 +51,7 @@ jobs:
           node test_v29_integration.js
           node test_v29_stabilize.js
           node test_ep_core.js
+          node test_ep_bridge.js
 
   deploy:
     needs: validate
