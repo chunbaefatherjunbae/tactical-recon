@@ -9,6 +9,8 @@
     completed:0,
     total:0,
     failed:0,
+    vectorReady:false,
+    vectorStatus:'UNKNOWN',
     error:null
   };
 
@@ -18,11 +20,22 @@
   }
 
   function applyMessage(data){
-    if(!data||data.type!=='LITE_PACK_STATUS')return;
+    if(!data)return;
+    if(data.type==='LITE_DATA_STATUS'){
+      state.vectorStatus=String(data.status||'UNKNOWN');
+      state.vectorReady=state.vectorStatus==='READY';
+      emit('vector-status');
+      return;
+    }
+    if(data.type!=='LITE_PACK_STATUS')return;
     state.packStatus=String(data.status||'UNKNOWN');
     state.completed=Number(data.completed)||0;
     state.total=Number(data.total)||0;
     state.failed=Number(data.failed)||0;
+    if(typeof data.vectorReady==='boolean'){
+      state.vectorReady=data.vectorReady;
+      state.vectorStatus=data.vectorReady?'READY':state.vectorStatus;
+    }
     emit('pack-status');
   }
 
@@ -44,7 +57,10 @@
       state.controlled=Boolean(navigator.serviceWorker.controller);
       ready.active?.postMessage({type:'GET_LITE_PACK_STATUS'});
       if(navigator.onLine){
-        const warm=()=>ready.active?.postMessage({type:'WARM_LITE_CORE'});
+        const warm=()=>{
+          ready.active?.postMessage({type:'WARM_LITE_DATA'});
+          ready.active?.postMessage({type:'WARM_LITE_CORE'});
+        };
         if('requestIdleCallback' in window) requestIdleCallback(warm,{timeout:2500});
         else setTimeout(warm,800);
       }
