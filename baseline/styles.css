@@ -1571,3 +1571,100 @@ body.baseline-navigation-active .site-map-marker-wrap {
   color:#d98f8f;
   border-color:rgba(217,143,143,.4);
 }
+
+
+/* Legacy RECON marker language. TEMP keeps the BASELINE diamond marker. */
+.tactical-pin-wrapper,
+.tactical-route-wrapper {
+  background:transparent!important;
+  border:0!important;
+}
+.marker-symbol {
+  width:28px;
+  height:28px;
+  display:block;
+  color:var(--accent);
+  filter:drop-shadow(0 0 2px var(--accent-glow));
+}
+.marker-symbol .marker-frame,
+.marker-symbol .marker-detail {
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.5;
+  stroke-linecap:square;
+  stroke-linejoin:miter;
+  vector-effect:non-scaling-stroke;
+}
+.marker-symbol .marker-detail { stroke-width:1.2; }
+.marker-symbol .marker-core { fill:currentColor; stroke:none; }
+.marker-symbol .marker-bg {
+  fill:rgba(0,0,0,.58);
+  stroke:none;
+}
+.marker-unexplored .marker-frame {
+  stroke-dasharray:5.6 5.7;
+  stroke-dashoffset:1.4;
+}
+.marker-gps {
+  filter:drop-shadow(0 0 3px var(--accent-glow));
+}
+.marker-gps .marker-frame { stroke-width:1.6; }
+.marker-gps .marker-detail { stroke-width:1.35; }
+.marker-gps.marker-last {
+  color:#8e9991;
+  opacity:.82;
+  filter:none;
+}
+.marker-gps.marker-last .marker-core {
+  fill:transparent;
+  stroke:currentColor;
+  stroke-width:1.2;
+}
+
+.route-start-marker,
+.route-end-marker,
+.route-via-marker {
+  position:relative;
+  display:block;
+  width:26px;
+  height:26px;
+  color:var(--accent);
+  filter:drop-shadow(0 0 4px var(--accent-glow));
+}
+.route-start-marker::before,
+.route-end-marker::before,
+.route-via-marker::before {
+  content:attr(data-label);
+  position:absolute;
+  inset:3px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1.5px solid currentColor;
+  background:rgba(0,0,0,.58);
+  color:currentColor;
+  font:900 9px var(--font-mono);
+}
+.route-start-marker::before { border-radius:50%; }
+.route-end-marker::before { border-radius:0; }
+.route-via-marker::before { transform:rotate(45deg); }
+.route-via-marker::after {
+  content:attr(data-label);
+  position:absolute;
+  inset:3px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:currentColor;
+  font:900 9px var(--font-mono);
+  z-index:1;
+}
+
+/* Upper-left telemetry must stay readable over map detail. */
+.position-hud > span:not(.reticle-coordinate),
+.position-hud .map-mode-status {
+  color:#79c88a;
+  opacity:1;
+  font-weight:800;
+  text-shadow:0 1px 2px rgba(0,0,0,.92);
+}
