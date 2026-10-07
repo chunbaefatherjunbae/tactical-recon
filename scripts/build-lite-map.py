@@ -4,6 +4,8 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 BBOX=(124.0,32.8,132.2,39.6)
+PRECISION=4
+SCALE=10**PRECISION
 
 def in_bbox(pt):
     x,y=pt[0],pt[1]
@@ -38,10 +40,11 @@ def rdp(points,eps):
     return [a,b]
 
 def clean_line(coords,eps):
-    pts=[[round(float(x),5),round(float(y),5)] for x,y,*_ in coords if BBOX[0]-.2<=x<=BBOX[2]+.2 and BBOX[1]-.2<=y<=BBOX[3]+.2]
+    pts=[[float(x),float(y)] for x,y,*_ in coords
+         if BBOX[0]-.2<=x<=BBOX[2]+.2 and BBOX[1]-.2<=y<=BBOX[3]+.2]
     if len(pts)<2: return None
     out=rdp(pts,eps)
-    return [[p[1],p[0]] for p in out] if len(out)>=2 else None
+    return [[round(p[1],PRECISION),round(p[0],PRECISION)] for p in out] if len(out)>=2 else None
 
 def lines_from_geom(g,eps):
     if not g: return []
@@ -56,6 +59,24 @@ def lines_from_geom(g,eps):
         return [line for poly in c for ring in poly if (line:=clean_line(ring,eps))]
     return []
 
+def encode_value(value):
+    value = ~(value << 1) if value < 0 else value << 1
+    out=[]
+    while value >= 0x20:
+        out.append(chr((0x20 | (value & 0x1f)) + 63))
+        value >>= 5
+    out.append(chr(value + 63))
+    return ''.join(out)
+
+def encode_polyline(points):
+    last_lat=0; last_lon=0; chunks=[]
+    for lat,lon in points:
+        ilat=int(round(lat*SCALE)); ilon=int(round(lon*SCALE))
+        chunks.append(encode_value(ilat-last_lat))
+        chunks.append(encode_value(ilon-last_lon))
+        last_lat=ilat; last_lon=ilon
+    return ''.join(chunks)
+
 def compact_name(p):
     return p.get("name:ko") or p.get("name") or p.get("ref") or ""
 
@@ -63,8 +84,9 @@ src=Path(sys.argv[1])
 dst=Path(sys.argv[2])
 data=json.loads(src.read_text(encoding="utf-8"))
 
-roads=[]; rivers=[]; rails=[]; coast=[]; places=[]
-road_eps={"motorway":.001,"trunk":.0015,"primary":.002,"secondary":.0035}
+roads={"M":[],"T":[],"P":[],"S":[]}
+rivers=[]; rails=[]; coast=[]; places=[]
+road_eps={"motorway":.001,"trunk":.0015,"primary":.0025,"secondary":.0045}
 
 for f in data.get("features",[]):
     p=f.get("properties") or {}; g=f.get("geometry")
@@ -74,41 +96,44 @@ for f in data.get("features",[]):
     if highway in road_eps:
         cls={"motorway":"M","trunk":"T","primary":"P","secondary":"S"}[highway]
         for line in lines_from_geom(g,road_eps[highway]):
-            roads.append({"c":cls,"n":compact_name(p),"p":line})
+            if len(line)>=2: roads[cls].append(encode_polyline(line))
         continue
 
     waterway=p.get("waterway")
-    if waterway in ("river","canal"):
-        for line in lines_from_geom(g,.004):
-            rivers.append({"c":"R" if waterway=="river" else "C","n":compact_name(p),"p":line})
+    if waterway=="river":
+        for line in lines_from_geom(g,.006):
+            if len(line)>=2: rivers.append(encode_polyline(line))
         continue
 
     railway=p.get("railway")
-    if railway in ("rail","light_rail"):
-        for line in lines_from_geom(g,.003):
-            rails.append({"c":"R","n":compact_name(p),"p":line})
+    if railway=="rail":
+        for line in lines_from_geom(g,.005):
+            if len(line)>=2: rails.append(encode_polyline(line))
         continue
 
     if p.get("natural")=="coastline":
-        for line in lines_from_geom(g,.0025):
-            coast.append({"p":line})
+        for line in lines_from_geom(g,.005):
+            if len(line)>=2: coast.append(encode_polyline(line))
         continue
 
     place=p.get("place")
     if place in ("city","town") and g.get("type")=="Point":
         x,y=g.get("coordinates")[:2]
-        if in_bbox([x,y]):
-            places.append({"n":compact_name(p),"c":"C" if place=="city" else "T","p":[round(y,5),round(x,5)]})
+        name=compact_name(p)
+        if name and in_bbox([x,y]):
+            places.append([name,"C" if place=="city" else "T",round(y,PRECISION),round(x,PRECISION)])
 
-# Remove pathological unnamed micro-segments and cap label noise.
-roads=[r for r in roads if len(r["p"])>=2]
-rivers=[r for r in rivers if len(r["p"])>=2]
-rails=[r for r in rails if len(r["p"])>=2]
-coast=[r for r in coast if len(r["p"])>=2]
-places=sorted(places,key=lambda x:(x["c"]!="C",x["n"]))[:450]
+# Keep labels sparse. Geometry remains complete for selected classes.
+seen=set(); unique_places=[]
+for row in sorted(places,key=lambda x:(x[1]!="C",x[0])):
+    key=(row[0],row[1])
+    if key in seen: continue
+    seen.add(key); unique_places.append(row)
+places=unique_places[:320]
 
 payload={
-  "version":1,
+  "version":2,
+  "precision":PRECISION,
   "generatedAt":datetime.now(timezone.utc).isoformat(),
   "source":"OpenStreetMap / Geofabrik South Korea extract",
   "bbox":list(BBOX),
@@ -122,7 +147,13 @@ payload={
 js="window.BaselineLiteOSM=Object.freeze("+json.dumps(payload,ensure_ascii=False,separators=(",",":"))+");\n"
 dst.parent.mkdir(parents=True,exist_ok=True)
 dst.write_text(js,encoding="utf-8")
-print(json.dumps({
+
+stats={
   "bytes":dst.stat().st_size,
-  "roads":len(roads),"rivers":len(rivers),"rails":len(rails),"coast":len(coast),"places":len(places)
-}))
+  "roads":{k:len(v) for k,v in roads.items()},
+  "rivers":len(rivers),
+  "rails":len(rails),
+  "coast":len(coast),
+  "places":len(places)
+}
+print(json.dumps(stats,ensure_ascii=False))
