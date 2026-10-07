@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - 'ep/**'
   workflow_dispatch:
 
 permissions:
@@ -31,7 +32,12 @@ jobs:
           node --check v29-storage.js
           node --check v29-stabilize.js
           node --check service-worker.js
+          node --check ep-core/location-core.js
+          node --check ep-core/reference-core.js
+          node --check ep-core/plan-core.js
+          node --check ep-core/state-core.js
           node --check test_v29_stabilize.js
+          node --check test_ep_core.js
 
       - name: Run regression tests
         run: |
@@ -41,9 +47,11 @@ jobs:
           node test_v29.js
           node test_v29_integration.js
           node test_v29_stabilize.js
+          node test_ep_core.js
 
   deploy:
     needs: validate
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
