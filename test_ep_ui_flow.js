@@ -12,6 +12,15 @@ function test(name,fn){
   catch(e){console.error('[FAIL] '+name+': '+e.message);failed++;}
 }
 
+test('V skin keeps PLAN and MISSION as bottom field panels',()=>{
+  assert(css.includes('.ep-plan-shell{'));
+  assert(css.includes('bottom:var(--ep-toolbar-h)'));
+  assert(css.includes('.ep-mission-shell{'));
+  assert(css.includes('background:rgba(4,10,6,.97)'));
+  assert(css.includes('.ep-plan-actions,.ep-draw-actions'));
+  assert(css.includes('.ep-mission-stepper{'));
+});
+
 test('Unified Location Card has six fixed actions',()=>{
   ['epLocStart','epLocVia','epLocDest','epLocTemp','epLocSave','epLocRemove'].forEach(id=>assert(flow.includes('id="'+id+'"')));
   assert(flow.includes('<button id="epLocStart"'));
