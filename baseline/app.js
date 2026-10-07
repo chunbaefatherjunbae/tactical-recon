@@ -847,6 +847,11 @@
   }
 
   function openSheet(panel, custom) {
+    if (sitePlacementActive) {
+      sitePlacementActive = false;
+      editingSiteId = null;
+      updateSitePlacementBar();
+    }
     if (panel !== 'explore') clearExploreCircle();
     const spec = custom || panels[panel];
     if (!spec) return;
