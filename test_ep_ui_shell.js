@@ -51,13 +51,28 @@ test('V skin keeps adaptive position and text-only bottom toolbar',()=>{
   assert(css.includes('.ep-bottom-nav button b{display:none!important}'));
 });
 
-test('V skin restores exact compact reticle and field scale geometry',()=>{
+test('V skin restores final V29 reticle geometry and scale',()=>{
+  assert(css.includes('width:112px!important'));
+  assert(css.includes('height:112px!important'));
+  assert(css.includes('width:40px!important'));
+  assert(css.includes('height:40px!important'));
+  assert(css.includes('width:8px!important'));
+  assert(css.includes('height:8px!important'));
   assert(css.includes('background:transparent!important'));
-  assert(css.includes('border:0!important'));
-  assert(css.includes('width:44px!important'));
-  assert(css.includes('height:44px!important'));
-  assert(css.includes('width:20px!important'));
-  assert(css.includes('height:20px!important'));
+});
+
+test('DISPLAY modes resolve EP HUD colors on body instead of root snapshot',()=>{
+  assert(css.includes('body{'));
+  assert(css.includes('--ep-field-osd:var(--field-panel'));
+  assert(css.includes('--ep-field-active:var(--field-active'));
+  const rootBlock=css.slice(css.indexOf(':root{'),css.indexOf('body{'));
+  assert.strictEqual(rootBlock.includes('--ep-field-active'),false);
+});
+
+test('V final corner frame uses 34px brackets and 70px extensions',()=>{
+  assert(css.includes('width:34px!important;height:34px!important'));
+  assert(css.includes('bottom:calc(76px + var(--ep-safe-bottom))!important'));
+  assert(css.includes('width:70px!important;height:1px!important'));
 });
 
 test('V skin uses V27 global control dimensions and toolbar rhythm',()=>{
