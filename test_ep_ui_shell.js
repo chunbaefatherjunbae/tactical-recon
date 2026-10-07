@@ -41,7 +41,7 @@ test('service worker keeps EP shell as old-cache fallback',()=>{
   assert(sw.includes("html.includes('ep-ui-shell.js')"));
 });
 
-test('field polish restores V-style adaptive position and text-only bottom bar',()=>{
+test('V skin keeps adaptive position and text-only bottom toolbar',()=>{
   assert(shell.includes("if(typeof root.centerGpsNow==='function')root.centerGpsNow()"));
   assert(shell.includes('id="epFollowGlyph"'));
   assert(shell.includes('<b>TEMP</b><span>임시위치</span>'));
@@ -50,13 +50,20 @@ test('field polish restores V-style adaptive position and text-only bottom bar',
   assert(css.includes('.ep-bottom-nav button b{display:none!important}'));
 });
 
-test('field polish removes scale card and restores compact V reticle geometry',()=>{
+test('V skin restores exact compact reticle and field scale geometry',()=>{
   assert(css.includes('background:transparent!important'));
   assert(css.includes('border:0!important'));
   assert(css.includes('width:44px!important'));
   assert(css.includes('height:44px!important'));
   assert(css.includes('width:20px!important'));
   assert(css.includes('height:20px!important'));
+});
+
+test('V skin uses V27 global control dimensions and toolbar rhythm',()=>{
+  assert(css.includes('width:48px!important'));
+  assert(css.includes('min-height:38px!important'));
+  assert(css.includes('min-height:42px!important'));
+  assert(css.includes('border-top:1px solid var(--ep-field-line-strong)!important'));
 });
 
 test('EP shell exposes required map-first controls',()=>{
