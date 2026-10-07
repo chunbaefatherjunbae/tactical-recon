@@ -48,6 +48,7 @@ jobs:
           node --check ep-surface-bridge.js
           node --check ep-overlay-bridge.js
           node --check ep-ui-shell.js
+          node --check ep-ui-flow.js
           node --check test_v29_stabilize.js
           node --check test_ep_core.js
           node --check test_ep_bridge.js
@@ -57,6 +58,7 @@ jobs:
           node --check test_ep_surface.js
           node --check test_ep_overlay.js
           node --check test_ep_ui_shell.js
+          node --check test_ep_ui_flow.js
 
       - name: Run regression tests
         run: |
@@ -74,6 +76,7 @@ jobs:
           node test_ep_surface.js
           node test_ep_overlay.js
           node test_ep_ui_shell.js
+          node test_ep_ui_flow.js
 
   deploy:
     needs: validate

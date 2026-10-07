@@ -20,6 +20,7 @@ const STATIC_ASSETS = [
   './v29-stabilize.css',
   './v29-stabilize.js',
   './ep-ui.css',
+  './ep-ui-flow.css',
   './ep-core/location-core.js',
   './ep-core/search-core.js',
   './ep-core/reference-core.js',
@@ -35,7 +36,8 @@ const STATIC_ASSETS = [
   './ep-mission-bridge.js',
   './ep-surface-bridge.js',
   './ep-overlay-bridge.js',
-  './ep-ui-shell.js'
+  './ep-ui-shell.js',
+  './ep-ui-flow.js'
 ];
 
 self.addEventListener('install', event => {
@@ -107,6 +109,9 @@ async function injectStableOverlay(response) {
   if (!html.includes('ep-ui.css')) {
     html = html.replace('</head>', '  <link rel="stylesheet" href="./ep-ui.css" />\n</head>');
   }
+  if (!html.includes('ep-ui-flow.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./ep-ui-flow.css" />\n</head>');
+  }
   if (!html.includes('v29-stabilize.js')) {
     html = html.replace('</body>', '  <script src="./v29-stabilize.js"></script>\n</body>');
   }
@@ -157,6 +162,9 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('ep-ui-shell.js')) {
     html = html.replace('</body>', '  <script src="./ep-ui-shell.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-ui-flow.js')) {
+    html = html.replace('</body>', '  <script src="./ep-ui-flow.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
