@@ -60,7 +60,9 @@
       overlayStrokes:strokesFromLegacy(snapshot.overlaySegments,'overlay'),
       compatibility:{
         source:'V29',
-        targetId:snapshot.target?.id!==undefined?String(snapshot.target.id):null
+        targetId:snapshot.target?.id!==undefined?String(snapshot.target.id):null,
+        hasStart:Boolean(start),
+        hasEnd:Boolean(end)
       }
     };
   }
@@ -78,9 +80,11 @@
       id:p.id,name:p.name,coords:[Number(p.lat),Number(p.lon)],source:p.source,address:p.address||''
     }:null;
 
-    const start=plan.points.length>1?asLegacy(plan.points[0]):null;
+    const hasStart=Boolean(plan.compatibility?.hasStart||plan.points[0]?.source==='LEGACY_START');
+    const hasEnd=Boolean(plan.compatibility?.hasEnd||plan.points[plan.points.length-1]?.source==='LEGACY_END');
+    const start=hasStart&&plan.points.length?asLegacy(plan.points[0]):null;
     const objective=asLegacy(plan.points[objectiveIndex]);
-    const end=objectiveIndex<plan.points.length-1?asLegacy(plan.points[plan.points.length-1]):null;
+    const end=hasEnd&&objectiveIndex<plan.points.length-1?asLegacy(plan.points[plan.points.length-1]):null;
     const viaStart=start?1:0;
     const viaEnd=objectiveIndex;
     const vias=plan.points.slice(viaStart,viaEnd).map(asLegacy).filter(Boolean);

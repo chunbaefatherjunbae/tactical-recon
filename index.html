@@ -5881,6 +5881,20 @@
           updatedAt:Date.now()
         };
       },
+      isEditable() {
+        return Boolean(targetModeActive && targetModePhase === 'PLAN');
+      },
+      selectedPointRef() {
+        return selectedPlanPointRef ? {...selectedPlanPointRef} : null;
+      },
+      currentReference() {
+        const ref=getReferencePosition();
+        return ref?.coords ? {type:ref.type,coords:[...ref.coords]} : null;
+      },
+      mapCenter() {
+        const c=map.getCenter();
+        return {coords:[Number(c.lat),Number(c.lng)]};
+      },
       apply(snapshot, options = {}) {
         if (!snapshot || !targetModeActive) return false;
         routeStartPoint = cloneRouteEndpoint(snapshot.startPoint);

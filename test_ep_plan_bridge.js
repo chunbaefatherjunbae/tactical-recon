@@ -29,6 +29,14 @@ test('legacy V29 PLAN becomes one ordered EP point list',()=>{
   assert.equal(p.compatibility.targetId,'T1');
 });
 
+test('no-start legacy plan round-trips without promoting VIA to START',()=>{
+  const p=Adapter.fromLegacy({...legacy,startPoint:null},Plan);
+  assert.equal(p.compatibility.hasStart,false);
+  const back=Adapter.toLegacy(p);
+  assert.equal(back.startPoint,null);
+  assert.deepEqual(back.viaPoints.map(x=>x.name),['VIA 1','VIA 2']);
+});
+
 test('TARGET is destination only when legacy END is absent',()=>{
   const p=Adapter.fromLegacy({...legacy,endPoint:null},Plan);
   assert.equal(p.points[p.points.length-1].name,'TARGET');
@@ -61,6 +69,15 @@ test('PLAN migration port exists before service-worker registration',()=>{
   const port=index.indexOf('window.__v29PlanLegacy =');
   const pwa=index.indexOf("navigator.serviceWorker.register('./service-worker.js");
   assert(port>=0&&pwa>port);
+});
+
+test('PLAN bridge exposes EP point-owner actions',()=>{
+  const source=fs.readFileSync('ep-plan-bridge.js','utf8');
+  assert(source.includes("function setRole(role,value)"));
+  assert(source.includes("function clearRole(role,id)"));
+  assert(source.includes("root.assignPlanPoint=wrapped"));
+  assert(source.includes("root.setPlanPointAtReticle=wrapped"));
+  assert(source.includes("root.deleteSelectedPlanPoint=wrapped"));
 });
 
 test('PLAN bridge loads after runtime bridge',()=>{
