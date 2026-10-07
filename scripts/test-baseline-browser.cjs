@@ -39,6 +39,16 @@ const server = http.createServer((req, res) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.route('https://*.tile.openstreetmap.org/**', route => route.abort());
+    await page.route('https://nominatim.openstreetmap.org/**', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{
+        lat:'37.5663',
+        lon:'126.9779',
+        display_name:'서울특별시 중구 세종대로 110 대한민국',
+        address:{state:'서울특별시',borough:'중구',road:'세종대로',house_number:'110'}
+      }])
+    }));
 
     try {
       await page.goto('http://127.0.0.1:8766/baseline/');
@@ -157,16 +167,21 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('[data-edit-point="START"]').count(), 1);
       assert.equal(await page.locator('[data-edit-point="DEST"]').count(), 1);
 
+      assert.equal(await page.evaluate(() => BaselineNavigationUI.getDraft().start?.source), 'TEMP');
       await page.locator('#planNameInput').fill('BASELINE TEST PLAN');
       await page.locator('[data-edit-point="DEST"]').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '도착지 선택');
-      await page.locator('#pointSiteSelect').selectOption({ index: 1 });
-      await page.locator('#pointSiteUse').click();
+      assert.equal(await page.locator('#pointAddressInput').count(), 1);
+      await page.locator('#pointAddressInput').fill('서울시청');
+      await page.locator('#pointAddressSearch').click();
+      await page.locator('[data-address-result="0"]').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '계획 편집');
+      assert.equal(await page.evaluate(() => BaselineNavigationUI.getDraft().destination?.source), 'ADDRESS');
 
       await page.locator('#planAddVia').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '경유지 선택');
-      await page.locator('[data-point-source="MAP"]').click();
+      await page.locator('#pointSiteSelect').selectOption({ index: 1 });
+      await page.locator('#pointSiteUse').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '계획 편집');
       assert.equal(await page.locator('[data-edit-point="VIA"]').count(), 1);
 
@@ -179,7 +194,11 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#navNowMetric').textContent().then(t => t.includes('MAG')), true);
       assert.equal(await page.locator('#navStartMetric').textContent().then(t => t.includes('GRID')), true);
       assert.equal(await page.locator('#navDeclination').textContent().then(t => t.includes('WMM2025')), true);
+      assert.equal(await page.locator('#navNextBlock').isHidden(), true);
       assert.equal(await page.evaluate(() => Number.isFinite(BaselineNavigationCore.bearingBundle([37.5,127],[37.6,127.1]).magneticBearing)), true);
+      const seoulDeclination = await page.evaluate(() => BaselineNavigationCore.wmmField(37.5665,126.9780,0,new Date('2026-10-07T00:00:00Z')).declination);
+      assert(seoulDeclination < -7 && seoulDeclination > -11);
+      await page.screenshot({ path:`ui-results-baseline/${name}-navigation-ready.png`, fullPage:true });
 
       // Drawing: one finger draws. Drawing mode owns gestures instead of legacy PLAN handlers.
       await page.locator('[data-nav-action="DRAW"]').click();
@@ -221,6 +240,13 @@ const server = http.createServer((req, res) => {
       await page.locator('[data-nav-action="PAUSE"]').click();
       assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'PAUSED');
       assert.equal(await page.locator('[data-nav-action="PAUSE"]').textContent(), '재개');
+
+      await page.reload();
+      await page.waitForFunction(() => window.BaselineApp?.version === 'R0.1-BASELINE');
+      assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'PAUSED');
+      assert.equal(await page.locator('#navRouteSummary').isVisible(), true);
+      assert.equal(await page.locator('[data-nav-action="PAUSE"]').textContent(), '재개');
+
       await page.locator('[data-nav-action="PAUSE"]').click();
       assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'RUNNING');
       page.once('dialog', dialog => dialog.accept());
