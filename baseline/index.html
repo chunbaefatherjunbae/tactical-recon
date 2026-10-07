@@ -43,6 +43,28 @@
       <i class="reticle-core"></i>
     </div>
 
+    <button class="nav-route-summary" id="navRouteSummary" type="button" hidden aria-label="항법 경로 수정">
+      <span id="navRouteText">출발 → 목적지</span><b>⌄</b>
+    </button>
+
+    <section class="navigation-hud" id="navigationHud" hidden aria-live="polite">
+      <div id="navNextBlock" hidden><small>NEXT</small><strong id="navNextMetric">--</strong></div>
+      <div><small>NOW → DEST</small><strong id="navNowMetric">--</strong></div>
+      <div><small>START → DEST</small><strong id="navStartMetric">--</strong></div>
+      <div class="navigation-hud-sub" id="navDeclination">DECL --</div>
+      <div class="navigation-timer" id="navTimer" hidden>00:00:00</div>
+    </section>
+
+    <div class="nav-session-controls" id="navSessionControls" hidden></div>
+
+    <div class="drawing-controls" id="drawingControls" hidden>
+      <button type="button" data-draw-kind="ROUTE" class="active">경로</button>
+      <button type="button" data-draw-kind="MARK">표식</button>
+      <button type="button" id="drawUndoBtn">되돌리기</button>
+      <button type="button" id="drawDoneBtn">완료</button>
+    </div>
+    <div class="drawing-capture" id="drawingCapture" hidden aria-label="드로잉 영역"></div>
+
     <div class="scale-hud" id="scaleHud" aria-hidden="true">
       <span class="scale-line" id="scaleLine"></span>
       <strong id="scaleText">--</strong>
@@ -75,6 +97,10 @@
   <script src="./data/sites.js"></script>
   <script src="./site-store.js"></script>
   <script src="./explore-core.js"></script>
+  <script src="./navigation-core.js"></script>
+  <script src="./plan-store.js"></script>
+  <script src="./record-store.js"></script>
   <script src="./app.js"></script>
+  <script src="./navigation-ui.js"></script>
 </body>
 </html>
