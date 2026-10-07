@@ -495,7 +495,9 @@
     base.state.activeTrackId = track.id;
     if (track.planId && getPlan(track.planId)) base.state.activePlanId = track.planId;
     saveRecovery();
-    return getTrack(track.id);
+    const recoveredTrack=getTrack(track.id);
+    emitTrackLifecycle('RECOVER', recoveredTrack);
+    return recoveredTrack;
   }
 
   function trackDurationMs(track) {
