@@ -762,7 +762,9 @@
     openSheet,
     closeSheet,
     openSites,
-    openExplore
+    openExplore,
+    toast,
+    formatMgrs
   });
 
   renderSiteMarkers();
