@@ -898,20 +898,27 @@
     const lite = window.BaselineLiteMap?.status?.() || {requested:'auto',effective:'online',packStatus:'UNKNOWN',packCompleted:0,packTotal:0,packFailed:0,dataReady:false};
     const modeButton=(mode,label) => '<button type="button" data-map-mode="' + mode + '" class="' + (lite.requested===mode?'active':'') + '">' + label + '</button>';
     const packLabel = lite.packStatus === 'READY'
-      ? '전국 경량지형 준비 완료'
+      ? '전국 상세 지형 준비 완료'
       : lite.packStatus === 'PREPARING'
-        ? '준비 중 ' + lite.packCompleted + '/' + lite.packTotal
+        ? '상세 지형 준비 중 ' + lite.packCompleted + '/' + lite.packTotal
         : lite.packStatus === 'PARTIAL'
-          ? '일부 실패 · 다시 준비'
-          : '전국 경량지형 준비';
+          ? '상세 지형 일부 실패 · 다시 준비'
+          : lite.packStatus === 'CORE_READY'
+            ? '기본 지형 준비됨 · 상세 지형 받기'
+            : lite.packStatus === 'CORE_PREPARING'
+              ? '기본 지형 자동 준비 중 ' + lite.packCompleted + '/' + lite.packTotal
+              : lite.packStatus === 'CORE_PARTIAL'
+                ? '기본 지형 일부 실패 · 다시 준비'
+                : '전국 상세 지형 준비';
     return '<div class="settings-section">' +
       '<small>지도</small>' +
       '<div class="map-mode-options">' +
         modeButton('auto','자동') + modeButton('online','온라인') + modeButton('lite','경량') +
       '</div>' +
       '<div class="map-mode-readout">현재 · ' + esc(String(lite.effective).toUpperCase()) + '</div>' +
-      '<button class="lite-pack-btn" id="litePackBtn" type="button" ' + (lite.packStatus==='PREPARING'?'disabled':'') + '>' + esc(packLabel) + '</button>' +
-      '<p class="sheet-note">경량지도는 실제 OSM 선형 데이터와 DEM 지형을 사용합니다. 저해상도 전국 지형팩은 현장 출발 전 한 번 준비해두는 것을 권장합니다.</p>' +
+      '<button class="lite-pack-btn" id="litePackBtn" type="button" ' + (['PREPARING','CORE_PREPARING'].includes(lite.packStatus)?'disabled':'') + '>' + esc(packLabel) + '</button>' +
+      '<p class="sheet-note">AUTO는 온라인 → 이미 본 지도 캐시 → 경량지도 순서로 전환합니다. 경량지도는 실제 OSM 선형 데이터와 DEM 지형을 사용합니다.</p>' +
+      '<p class="sheet-note">저배율 전국 지형은 온라인 사용 중 자동 준비됩니다. 출발 전 ‘상세 지형 준비’를 완료하면 확대 시에도 더 선명한 지형을 오프라인에서 유지합니다.</p>' +
       '<p class="sheet-note">디스플레이 테마는 NVG-G로 고정. 테마 선택은 전체 배치 확정 뒤 추가.</p>' +
     '</div>';
   }
