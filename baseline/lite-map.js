@@ -458,7 +458,7 @@
       if(map.hasLayer(gridLayer))map.removeLayer(gridLayer);
       if(map.hasLayer(placeLayer))map.removeLayer(placeLayer);
       if(!map.hasLayer(App.topoLayer))App.topoLayer.addTo(map);
-      if(!map.hasLayer(App.roadBoostLayer))App.roadBoostLayer.addTo(map);
+      if(map.hasLayer(App.roadBoostLayer))map.removeLayer(App.roadBoostLayer);
     }
     emit(reason);
   }
