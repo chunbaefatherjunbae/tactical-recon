@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION='baseline-offline-v3';
+const VERSION='baseline-offline-v4';
 const SHELL_CACHE=VERSION+'-shell';
 const TERRAIN_CACHE=VERSION+'-terrain';
 const ONLINE_TILE_CACHE=VERSION+'-online-tiles';
@@ -8,6 +8,7 @@ const BASE=new URL('./',self.location.href);
 const local=path=>new URL(path,BASE).href;
 const CORE_MARKER=local('__lite_core_ready__');
 const PACK_MARKER=local('__lite_pack_ready__');
+const LITE_DATA_URL=local('./data/lite-map-osm.js');
 
 const SHELL=[
   './',
@@ -24,7 +25,6 @@ const SHELL=[
   './lite-map.js',
   './navigation-ui.js',
   './data/sites.js',
-  './data/lite-map-osm.js',
   '../vendor/leaflet-1.9.4.css',
   '../vendor/leaflet-1.9.4.js',
   '../vendor/mgrs-1.0.0.js'
@@ -112,6 +112,30 @@ async function cacheTerrainUrls(urls,{status='PREPARING',marker=null,concurrency
 
 async function coreReady(){return markerReady(CORE_MARKER);}
 async function packReady(){return markerReady(PACK_MARKER);}
+async function liteDataReady(){
+  const cache=await caches.open(SHELL_CACHE);
+  return Boolean(await cache.match(LITE_DATA_URL));
+}
+
+async function warmLiteData(){
+  if(await liteDataReady()){
+    await notify('LITE_DATA_STATUS',{status:'READY'});
+    return true;
+  }
+  await notify('LITE_DATA_STATUS',{status:'PREPARING'});
+  try{
+    const cache=await caches.open(SHELL_CACHE);
+    const req=new Request(LITE_DATA_URL,{cache:'no-store'});
+    const res=await fetch(req);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    await cache.put(req,res.clone());
+    await notify('LITE_DATA_STATUS',{status:'READY'});
+    return true;
+  }catch{
+    await notify('LITE_DATA_STATUS',{status:'ERROR'});
+    return false;
+  }
+}
 
 async function warmLiteCore(){
   if(await coreReady()){
@@ -130,6 +154,7 @@ async function warmLiteCore(){
 }
 
 async function prepareLitePack(){
+  await warmLiteData();
   if(await packReady()){
     await notify('LITE_PACK_STATUS',{status:'READY'});
     return;
@@ -172,6 +197,9 @@ self.addEventListener('message',event=>{
   if(data.type==='WARM_LITE_CORE'){
     event.waitUntil(warmLiteCore());
   }
+  if(data.type==='WARM_LITE_DATA'){
+    event.waitUntil(warmLiteData());
+  }
   if(data.type==='PREPARE_LITE_PACK'){
     event.waitUntil(prepareLitePack());
   }
@@ -179,7 +207,8 @@ self.addEventListener('message',event=>{
     event.waitUntil((async()=>{
       const ready=await packReady();
       const core=await coreReady();
-      event.source?.postMessage({type:'LITE_PACK_STATUS',status:ready?'READY':core?'CORE_READY':'NOT_READY'});
+      const vector=await liteDataReady();
+      event.source?.postMessage({type:'LITE_PACK_STATUS',status:ready?'READY':core?'CORE_READY':'NOT_READY',vectorReady:vector});
     })());
   }
 });
