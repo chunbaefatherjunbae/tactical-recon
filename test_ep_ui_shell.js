@@ -117,7 +117,7 @@ test('MAP shell hides legacy HUD stack but preserves legacy DOM',()=>{
 test('bottom navigation is map-only and three-function with range-first random access',()=>{
   assert(css.includes('body:not(.ep-surface-map) #epShell .ep-bottom-nav{display:none!important}'));
   assert(shell.includes('<span>거점</span>'));
-  assert(shell.includes('<span>무작위</span>'));
+  assert(shell.includes('<span id="epRandomLabel">무작위</span>'));
   assert(shell.includes('<span>기록</span>'));
 });
 
