@@ -148,12 +148,81 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('.site-row').count(), 1);
       await page.locator('#sheetClose').click();
 
-      for (const [panel, title] of [['plans','계획'],['records','기록']]) {
-        await page.locator(`.bottom-nav button[data-panel="${panel}"]`).click();
-        assert.equal(await page.locator('#sheetTitle').textContent(), title);
-        assert(await page.locator('#sheet').isVisible());
-        await page.locator('#sheetClose').click();
-      }
+      // Unified PLAN + NAVIGATION vertical flow.
+      await page.locator('.bottom-nav button[data-panel="plans"]').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '계획');
+      assert.equal(await page.locator('#planNewBtn').count(), 1);
+      await page.locator('#planNewBtn').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '계획 편집');
+      assert.equal(await page.locator('[data-edit-point="START"]').count(), 1);
+      assert.equal(await page.locator('[data-edit-point="DEST"]').count(), 1);
+
+      await page.locator('#planNameInput').fill('BASELINE TEST PLAN');
+      await page.locator('[data-edit-point="DEST"]').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '도착지 선택');
+      await page.locator('#pointSiteSelect').selectOption({ index: 1 });
+      await page.locator('#pointSiteUse').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '계획 편집');
+
+      await page.locator('#planAddVia').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '경유지 선택');
+      await page.locator('[data-point-source="MAP"]').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '계획 편집');
+      assert.equal(await page.locator('[data-edit-point="VIA"]').count(), 1);
+
+      await page.locator('#planEditorSave').click();
+      assert.equal(await page.evaluate(() => BaselinePlanStore.list().length), 1);
+      await page.locator('#planEditorConfirm').click();
+      assert.equal(await page.locator('#sheet').isHidden(), true);
+      assert.equal(await page.locator('#navRouteSummary').isVisible(), true);
+      assert.equal(await page.locator('#navigationHud').isVisible(), true);
+      assert.equal(await page.locator('#navNowMetric').textContent().then(t => t.includes('MAG')), true);
+      assert.equal(await page.locator('#navStartMetric').textContent().then(t => t.includes('GRID')), true);
+      assert.equal(await page.locator('#navDeclination').textContent().then(t => t.includes('WMM2025')), true);
+      assert.equal(await page.evaluate(() => Number.isFinite(BaselineNavigationCore.bearingBundle([37.5,127],[37.6,127.1]).magneticBearing)), true);
+
+      // Drawing: one finger draws. Drawing mode owns gestures instead of legacy PLAN handlers.
+      await page.locator('[data-nav-action="DRAW"]').click();
+      assert.equal(await page.locator('#drawingCapture').isVisible(), true);
+      const drawBox = await page.locator('#drawingCapture').boundingBox();
+      await page.locator('#drawingCapture').dispatchEvent('pointerdown', { pointerId:11, pointerType:'touch', isPrimary:true, clientX:drawBox.x+120, clientY:drawBox.y+350 });
+      await page.locator('#drawingCapture').dispatchEvent('pointermove', { pointerId:11, pointerType:'touch', isPrimary:true, clientX:drawBox.x+150, clientY:drawBox.y+370 });
+      await page.locator('#drawingCapture').dispatchEvent('pointermove', { pointerId:11, pointerType:'touch', isPrimary:true, clientX:drawBox.x+180, clientY:drawBox.y+390 });
+      await page.locator('#drawingCapture').dispatchEvent('pointerup', { pointerId:11, pointerType:'touch', isPrimary:true, clientX:drawBox.x+180, clientY:drawBox.y+390 });
+      assert.equal(await page.evaluate(() => BaselineNavigationUI.getDraft().drawings.length), 1);
+      await page.locator('#drawDoneBtn').click();
+      assert.equal(await page.locator('#drawingCapture').isHidden(), true);
+
+      // Session lifecycle: start -> lap -> pause -> resume -> stop -> record.
+      await page.locator('[data-nav-action="START"]').click();
+      assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'RUNNING');
+      assert.equal(await page.locator('#navTimer').isVisible(), true);
+      await page.locator('[data-nav-action="LAP"]').click();
+      assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.laps.length), 1);
+      await page.locator('[data-nav-action="PAUSE"]').click();
+      assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'PAUSED');
+      assert.equal(await page.locator('[data-nav-action="PAUSE"]').textContent(), '재개');
+      await page.locator('[data-nav-action="PAUSE"]').click();
+      assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()?.status), 'RUNNING');
+      page.once('dialog', dialog => dialog.accept());
+      await page.locator('[data-nav-action="STOP"]').click();
+      assert.equal(await page.evaluate(() => BaselineRecordStore.getActive()), null);
+      assert.equal(await page.evaluate(() => BaselineRecordStore.list().length), 1);
+
+      await page.locator('.bottom-nav button[data-panel="records"]').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '기록');
+      assert.equal(await page.locator('.record-row').count(), 1);
+      await page.locator('.record-row').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '기록 상세');
+      assert.equal(await page.locator('.record-lap').count(), 1);
+      await page.screenshot({ path:`ui-results-baseline/${name}-navigation-record.png`, fullPage:true });
+      await page.locator('#sheetClose').click();
+
+      await page.locator('.bottom-nav button[data-panel="plans"]').click();
+      assert.equal(await page.locator('.plan-library-row').count(), 1);
+      assert.equal(await page.locator('[data-plan-share]').count(), 1);
+      await page.screenshot({ path:`ui-results-baseline/${name}-plans.png`, fullPage:true });
+      await page.locator('#sheetClose').click();
 
       await page.locator('#searchBtn').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '검색');
@@ -162,7 +231,7 @@ const server = http.createServer((req, res) => {
 
       await page.locator('#settingsBtn').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '설정');
-      assert.equal(await page.locator('#sheetBody').textContent().then(t => t.includes('테마 기능은')), true);
+      assert.equal(await page.locator('#sheetBody').textContent().then(t => t.includes('NVG-G')), true);
       await page.locator('#sheetClose').click();
 
       for (const width of [320, 390, 768]) {
