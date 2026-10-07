@@ -50,7 +50,7 @@
   const roadBoostLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     minZoom: 10,
     maxZoom: 19,
-    opacity: 0.14,
+    opacity: 0.17,
     pane: 'roadBoostPane',
     className: 'road-boost-tiles',
     attribution: ''
