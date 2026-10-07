@@ -97,17 +97,17 @@ body.ep-shell-ready.route-drawing .reticle-container{opacity:.35!important}
 
 .ep-top-actions{
   position:absolute!important;top:max(48px,calc(var(--ep-safe-top) + 8px))!important;right:8px!important;
-  display:grid!important;grid-template-columns:40px!important;gap:4px!important;pointer-events:auto!important;
+  display:grid!important;grid-template-columns:48px!important;gap:4px!important;pointer-events:auto!important;
 }
 .ep-icon-btn{
-  width:40px!important;height:34px!important;display:grid!important;place-items:center!important;
+  width:48px!important;height:38px!important;display:grid!important;place-items:center!important;
   border:1px solid var(--ep-field-line)!important;border-radius:0!important;background:var(--ep-field-osd)!important;
   color:var(--ep-field-dim)!important;font-size:17px!important;font-weight:900!important;box-shadow:none!important;
 }
 .ep-icon-btn:active,.ep-icon-btn.active{color:var(--ep-field-active)!important;border-color:var(--ep-field-line-strong)!important;background:rgba(255,255,255,.035)!important}
 
 .ep-global-tools{
-  position:fixed!important;top:max(126px,calc(var(--ep-safe-top) + 122px))!important;right:8px!important;transform:none!important;
+  position:fixed!important;top:max(132px,calc(var(--ep-safe-top) + 92px))!important;right:8px!important;transform:none!important;
   width:48px!important;display:flex!important;flex-direction:column!important;gap:4px!important;pointer-events:auto!important;
 }
 .ep-global-tool{
@@ -118,7 +118,6 @@ body.ep-shell-ready.route-drawing .reticle-container{opacity:.35!important}
 }
 .ep-global-tool b{font-size:9px!important;line-height:1!important;font-weight:900!important;letter-spacing:.6px!important}
 .ep-global-tool span{display:none!important;font-size:6px!important;line-height:1!important}
-#epGpsBtn #epGpsState{display:block!important;margin-top:2px;color:currentColor!important}
 #epFollowBtn b{width:19px!important;height:19px!important;display:grid!important;place-items:center!important}
 #epFollowBtn svg{width:19px!important;height:19px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.5!important}
 #epFollowBtn.following svg path,#epFollowBtn.following svg circle{stroke-linecap:square;stroke-linejoin:miter}
@@ -141,7 +140,7 @@ body.ep-shell-ready.ep-surface-mission .map-scale-osd{bottom:calc(var(--ep-toolb
 
 .ep-bottom-nav{
   position:fixed!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:var(--ep-toolbar-h)!important;
-  padding:5px 6px max(5px,var(--ep-safe-bottom))!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  padding:5px 6px max(5px,var(--ep-safe-bottom))!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
   gap:4px!important;background:rgba(3,8,5,.96)!important;border:0!important;border-top:1px solid var(--ep-field-line-strong)!important;
   box-shadow:none!important;pointer-events:auto!important;align-items:stretch!important;
 }
@@ -173,7 +172,8 @@ body.ep-shell-ready .sitrep-panel,body.ep-shell-ready .target-mode-panel{display
 @media(max-width:390px){
   .ep-top-hud{width:min(214px,calc(100vw - 68px))!important}
   .ep-coordinate strong{font-size:10.5px!important}
-  .ep-top-actions{right:7px!important}
+  .ep-top-actions{right:7px!important;grid-template-columns:46px!important}
+  .ep-icon-btn{width:46px!important}
   .ep-global-tools{right:7px!important;width:46px!important}
   .ep-global-tool{width:46px!important}
 }
