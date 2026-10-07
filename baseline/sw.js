@@ -42,7 +42,7 @@ function tileXY(lat,lon,z){
 function koreaTerrainUrls(){
   const bbox={south:32.8,west:124.0,north:39.6,east:132.2};
   const urls=[];
-  for(const z of [7,8,9]){
+  for(const z of [5,6,7,8,9]){
     const [x1,ySouth]=tileXY(bbox.south,bbox.west,z);
     const [x2,yNorth]=tileXY(bbox.north,bbox.east,z);
     const minX=Math.min(x1,x2),maxX=Math.max(x1,x2);
@@ -147,14 +147,20 @@ self.addEventListener('fetch',event=>{
   if(url.origin===self.location.origin){
     if(url.pathname.includes('/baseline/')||url.pathname.includes('/vendor/')){
       event.respondWith((async()=>{
-        const cached=await caches.match(req);
-        if(cached) return cached;
-        const res=await fetch(req);
-        if(res.ok){
-          const cache=await caches.open(SHELL_CACHE);
-          cache.put(req,res.clone()).catch(()=>{});
+        const cache=await caches.open(SHELL_CACHE);
+        try{
+          const res=await fetch(req);
+          if(res.ok) cache.put(req,res.clone()).catch(()=>{});
+          return res;
+        }catch{
+          const cached=await cache.match(req);
+          if(cached) return cached;
+          if(req.mode==='navigate'){
+            const fallback=await cache.match(local('./index.html'));
+            if(fallback) return fallback;
+          }
+          return new Response('',{status:504,statusText:'BASELINE offline shell miss'});
         }
-        return res;
       })());
     }
     return;
