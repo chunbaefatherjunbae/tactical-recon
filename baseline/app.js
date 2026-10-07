@@ -839,7 +839,7 @@
     },
     settings: {
       title: '설정',
-      html: '<p class="sheet-note">현재 기본 디스플레이는 기존 NVG-G로 고정되어 있습니다. 테마 선택 기능은 전체 배치가 확정된 뒤 다시 추가합니다.</p>'
+      html: '<p class="sheet-note">설정 로딩 중...</p>'
     }
   };
 
@@ -894,6 +894,44 @@
     return null;
   }
 
+  function settingsHtml() {
+    const lite = window.BaselineLiteMap?.status?.() || {requested:'auto',effective:'online',packStatus:'UNKNOWN',packCompleted:0,packTotal:0,packFailed:0,dataReady:false};
+    const modeButton=(mode,label) => '<button type="button" data-map-mode="' + mode + '" class="' + (lite.requested===mode?'active':'') + '">' + label + '</button>';
+    const packLabel = lite.packStatus === 'READY'
+      ? '전국 경량지형 준비 완료'
+      : lite.packStatus === 'PREPARING'
+        ? '준비 중 ' + lite.packCompleted + '/' + lite.packTotal
+        : lite.packStatus === 'PARTIAL'
+          ? '일부 실패 · 다시 준비'
+          : '전국 경량지형 준비';
+    return '<div class="settings-section">' +
+      '<small>지도</small>' +
+      '<div class="map-mode-options">' +
+        modeButton('auto','자동') + modeButton('online','온라인') + modeButton('lite','경량') +
+      '</div>' +
+      '<div class="map-mode-readout">현재 · ' + esc(String(lite.effective).toUpperCase()) + '</div>' +
+      '<button class="lite-pack-btn" id="litePackBtn" type="button" ' + (lite.packStatus==='PREPARING'?'disabled':'') + '>' + esc(packLabel) + '</button>' +
+      '<p class="sheet-note">경량지도는 실제 OSM 선형 데이터와 DEM 지형을 사용합니다. 저해상도 전국 지형팩은 현장 출발 전 한 번 준비해두는 것을 권장합니다.</p>' +
+      '<p class="sheet-note">디스플레이 테마는 NVG-G로 고정. 테마 선택은 전체 배치 확정 뒤 추가.</p>' +
+    '</div>';
+  }
+
+  function openSettings() {
+    openSheet('settings',{title:'설정',html:settingsHtml()});
+    document.querySelectorAll('[data-map-mode]').forEach(btn => btn.addEventListener('click',() => {
+      window.BaselineLiteMap?.setMode?.(btn.dataset.mapMode);
+      openSettings();
+    }));
+    $('litePackBtn')?.addEventListener('click',() => {
+      if (!navigator.onLine) {
+        toast('온라인 상태에서 준비 필요');
+        return;
+      }
+      window.BaselineLiteMap?.prepareLitePack?.();
+      openSettings();
+    });
+  }
+
   function openSearch() {
     openSheet('search', {
       title: '검색',
@@ -922,7 +960,7 @@
   }
 
   $('searchBtn')?.addEventListener('click', openSearch);
-  $('settingsBtn')?.addEventListener('click', () => openSheet('settings'));
+  $('settingsBtn')?.addEventListener('click', openSettings);
   $('gpsBtn')?.addEventListener('click', toggleGps);
   $('followBtn')?.addEventListener('click', toggleFollow);
   $('sheetClose')?.addEventListener('click', closeSheet);
@@ -966,6 +1004,13 @@
       openSites(activeSiteFilter);
     }
   });
+  window.addEventListener('baseline-offline-change', () => {
+    if (S.state.activePanel === 'settings' && !$('sheet').hidden) openSettings();
+  });
+  window.addEventListener('baseline-map-mode-change', () => {
+    if (S.state.activePanel === 'settings' && !$('sheet').hidden) openSettings();
+  });
+
   window.addEventListener('pageshow', () => {
     setTimeout(() => {
       map.invalidateSize();
@@ -989,6 +1034,7 @@
     openSites,
     openExplore,
     openSiteAdd,
+    openSettings,
     toast,
     formatMgrs
   });
