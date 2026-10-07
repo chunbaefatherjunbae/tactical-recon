@@ -29,6 +29,7 @@
   let gesture = null;
   let gestureUntilClear = false;
   let timerHandle = null;
+  let pointAddressSearchToken = 0;
 
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -124,6 +125,32 @@
     } catch {
       return coords.map(n => Number(n).toFixed(5)).join(', ');
     }
+  }
+
+  function uniqueAddressParts(parts) {
+    const seen=new Set();
+    return parts.filter(value => {
+      const clean=String(value||'').trim();
+      if(!clean||clean==='대한민국'||/^\d{5}$/.test(clean)||seen.has(clean))return false;
+      seen.add(clean);return true;
+    }).map(value=>String(value).trim());
+  }
+
+  function normalizeKoreanAddress(data,fallback='') {
+    const a=data?.address||{};
+    const province=a.state||a.province||a.region;
+    const city=a.city||a.municipality;
+    const district=a.city_district||a.borough||a.county;
+    const locality=a.town||a.village||a.suburb||a.quarter||a.neighbourhood;
+    const road=a.road||a.pedestrian||a.residential||a.path;
+    const house=a.house_number;
+    const building=a.building||a.amenity||a.shop||a.tourism;
+    let parts=uniqueAddressParts([province,city,district]);
+    if(road)parts=uniqueAddressParts([...parts,road,house]);
+    else parts=uniqueAddressParts([...parts,locality,building]);
+    if(parts.length>=2)return parts.join(' ');
+    const display=String(data?.display_name||'').split(',').map(v=>v.trim()).filter(v=>v&&v!=='대한민국'&&!/^\d{5}$/.test(v));
+    return display.length?display.reverse().join(' '):fallback;
   }
 
   function routeLabel() {
@@ -238,20 +265,12 @@
     const nowCoords = ref ? [Number(ref.lat),Number(ref.lon)] : null;
     const dest = draft.destination.coords;
     const start = draft.start?.coords || null;
-    const next = nextTarget();
-
     const nowBundle = nowCoords ? Core.bearingBundle(nowCoords,dest) : null;
     const startBundle = start ? Core.bearingBundle(start,dest) : null;
     $('navNowMetric').textContent = metricText(nowBundle);
     $('navStartMetric').textContent = metricText(startBundle);
-
     const nextBlock = $('navNextBlock');
-    if (next && draft.vias.length && nowCoords) {
-      nextBlock.hidden = false;
-      $('navNextMetric').textContent = metricText(Core.bearingBundle(nowCoords,next.coords));
-    } else {
-      nextBlock.hidden = true;
-    }
+    if (nextBlock) nextBlock.hidden = true;
 
     const decl = nowBundle?.declination;
     $('navDeclination').textContent = Number.isFinite(decl)
@@ -395,6 +414,9 @@
     $('planEditorSave')?.addEventListener('click',() => saveCurrent(false));
     $('planEditorConfirm')?.addEventListener('click',() => {
       if ($('planNameInput')) draft.name = $('planNameInput').value.trim();
+      if (!draft.start) draft.start=referencePoint('START');
+      if (!draft.start) return toast('출발지 기준 위치 필요');
+      if (!draft.destination) return toast('도착지 선택 필요');
       routeChanged('PLAN_CONFIRM');
       App.closeSheet();
     });
@@ -443,6 +465,8 @@
         '<button type="button" data-point-source="LAST" ' + (last ? '' : 'disabled') + '>마지막위치<span>' + (last ? formatMgrs(last.coords) : '없음') + '</span></button>' +
         '<button type="button" data-point-source="MAP">지도 조준점<span>' + formatMgrs(reticlePoint(role).coords) + '</span></button>' +
       '</div>' +
+      '<div class="point-picker-address"><input id="pointAddressInput" type="search" autocomplete="street-address" placeholder="주소 검색 (온라인)"><button type="button" id="pointAddressSearch">검색</button></div>' +
+      '<div class="point-address-results" id="pointAddressResults"></div>' +
       '<div class="point-picker-coord"><input id="pointCoordInput" type="text" placeholder="MGRS 또는 위도, 경도"><button type="button" id="pointCoordUse">좌표 사용</button></div>' +
       '<div class="point-picker-site"><select id="pointSiteSelect"><option value="">거점 선택</option>' + siteOptions + '</select><button type="button" id="pointSiteUse">거점 사용</button></div>' +
       random +
@@ -463,6 +487,51 @@
         if (point) setPoint(role,index,point);
       });
     });
+
+    const runAddressSearch=async() => {
+      const input=$('pointAddressInput');
+      const results=$('pointAddressResults');
+      const button=$('pointAddressSearch');
+      const query=String(input?.value||'').trim();
+      if(!query){input?.focus();return;}
+      if(!navigator.onLine){
+        if(results)results.innerHTML='<div class="point-address-empty">OFFLINE · 주소 검색은 네트워크가 필요합니다.</div>';
+        return;
+      }
+      const token=++pointAddressSearchToken;
+      if(button)button.disabled=true;
+      if(results)results.innerHTML='<div class="point-address-empty">SEARCHING...</div>';
+      try{
+        const url='https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=6&addressdetails=1&accept-language=ko&q='+encodeURIComponent(query);
+        const res=await fetch(url,{headers:{Accept:'application/json'}});
+        if(!res.ok)throw new Error('search failed');
+        const data=await res.json();
+        if(token!==pointAddressSearchToken)return;
+        if(!Array.isArray(data)||!data.length){
+          results.innerHTML='<div class="point-address-empty">검색 결과 없음</div>';return;
+        }
+        results.innerHTML=data.map((row,i)=>{
+          const lat=Number(row.lat),lon=Number(row.lon);
+          if(!Number.isFinite(lat)||!Number.isFinite(lon))return '';
+          const address=normalizeKoreanAddress(row,row.display_name||query);
+          return '<button type="button" data-address-result="'+i+'"><strong>'+esc(address||query)+'</strong><span>'+lat.toFixed(5)+', '+lon.toFixed(5)+' · '+esc(formatMgrs([lat,lon]))+'</span></button>';
+        }).join('');
+        results.querySelectorAll('[data-address-result]').forEach(btn=>btn.addEventListener('click',()=>{
+          const row=data[Number(btn.dataset.addressResult)];
+          const lat=Number(row?.lat),lon=Number(row?.lon);
+          if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
+          const address=normalizeKoreanAddress(row,row.display_name||query);
+          setPoint(role,index,Plans.point({role,name:address||query,address:address||row.display_name||query,coords:[lat,lon],source:'ADDRESS'},role));
+        }));
+      }catch(error){
+        if(token!==pointAddressSearchToken)return;
+        if(results)results.innerHTML='<div class="point-address-empty">주소 검색 실패 · 좌표/MGRS는 오프라인 사용 가능</div>';
+      }finally{
+        if(button&&token===pointAddressSearchToken)button.disabled=false;
+      }
+    };
+    $('pointAddressSearch')?.addEventListener('click',runAddressSearch);
+    $('pointAddressInput')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();runAddressSearch();}});
 
     $('pointCoordUse')?.addEventListener('click',() => {
       const coords = parseCoords($('pointCoordInput')?.value);
