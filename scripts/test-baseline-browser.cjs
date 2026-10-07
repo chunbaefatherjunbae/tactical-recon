@@ -190,6 +190,25 @@ const server = http.createServer((req, res) => {
       await page.locator('#drawingCapture').dispatchEvent('pointermove', { pointerId:11, pointerType:'touch', isPrimary:true, clientX:drawBox.x+180, clientY:drawBox.y+390 });
       await page.locator('#drawingCapture').dispatchEvent('pointerup', { pointerId:11, pointerType:'touch', isPrimary:true, clientX:drawBox.x+180, clientY:drawBox.y+390 });
       assert.equal(await page.evaluate(() => BaselineNavigationUI.getDraft().drawings.length), 1);
+
+      // Two-finger gesture moves the map and must not create another drawing.
+      const centerBeforeGesture = await page.evaluate(() => {
+        const c = BaselineApp.map.getCenter();
+        return [c.lat,c.lng];
+      });
+      await page.locator('#drawingCapture').dispatchEvent('pointerdown', { pointerId:21, pointerType:'touch', isPrimary:true, clientX:drawBox.x+100, clientY:drawBox.y+300 });
+      await page.locator('#drawingCapture').dispatchEvent('pointerdown', { pointerId:22, pointerType:'touch', isPrimary:false, clientX:drawBox.x+210, clientY:drawBox.y+300 });
+      await page.locator('#drawingCapture').dispatchEvent('pointermove', { pointerId:21, pointerType:'touch', isPrimary:true, clientX:drawBox.x+75, clientY:drawBox.y+315 });
+      await page.locator('#drawingCapture').dispatchEvent('pointermove', { pointerId:22, pointerType:'touch', isPrimary:false, clientX:drawBox.x+185, clientY:drawBox.y+315 });
+      await page.locator('#drawingCapture').dispatchEvent('pointerup', { pointerId:21, pointerType:'touch', isPrimary:true, clientX:drawBox.x+75, clientY:drawBox.y+315 });
+      await page.locator('#drawingCapture').dispatchEvent('pointerup', { pointerId:22, pointerType:'touch', isPrimary:false, clientX:drawBox.x+185, clientY:drawBox.y+315 });
+      assert.equal(await page.evaluate(() => BaselineNavigationUI.getDraft().drawings.length), 1);
+      const centerAfterGesture = await page.evaluate(() => {
+        const c = BaselineApp.map.getCenter();
+        return [c.lat,c.lng];
+      });
+      assert(Math.abs(centerAfterGesture[0]-centerBeforeGesture[0]) > 0.00001 || Math.abs(centerAfterGesture[1]-centerBeforeGesture[1]) > 0.00001);
+
       await page.locator('#drawDoneBtn').click();
       assert.equal(await page.locator('#drawingCapture').isHidden(), true);
 
