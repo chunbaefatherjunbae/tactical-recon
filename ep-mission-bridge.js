@@ -71,8 +71,7 @@
       if(force&&state.mission?.status==='ACTIVE'){
         state.lastMissionRecord=Mission.finish(state.mission);
         state.mission=null;
-        state.surface='PLAN';
-        emit();
+        root.EpSurfaceBridge?.setSurface?.('PLAN',{force:true,reason:'LEGACY_NAV_EXIT'});
       }
       return null;
     }
@@ -80,8 +79,7 @@
     try{
       const mission=ensureMission(snap);
       if(mission){
-        state.surface='MISSION';
-        emit();
+        root.EpSurfaceBridge?.setSurface?.('MISSION',{force:true,reason:'MISSION_SYNC'});
       }
       return mission;
     }finally{syncing=false;}
@@ -163,7 +161,7 @@
       state.lastMissionRecord=Mission.finish(state.mission);
       state.mission=null;
     }
-    state.surface=returnToPlan?'PLAN':'MAP';
+    root.EpSurfaceBridge?.setSurface?.(returnToPlan?'PLAN':'MAP',{force:true,reason:'MISSION_END'});
     emit();
   }
 

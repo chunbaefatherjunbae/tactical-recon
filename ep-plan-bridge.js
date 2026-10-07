@@ -30,6 +30,7 @@
     lastSignature=sig;
     const plan=Adapter.fromLegacy(snap,Plan);
     runtime.state.plan=plan;
+    root.EpSurfaceBridge?.setSurface?.('PLAN',{force:true,reason:'PLAN_SYNC'});
     try{
       root.dispatchEvent(new CustomEvent('ep-state-change',{detail:{slice:'plan',state:runtime.snapshot()}}));
     }catch(e){}

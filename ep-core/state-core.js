@@ -12,6 +12,7 @@
   function createState(){
     return {
       surface:SURFACE.MAP,
+      surfaceMeta:{previous:null,reason:'INIT',changedAt:Date.now()},
       overlay:OVERLAY.NONE,
       drawTool:DRAW.NONE,
       gps:{enabled:false,status:'OFF',fix:null,lastFix:null,follow:false},
