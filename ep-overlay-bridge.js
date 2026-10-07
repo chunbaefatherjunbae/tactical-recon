@@ -11,6 +11,7 @@
 
   const state=Runtime.state;
   let muting=false;
+  let v29SheetObserver=null;
   const raw={};
 
   function emit(reason){
@@ -121,6 +122,31 @@
     root.toggleWpDrawer=wrapped;
   }
 
+  function syncRecordsOverlayFromSheet(source='V29_SHEET'){
+    const sheet=document.getElementById('v29Sheet');
+    if(!sheet)return false;
+    const open=sheet.classList.contains('open');
+    if(open){
+      if(state.overlay!=='RECORDS')setOverlay('RECORDS',{source,closeOthers:true});
+    }else if(state.overlay==='RECORDS'){
+      closeOverlay('RECORDS',{source});
+    }
+    return open;
+  }
+
+  function installV29SheetObserver(){
+    const attach=()=>{
+      const sheet=document.getElementById('v29Sheet');
+      if(!sheet||sheet.__epOverlayObserved)return false;
+      sheet.__epOverlayObserved=true;
+      v29SheetObserver=new MutationObserver(()=>syncRecordsOverlayFromSheet('V29_SHEET_CLASS'));
+      v29SheetObserver.observe(sheet,{attributes:true,attributeFilter:['class']});
+      syncRecordsOverlayFromSheet('V29_SHEET_INSTALL');
+      return true;
+    };
+    if(!attach())root.addEventListener?.('DOMContentLoaded',attach,{once:true});
+  }
+
   function wrapV29Records(){
     const ui=root.v29?.ui;
     if(!ui||ui.__epOverlayOwner)return;
@@ -170,7 +196,11 @@
     wrapClose('closeNavMore','TOOLS');
 
     wrapV29Records();
-    root.addEventListener?.('DOMContentLoaded',wrapV29Records,{once:true});
+    installV29SheetObserver();
+    root.addEventListener?.('DOMContentLoaded',()=>{
+      wrapV29Records();
+      installV29SheetObserver();
+    },{once:true});
     syncBody();
   }
 

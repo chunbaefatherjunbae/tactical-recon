@@ -47,8 +47,16 @@ test('V skin keeps adaptive position and text-only bottom toolbar',()=>{
   assert(shell.includes('<b>TEMP</b><span>임시위치</span>'));
   ['⌾','✣','≋','⌁'].forEach(icon=>assert.strictEqual(shell.includes(icon),false));
   assert(css.includes('.ep-bottom-nav{'));
-  assert(css.includes('grid-template-columns:repeat(4,minmax(0,1fr))!important'));
+  assert(css.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
   assert(css.includes('.ep-bottom-nav button b{display:none!important}'));
+});
+
+test('search and operation menu match GPS control dimensions and GPS has no redundant status label',()=>{
+  assert(css.includes('grid-template-columns:48px!important'));
+  assert(css.includes('width:48px!important;height:38px!important'));
+  assert(css.includes('width:48px!important;min-height:38px!important;height:38px!important'));
+  assert.strictEqual(shell.includes('id="epGpsState"'),false);
+  assert.strictEqual(shell.includes("el('epGpsState')"),false);
 });
 
 test('V skin restores final V29 reticle geometry and scale',()=>{
@@ -82,10 +90,11 @@ test('V skin uses V27 global control dimensions and toolbar rhythm',()=>{
   assert(css.includes('border-top:1px solid var(--ep-field-line-strong)!important'));
 });
 
-test('EP shell exposes required map-first controls',()=>{
-  ['epPosReadout','epTgtReadout','epGpsBtn','epFollowBtn','epTempBtn','epTrackBtn','epPointsBtn','epRandomBtn','epRecordsBtn','epToolsBtn'].forEach(id=>{
+test('EP shell exposes required map-first controls without duplicate bottom tools',()=>{
+  ['epPosReadout','epTgtReadout','epGpsBtn','epFollowBtn','epTempBtn','epTrackBtn','epPointsBtn','epRandomBtn','epRecordsBtn'].forEach(id=>{
     assert(shell.includes("id=\""+id+"\""));
   });
+  assert.strictEqual(shell.includes('id="epToolsBtn"'),false);
 });
 
 test('MAP shell hides legacy HUD stack but preserves legacy DOM',()=>{
@@ -97,12 +106,11 @@ test('MAP shell hides legacy HUD stack but preserves legacy DOM',()=>{
   assert(index.includes('class="mfd-bottom-bar"'));
 });
 
-test('bottom navigation is map-only and four-function',()=>{
+test('bottom navigation is map-only and three-function because top menu owns tools',()=>{
   assert(css.includes('body:not(.ep-surface-map) #epShell .ep-bottom-nav{display:none!important}'));
   assert(shell.includes('<span>거점</span>'));
   assert(shell.includes('<span>무작위</span>'));
   assert(shell.includes('<span>기록</span>'));
-  assert(shell.includes('<span>도구</span>'));
 });
 
 test('TRACK short and long press use V28 TrackV2 state',()=>{

@@ -5969,13 +5969,13 @@
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js?v=ep-v6-display-fix-20261007-2', { scope: './', updateViaCache: 'none' })
+      navigator.serviceWorker.register('./service-worker.js?v=ep-v6-ui-control-audit-20261007-3', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-ep-v6-display-fix-20261007-2';
+        const reloadKey = 'tactical-recon-sw-reload-ep-v6-ui-control-audit-20261007-3';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();

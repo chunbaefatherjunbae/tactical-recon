@@ -184,7 +184,7 @@
         '<button class="ep-icon-btn" id="epMoreBtn" type="button" aria-label="더보기">⋯</button>'+
       '</div>'+
       '<aside class="ep-global-tools">'+
-        '<button class="ep-global-tool" id="epGpsBtn" type="button"><b>GPS</b><span id="epGpsState">OFF</span></button>'+
+        '<button class="ep-global-tool" id="epGpsBtn" type="button" aria-label="GPS 전원"><b>GPS</b></button>'+
         '<button class="ep-global-tool" id="epFollowBtn" type="button" aria-label="현재 위치 / 추적"><b id="epFollowGlyph"></b><span id="epFollowLabel">위치</span></button>'+
         '<button class="ep-global-tool" id="epTempBtn" type="button" aria-label="TEMP 위치 지정"><b>TEMP</b><span>임시위치</span></button>'+
         '<button class="ep-global-tool" id="epTrackBtn" type="button" aria-label="트랙 기록"><b id="epTrackState">○</b><span>트랙</span></button>'+
@@ -193,7 +193,6 @@
         '<button id="epPointsBtn" type="button"><span>거점</span></button>'+
         '<button id="epRandomBtn" type="button"><span>무작위</span></button>'+
         '<button id="epRecordsBtn" type="button"><span>기록</span></button>'+
-        '<button id="epToolsBtn" type="button"><span>도구</span></button>'+
       '</nav>'+
       '<div class="ep-shell-toast" id="epShellToast"></div>';
     document.body.appendChild(shell);
@@ -206,7 +205,6 @@
     el('epPointsBtn').addEventListener('click',openPoints);
     el('epRandomBtn').addEventListener('click',runRandom);
     el('epRecordsBtn').addEventListener('click',openRecords);
-    el('epToolsBtn').addEventListener('click',openTools);
     el('epPosReadout').addEventListener('click',()=>copyText(el('epPosCoord').textContent));
     el('epTgtReadout').addEventListener('click',()=>copyText(el('epTgtCoord').textContent));
     installTrackButton();
@@ -230,11 +228,9 @@
     el('epTgtCoord').textContent=tgt?mgrsText(tgt):'--';
 
     const gpsOn=safeBool('gps');
-    const fix=safeBool('fix');
     const follow=safeBool('follow');
     const temp=safeBool('temp');
     el('epGpsBtn').classList.toggle('active',gpsOn);
-    el('epGpsState').textContent=gpsOn?(fix?'FIX':'ON'):'OFF';
     const followBtn=el('epFollowBtn');
     const followGlyph=el('epFollowGlyph');
     const followLabel=el('epFollowLabel');
@@ -257,9 +253,10 @@
     const overlay=state()?.overlay||'NONE';
     for(const pair of [
       ['epPointsBtn','POINTS'],
-      ['epRecordsBtn','RECORDS'],
-      ['epToolsBtn','TOOLS']
+      ['epRecordsBtn','RECORDS']
     ]) el(pair[0]).classList.toggle('active',overlay===pair[1]);
+    el('epSearchBtn').classList.toggle('active',overlay==='SEARCH');
+    el('epMoreBtn').classList.toggle('active',overlay==='TOOLS');
   }
 
   function install(){

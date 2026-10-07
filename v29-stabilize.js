@@ -919,7 +919,6 @@
       '<button class="osb-btn" id="v29NearbyBtn" type="button"></button>'+
       '<button class="osb-btn" id="v29LayersBtn" type="button"></button>'+
       '<button class="osb-btn" id="v29RoadBtn" type="button"></button>'+
-      '<button class="osb-btn" id="v29DisplayBtn" type="button"></button>'+
       '</div>');
 
     const data=makeSection('control-data','DATA',
@@ -953,7 +952,6 @@
     mapSection.querySelector('#v29NearbyBtn')?.addEventListener('click',()=>openFieldControls('radar'));
     mapSection.querySelector('#v29LayersBtn')?.addEventListener('click',()=>openFieldControls('layers'));
     mapSection.querySelector('#v29RoadBtn')?.addEventListener('click',function(){toggleRoadBoost(this);});
-    mapSection.querySelector('#v29DisplayBtn')?.addEventListener('click',()=>openFieldControls('optic'));
 
     data.querySelector('#v29ReuseBtn')?.addEventListener('click',()=>{closeFieldControls();root.openV29FieldKit?.('reuse');});
     data.querySelector('#v29GpxBtn')?.addEventListener('click',()=>{closeFieldControls();root.openV29FieldKit?.('export');});
@@ -965,6 +963,7 @@
 
     system.querySelector('#v29SystemGpsBtn')?.addEventListener('click',()=>toggleGpsPower());
     system.querySelector('#v29SystemDisplayBtn')?.addEventListener('click',()=>openFieldControls('optic'));
+    document.getElementById('targetNavOpticBtn')?.remove();
 
     if(typeof openFieldControls==='function'&&!openFieldControls.__v29Menu){
       const previous=openFieldControls;
@@ -996,7 +995,7 @@
       '#v29GpsStatusBtn':t('gpsStatus'),'#v29PositionSearchBtn':t('positionSearch'),'#v29TempSetBtn':t('tempSet'),
       '#v29TempClearBtn':t('tempClear'),'#v29HomeSetBtn':t('homeSet'),'#v29HomeGoBtn':t('homeGo'),
       '#v29HomeClearBtn':t('homeClear'),'#v29PositionSiteAddBtn':t('siteAdd'),'#v29NearbyBtn':t('nearby'),
-      '#v29LayersBtn':t('layers'),'#v29RoadBtn':t('roads'),'#v29DisplayBtn':t('display'),'#v29ReuseBtn':t('reuse'),
+      '#v29LayersBtn':t('layers'),'#v29RoadBtn':t('roads'),'#v29ReuseBtn':t('reuse'),
       '#v29GpxBtn':t('gpx'),'#v29BackupBtn':t('backup'),'#v29RestoreBtn':t('restore'),'#v29SystemGpsBtn':t('gpsPower'),
       '#v29SystemDisplayBtn':t('display')
     };
@@ -1801,8 +1800,18 @@
     const system=document.getElementById('control-system');
     const systemGrid=system?.querySelector('.field-control-grid');
     if(systemGrid){
-      systemGrid.innerHTML='<button class="osb-btn" id="v29LanguageBtn" type="button"></button>';
-      systemGrid.querySelector('#v29LanguageBtn')?.addEventListener('click',()=>openFieldControls('language'));
+      let language=systemGrid.querySelector('#v29LanguageBtn');
+      if(!language){
+        language=document.createElement('button');
+        language.className='osb-btn';
+        language.id='v29LanguageBtn';
+        language.type='button';
+        systemGrid.appendChild(language);
+      }
+      if(!language.__v29LanguageBound){
+        language.__v29LanguageBound=true;
+        language.addEventListener('click',()=>openFieldControls('language'));
+      }
     }
     syncMissionMenuText();
   }
@@ -1818,6 +1827,8 @@
       '#v29FreeTrackMissionBtn':(base.track.state!=='OFF'&&base.state.activePlanId===freePlanId())?t('freeTrackManage'):t('freeTrack'),
       '#v29StandardMapBtn':t('standardMap'),
       '#v29LightMapBtn':t('lightMap'),
+      '#v29SystemGpsBtn':t('gpsPower'),
+      '#v29SystemDisplayBtn':t('display'),
       '#v29LanguageBtn':t('language')
     };
     Object.entries(labels).forEach(([sel,label])=>{const el=document.querySelector(sel);if(el)el.textContent=label;});
