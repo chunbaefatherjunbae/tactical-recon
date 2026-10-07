@@ -356,7 +356,8 @@
       toast('TEMP 없음');
       return;
     }
-    map.setView([temp.lat, temp.lon], Math.max(map.getZoom(), 15), { animate: true });
+    if (S.state.gps.follow) S.setFollow(false);
+    map.setView([temp.lat, temp.lon], Math.max(map.getZoom(), 15), { animate:false });
     toast('TEMP로 이동');
   }
 
