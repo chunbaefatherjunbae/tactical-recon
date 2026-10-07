@@ -5990,7 +5990,7 @@
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js?v=ep-v6-frameless-hud-20261007-4', { scope: './', updateViaCache: 'none' })
+      navigator.serviceWorker.register('./service-worker.js?v=ep-v7-usability-pass-20261007-1', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
