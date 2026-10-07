@@ -14,6 +14,7 @@
   const MODE_KEY='tr_baseline_map_mode_v1';
   const VALID_MODES=new Set(['auto','online','lite']);
   const processedTerrain=new Map();
+  const TERRAIN_MEMORY_LIMIT=48;
   const DATA_URL='./data/lite-map-osm.js';
   let requestedMode=VALID_MODES.has(localStorage.getItem(MODE_KEY)) ? localStorage.getItem(MODE_KEY) : 'auto';
   let effectiveMode='online';
@@ -170,6 +171,11 @@
     })();
 
     processedTerrain.set(key,promise);
+    while(processedTerrain.size>TERRAIN_MEMORY_LIMIT){
+      const oldest=processedTerrain.keys().next().value;
+      if(oldest===key)break;
+      processedTerrain.delete(oldest);
+    }
     try{return await promise;}
     catch(error){
       processedTerrain.delete(key);
