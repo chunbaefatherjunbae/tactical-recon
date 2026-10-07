@@ -1,8 +1,9 @@
 'use strict';
 
-const VERSION='baseline-offline-v2';
+const VERSION='baseline-offline-v3';
 const SHELL_CACHE=VERSION+'-shell';
 const TERRAIN_CACHE=VERSION+'-terrain';
+const ONLINE_TILE_CACHE=VERSION+'-online-tiles';
 const BASE=new URL('./',self.location.href);
 const local=path=>new URL(path,BASE).href;
 const CORE_MARKER=local('__lite_core_ready__');
@@ -31,6 +32,12 @@ const SHELL=[
 
 const TERRAIN_HOST='https://s3.amazonaws.com';
 const TERRAIN_PREFIX='/elevation-tiles-prod/terrarium/';
+const ONLINE_TILE_HOSTS=new Set([
+  'tile.openstreetmap.org',
+  'a.tile.opentopomap.org',
+  'b.tile.opentopomap.org',
+  'c.tile.opentopomap.org'
+]);
 
 function tileXY(lat,lon,z){
   const n=2**z;
@@ -153,7 +160,7 @@ self.addEventListener('install',event=>{
 
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
-    const keep=new Set([SHELL_CACHE,TERRAIN_CACHE]);
+    const keep=new Set([SHELL_CACHE,TERRAIN_CACHE,ONLINE_TILE_CACHE]);
     const names=await caches.keys();
     await Promise.all(names.filter(name=>name.startsWith('baseline-offline-')&&!keep.has(name)).map(name=>caches.delete(name)));
     await self.clients.claim();
@@ -201,6 +208,30 @@ self.addEventListener('fetch',event=>{
         }
       })());
     }
+    return;
+  }
+
+  if(ONLINE_TILE_HOSTS.has(url.hostname)){
+    event.respondWith((async()=>{
+      const cache=await caches.open(ONLINE_TILE_CACHE);
+      const cached=await cache.match(req);
+      if(cached){
+        event.waitUntil((async()=>{
+          try{
+            const fresh=await fetch(req);
+            if(fresh.ok||fresh.type==='opaque') await cache.put(req,fresh.clone());
+          }catch{}
+        })());
+        return cached;
+      }
+      try{
+        const res=await fetch(req);
+        if(res.ok||res.type==='opaque') await cache.put(req,res.clone());
+        return res;
+      }catch{
+        return new Response('',{status:504,statusText:'Offline map tile unavailable'});
+      }
+    })());
     return;
   }
 
