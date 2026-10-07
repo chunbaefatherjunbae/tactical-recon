@@ -448,6 +448,17 @@
     }, 0);
   });
 
+  window.BaselineApp = Object.freeze({
+    version: 'R0.1-BASELINE',
+    map,
+    refresh,
+    setTempAtReticle,
+    moveToTemp,
+    centerOnReference,
+    openSheet,
+    closeSheet
+  });
+
   renderScale();
   refresh();
 })();
