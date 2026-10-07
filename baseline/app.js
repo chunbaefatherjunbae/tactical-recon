@@ -953,6 +953,7 @@
   function setActiveQuick(panel) {
     $('searchBtn')?.classList.toggle('active',panel === 'search');
     $('settingsBtn')?.classList.toggle('active',panel === 'settings');
+    $('layerBtn')?.classList.toggle('active',panel === 'layers');
   }
 
   function openSheet(panel, custom) {
@@ -1029,6 +1030,77 @@
       '<p class="sheet-note">저배율 전국 지형은 온라인 사용 중 자동 준비됩니다. 출발 전 ‘상세 지형 준비’를 완료하면 확대 시에도 더 선명한 지형을 오프라인에서 유지합니다.</p>' +
       '<p class="sheet-note">디스플레이 테마는 NVG-G로 고정. 테마 선택은 전체 배치 확정 뒤 추가.</p>' +
     '</div>';
+  }
+
+  const LAYER_PREF_KEY='baseline-layer-visibility-v1';
+  const layerDefaults=Object.freeze({
+    registered:true,
+    user:true,
+    unexplored:true,
+    secured:true,
+    plan:true,
+    track:true
+  });
+  let layerVisibility={...layerDefaults};
+
+  try {
+    const saved=JSON.parse(localStorage.getItem(LAYER_PREF_KEY) || 'null');
+    if(saved && typeof saved === 'object'){
+      Object.keys(layerDefaults).forEach(key => {
+        if(typeof saved[key] === 'boolean') layerVisibility[key]=saved[key];
+      });
+    }
+  } catch {}
+
+  function persistLayerVisibility(){
+    try { localStorage.setItem(LAYER_PREF_KEY,JSON.stringify(layerVisibility)); } catch {}
+  }
+
+  function applyLayerVisibility(){
+    const root=document.body;
+    Object.keys(layerDefaults).forEach(key => {
+      root.classList.toggle('layer-hide-' + key,!layerVisibility[key]);
+    });
+    const btn=$('layerBtn');
+    if(btn){
+      const hidden=Object.values(layerVisibility).filter(value => !value).length;
+      btn.classList.toggle('layer-filtered',hidden>0);
+      btn.setAttribute('aria-label',hidden ? '레이어 · ' + hidden + '개 숨김' : '레이어');
+      btn.title=hidden ? '레이어 · ' + hidden + '개 숨김' : '레이어';
+      btn.setAttribute('aria-pressed',String(hidden>0));
+    }
+  }
+
+  function layerRow(key,label,detail){
+    const on=layerVisibility[key] !== false;
+    return '<button type="button" class="layer-toggle-row' + (on ? ' active' : '') + '" data-layer-key="' + key + '" aria-pressed="' + String(on) + '">' +
+      '<span><strong>' + esc(label) + '</strong><small>' + esc(detail) + '</small></span>' +
+      '<i class="layer-toggle-switch" aria-hidden="true"><b></b></i>' +
+    '</button>';
+  }
+
+  function layerPanelHtml(){
+    return '<div class="layer-control-list">' +
+      layerRow('registered','등록 거점','기본 등록 거점') +
+      layerRow('user','내 거점','직접 등록한 거점') +
+      layerRow('unexplored','미개척','무작위 탐색 좌표') +
+      layerRow('secured','개척','개척 완료 거점') +
+      layerRow('plan','계획','계획선 · 출발/경유/목적지') +
+      layerRow('track','TRACK','현재 항법 궤적') +
+    '</div>' +
+    '<p class="sheet-note">지도 표시만 변경합니다. 거점·계획·기록 데이터는 삭제되지 않습니다.</p>';
+  }
+
+  function openLayers(){
+    openSheet('layers',{title:'레이어',html:layerPanelHtml()});
+    document.querySelectorAll('[data-layer-key]').forEach(btn => btn.addEventListener('click',() => {
+      const key=btn.dataset.layerKey;
+      if(!(key in layerDefaults)) return;
+      layerVisibility[key]=!layerVisibility[key];
+      persistLayerVisibility();
+      applyLayerVisibility();
+      openLayers();
+    }));
   }
 
   function openSettings() {
@@ -1121,6 +1193,7 @@
 
   $('searchBtn')?.addEventListener('click', openSearch);
   $('settingsBtn')?.addEventListener('click', openSettings);
+  $('layerBtn')?.addEventListener('click', openLayers);
   $('gpsBtn')?.addEventListener('click', toggleGps);
   $('followBtn')?.addEventListener('click', toggleFollow);
   $('sheetClose')?.addEventListener('click', closeSheet);
@@ -1206,6 +1279,7 @@
     formatMgrs
   });
 
+  applyLayerVisibility();
   renderSiteMarkers();
   renderScale();
   renderReticleCoordinate();
