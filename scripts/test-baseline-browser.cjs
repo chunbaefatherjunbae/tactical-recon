@@ -51,6 +51,10 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#followBtn svg').count(), 1);
       assert.equal(await page.evaluate(() => BaselineApp.topoLayer?._url.includes('opentopomap.org')), true);
       assert.equal(await page.evaluate(() => BaselineApp.roadBoostLayer?._url.includes('openstreetmap.org')), true);
+      assert.equal(await page.evaluate(() => document.body.classList.contains('theme-nvg-green')), true);
+      assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--map-filter').includes('hue-rotate(76deg)')), true);
+      assert.equal(await page.evaluate(() => BaselineSites.getRegistered().length), 24);
+      assert.equal(await page.locator('.site-map-marker').count(), 24);
       assert.equal(await page.locator('.reticle').count(), 1);
       assert.equal(await page.locator('[class*="corner"]').count(), 0);
 
@@ -95,7 +99,25 @@ const server = http.createServer((req, res) => {
       });
       assert(Math.abs(center.lat - savedTemp.lat) < 0.002 && Math.abs(center.lon - savedTemp.lon) < 0.002, 'TEMP hold must move map to saved TEMP');
 
-      for (const [panel, title] of [['sites','거점'],['explore','탐색'],['plans','계획'],['records','기록']]) {
+      await page.locator('.bottom-nav button[data-panel="sites"]').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '거점');
+      assert.equal(await page.locator('[data-site-filter]').count(), 3);
+      assert.equal(await page.locator('.site-row').count(), 24);
+      await page.locator('.site-row').first().click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '거점 정보');
+      assert(await page.locator('#siteMapGo').isVisible());
+      assert.equal(await page.locator('#siteSecureToggle').textContent(), '개척 완료');
+      await page.locator('#siteSecureToggle').click();
+      assert.equal(await page.locator('#siteSecureToggle').textContent(), '미개척으로');
+      assert.equal(await page.evaluate(() => BaselineSites.getSecured().length), 1);
+      await page.locator('#sheetClose').click();
+
+      await page.locator('.bottom-nav button[data-panel="sites"]').click();
+      await page.locator('[data-site-filter="secured"]').click();
+      assert.equal(await page.locator('.site-row').count(), 1);
+      await page.locator('#sheetClose').click();
+
+      for (const [panel, title] of [['explore','탐색'],['plans','계획'],['records','기록']]) {
         await page.locator(`.bottom-nav button[data-panel="${panel}"]`).click();
         assert.equal(await page.locator('#sheetTitle').textContent(), title);
         assert(await page.locator('#sheet').isVisible());
