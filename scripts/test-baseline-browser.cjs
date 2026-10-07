@@ -126,6 +126,7 @@ const server = http.createServer((req, res) => {
       await page.evaluate(() => {
         BaselineState.setGpsEnabled(false);
         BaselineState.setTemp({ lat: 37.41, lon: 127.01 });
+        BaselineState.setFollow(true);
         BaselineApp.map.setView([35.0, 129.0], 11, { animate:false });
       });
       const savedTemp = await page.evaluate(() => BaselineState.state.temp);
@@ -138,6 +139,7 @@ const server = http.createServer((req, res) => {
         return { lat:c.lat, lon:c.lng };
       });
       assert(Math.abs(center.lat - savedTemp.lat) < 0.002 && Math.abs(center.lon - savedTemp.lon) < 0.002, 'TEMP hold must move map to saved TEMP');
+      assert.equal(await page.evaluate(() => BaselineState.state.gps.follow), false, 'TEMP hold must suspend follow');
 
       await page.locator('.bottom-nav button[data-panel="sites"]').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '거점');
