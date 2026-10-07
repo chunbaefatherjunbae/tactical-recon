@@ -3702,8 +3702,6 @@
       target = getLocalIntel().find(item => String(item.id) === String(target.id)) || target;
       closeRouteLocate(); closeRoutePoints(); closeNavOptic();
       stopNavElapsed();
-      if (trackRecording || pendingTrackStart) stopTrackRecording(true, true);
-      clearActiveTrack();
       targetModeTarget = target;
       targetModeActive = true;
       targetModePhase = 'PLAN';
@@ -3750,7 +3748,6 @@
       closeRoutePoints();
       closeNavOptic();
       setMapRouteDrawInteraction(false);
-      if (trackRecording || pendingTrackStart) stopTrackRecording(true, true);
       targetModeActive = false;
       targetModeTarget = null;
       targetModeShowGps = false;
@@ -3770,7 +3767,6 @@
       navLegIndex = 0; backtrackActive = false;
       stopNavElapsed();
       routeDirty = false;
-      clearActiveTrack();
       if (routeDraftLayer) routeDraftLayer.clearLayers();
       if (routeViaLayer) routeViaLayer.clearLayers();
       if (targetReferenceLine && map.hasLayer(targetReferenceLine)) map.removeLayer(targetReferenceLine);
@@ -4088,7 +4084,6 @@
 
     function returnToTargetPlan() {
       if (epIsMapSurface()) return;
-      if (trackRecording || pendingTrackStart) stopTrackRecording(true, true);
       targetModePhase = 'PLAN';
       pendingNavStart = false;
       navPanelCollapsed = false;

@@ -78,6 +78,46 @@
     return index<0?Math.max(0,plan.points.length-1):index;
   }
 
+  function setObjective(value){
+    const p=port();
+    if(!p?.isEditable?.())return false;
+    const input=pointFromLegacy(value,'OBJECTIVE');
+    if(!input)return false;
+    const plan=syncFromLegacy(true);
+    if(!plan)return false;
+    const index=objectiveIndex(plan);
+    const next=Plan.point({...input,source:input.source||'LEGACY_OBJECTIVE'});
+    plan.points[index]=next;
+    plan.compatibility={...(plan.compatibility||{}),targetId:String(next.id)};
+    plan.updatedAt=Date.now();
+    return applyPlan(plan);
+  }
+
+  function removePointById(pointId){
+    const p=port();
+    if(!p?.isEditable?.())return false;
+    const plan=syncFromLegacy(true);
+    if(!plan)return false;
+    const index=plan.points.findIndex(item=>String(item.id)===String(pointId));
+    if(index<0)return false;
+    const objective=objectiveIndex(plan);
+    if(index===objective)return false;
+    if(index===0&&plan.compatibility?.hasStart){
+      plan.points.shift();
+      plan.compatibility.hasStart=false;
+      plan.updatedAt=Date.now();
+      return applyPlan(plan);
+    }
+    if(index===plan.points.length-1&&plan.compatibility?.hasEnd){
+      plan.points.pop();
+      plan.compatibility.hasEnd=false;
+      plan.updatedAt=Date.now();
+      return applyPlan(plan);
+    }
+    if(!Plan.removePoint(plan,pointId))return false;
+    return applyPlan(plan);
+  }
+
   function setRole(role,value){
     const p=port();
     if(!p?.isEditable?.())return false;
@@ -283,7 +323,9 @@
     applyPlan,
     mutate,
     setRole,
+    setObjective,
     clearRole,
+    removePointById,
     captureStroke,
     undoStroke,
     clearStrokes,
