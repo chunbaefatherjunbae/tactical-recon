@@ -68,6 +68,15 @@ const server = http.createServer((req, res) => {
       assert(parseFloat(await page.locator('#positionCoord').evaluate(el => getComputedStyle(el).fontSize)) >= 13);
       assert(parseFloat(await page.locator('#positionMeta').evaluate(el => getComputedStyle(el).fontSize)) >= 11);
       assert.equal(await page.locator('#reticleCoord').count(), 1);
+      const scaleShape = await page.locator('#scaleLine').evaluate(el => {
+        const s=getComputedStyle(el);
+        return {top:s.borderTopStyle,left:s.borderLeftStyle,right:s.borderRightStyle,bottom:s.borderBottomStyle,shadow:s.boxShadow};
+      });
+      assert(scaleShape.top === 'none' || scaleShape.top === 'hidden' || scaleShape.top === '');
+      assert.notEqual(scaleShape.left,'none');
+      assert.notEqual(scaleShape.right,'none');
+      assert.notEqual(scaleShape.bottom,'none');
+      assert.equal(scaleShape.shadow,'none');
       assert.equal(await page.locator('#gpsBtn').evaluate(el => el.classList.contains('inactive-state')), true);
       assert.equal(await page.locator('#followBtn').evaluate(el => el.classList.contains('inactive-state')), true);
       assert.equal(await page.evaluate(() => document.body.classList.contains('theme-nvg-green')), true);
