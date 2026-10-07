@@ -20,6 +20,7 @@ const STATIC_ASSETS = [
   './v29-stabilize.css',
   './v29-stabilize.js',
   './ep-core/location-core.js',
+  './ep-core/search-core.js',
   './ep-core/reference-core.js',
   './ep-core/plan-core.js',
   './ep-core/state-core.js',
@@ -98,6 +99,9 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('ep-core/location-core.js')) {
     html = html.replace('</body>', '  <script src="./ep-core/location-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/search-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/search-core.js"></script>\n</body>');
   }
   if (!html.includes('ep-core/reference-core.js')) {
     html = html.replace('</body>', '  <script src="./ep-core/reference-core.js"></script>\n</body>');
