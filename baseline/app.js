@@ -162,23 +162,65 @@
     temp?.setAttribute('aria-pressed', String(Boolean(S.state.temp)));
   }
 
+  function legacyGpsSvg(extraClass='') {
+    return '<svg class="marker-symbol marker-gps ' + extraClass + '" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<circle class="marker-bg" cx="12" cy="12" r="7.1"></circle>' +
+      '<circle class="marker-frame" cx="12" cy="12" r="7.1"></circle>' +
+      '<path class="marker-detail" d="M12 2.8V5 M12 19V21.2 M2.8 12H5 M19 12H21.2"></path>' +
+      '<circle class="marker-core" cx="12" cy="12" r="2.05"></circle>' +
+    '</svg>';
+  }
+
+  function legacySiteSvg(type) {
+    if (type === 'REGISTERED') {
+      return '<svg class="marker-symbol marker-registered" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<polygon class="marker-bg" points="12,4.2 19.8,12 12,19.8 4.2,12"></polygon>' +
+        '<polygon class="marker-frame" points="12,4.2 19.8,12 12,19.8 4.2,12"></polygon>' +
+        '<circle class="marker-core" cx="12" cy="12" r="1.35"></circle></svg>';
+    }
+    if (type === 'SECURED') {
+      return '<svg class="marker-symbol marker-secured" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<polygon class="marker-bg" points="12,4.2 19.8,12 12,19.8 4.2,12"></polygon>' +
+        '<polygon class="marker-frame" points="12,4.2 19.8,12 12,19.8 4.2,12"></polygon>' +
+        '<polygon class="marker-core" points="12,9.3 14.7,12 12,14.7 9.3,12"></polygon></svg>';
+    }
+    if (type === 'USER') {
+      return '<svg class="marker-symbol marker-user" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<rect class="marker-bg" x="5.2" y="5.2" width="13.6" height="13.6"></rect>' +
+        '<rect class="marker-frame" x="5.2" y="5.2" width="13.6" height="13.6"></rect>' +
+        '<circle class="marker-core" cx="12" cy="12" r="1.45"></circle></svg>';
+    }
+    return '<svg class="marker-symbol marker-unexplored" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<circle class="marker-bg" cx="12" cy="12" r="7.3"></circle>' +
+      '<circle class="marker-frame" cx="12" cy="12" r="7.3"></circle>' +
+      '<circle class="marker-core" cx="12" cy="12" r="1.05" opacity=".72"></circle></svg>';
+  }
+
   function makeDot(colorClass) {
+    if (colorClass === 'temp') {
+      return L.divIcon({
+        className:'baseline-marker-wrap',
+        html:'<span class="baseline-marker temp"></span>',
+        iconSize:[20,20],
+        iconAnchor:[10,10]
+      });
+    }
     return L.divIcon({
-      className: 'baseline-marker-wrap',
-      html: '<span class="baseline-marker ' + colorClass + '"></span>',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      className:'tactical-pin-wrapper',
+      html:legacyGpsSvg(colorClass === 'last' ? 'marker-last' : ''),
+      iconSize:[28,28],
+      iconAnchor:[14,14]
     });
   }
 
   function makeSiteIcon(site) {
     const secured = site?.status === 'SECURED';
-    const sourceClass = site?.source === 'WILD' ? ' wild' : (site?.source === 'USER' ? ' user' : ' registered');
+    const type = secured ? 'SECURED' : (site?.source === 'WILD' ? 'UNEXPLORED' : (site?.source === 'USER' ? 'USER' : 'REGISTERED'));
     return L.divIcon({
-      className: 'site-map-marker-wrap',
-      html: '<span class="site-map-marker' + sourceClass + (secured ? ' secured' : '') + '"></span>',
-      iconSize: [24, 24],
-      iconAnchor: [12, 12]
+      className:'tactical-pin-wrapper',
+      html:legacySiteSvg(type),
+      iconSize:[28,28],
+      iconAnchor:[14,14]
     });
   }
 
