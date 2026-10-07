@@ -53,7 +53,7 @@
     pane: 'roadBoostPane',
     className: 'road-boost-tiles',
     attribution: ''
-  }).addTo(map);
+  });
 
   siteLayer.addTo(map);
 
@@ -78,14 +78,31 @@
     return Math.floor(hr / 24) + '일 전';
   }
 
+  function spacedMgrs(raw) {
+    const compact=String(raw || '').toUpperCase().replace(/\s+/g,'');
+    const match=compact.match(/^(\d{1,2}[C-X])([A-Z]{2})(\d*)$/);
+    if(!match) return compact;
+    const digits=match[3] || '';
+    if(!digits) return match[1] + ' ' + match[2];
+    const half=Math.floor(digits.length/2);
+    return [match[1],match[2],digits.slice(0,half),digits.slice(half)].filter(Boolean).join(' ');
+  }
+
   function formatMgrs(point) {
-    if (!point) return 'POSITION --';
+    if (!point) return '--';
     try {
       if (window.mgrs?.forward) {
-        return window.mgrs.forward([Number(point.lon), Number(point.lat)], 5).replace(/\s+/g, ' ').trim();
+        return spacedMgrs(window.mgrs.forward([Number(point.lon), Number(point.lat)], 5));
       }
     } catch {}
     return Number(point.lat).toFixed(5) + ', ' + Number(point.lon).toFixed(5);
+  }
+
+  function renderReticleCoordinate() {
+    const node=$('reticleCoord');
+    if(!node) return;
+    const center=map.getCenter();
+    node.textContent='RET  ' + formatMgrs({lat:center.lat,lon:center.lng});
   }
 
   function esc(value) {
@@ -106,12 +123,12 @@
     if (!coord || !meta) return;
 
     if (!ref) {
-      coord.textContent = 'POSITION --';
+      coord.textContent = 'POS  --';
       meta.textContent = 'NO REFERENCE';
       return;
     }
 
-    coord.textContent = formatMgrs(ref);
+    coord.textContent = 'POS  ' + formatMgrs(ref);
     const pieces = [ref.type];
     if (ref.type === 'GPS' && Number.isFinite(Number(ref.accuracy))) {
       pieces.push('±' + Math.round(Number(ref.accuracy)) + ' m');
@@ -991,9 +1008,16 @@
 
   bindTempGesture();
 
+  let reticleHudFrame=0;
   map.on('move zoom resize', () => {
     renderScale();
     if (sitePlacementActive) updateSitePlacementBar();
+    if(!reticleHudFrame){
+      reticleHudFrame=requestAnimationFrame(()=>{
+        reticleHudFrame=0;
+        renderReticleCoordinate();
+      });
+    }
   });
   map.on('dragstart', () => {
     if (S.state.gps.follow) {
@@ -1049,5 +1073,6 @@
 
   renderSiteMarkers();
   renderScale();
+  renderReticleCoordinate();
   refresh();
 })();
