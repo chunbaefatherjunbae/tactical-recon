@@ -3,7 +3,8 @@
 
   const App=window.BaselineApp;
   const Offline=window.BaselineOffline;
-  const Data=window.BaselineLiteOSM || {roads:[],rivers:[],rails:[],coast:[],places:[]};
+  let Data=window.BaselineLiteOSM || null;
+  let dataLoadPromise=null;
   if(!App||!window.L){
     console.error('[BASELINE LITE] dependency missing');
     return;
@@ -13,6 +14,7 @@
   const MODE_KEY='tr_baseline_map_mode_v1';
   const VALID_MODES=new Set(['auto','online','lite']);
   const processedTerrain=new Map();
+  const DATA_URL='./data/lite-map-osm.js';
   let requestedMode=VALID_MODES.has(localStorage.getItem(MODE_KEY)) ? localStorage.getItem(MODE_KEY) : 'auto';
   let effectiveMode='online';
   let vectorReady=false;
@@ -20,6 +22,47 @@
   let fallbackReason=null;
 
   function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+
+  function loadLiteData(){
+    if(Data) return Promise.resolve(Data);
+    if(window.BaselineLiteOSM){
+      Data=window.BaselineLiteOSM;
+      return Promise.resolve(Data);
+    }
+    if(dataLoadPromise) return dataLoadPromise;
+
+    dataLoadPromise=new Promise((resolve,reject)=>{
+      const existing=document.querySelector('script[data-baseline-lite-data]');
+      if(existing){
+        existing.addEventListener('load',()=>{
+          Data=window.BaselineLiteOSM||null;
+          if(Data) resolve(Data); else reject(new Error('lite data missing after load'));
+        },{once:true});
+        existing.addEventListener('error',()=>reject(new Error('lite data load failed')),{once:true});
+        return;
+      }
+
+      const script=document.createElement('script');
+      script.src=DATA_URL;
+      script.async=true;
+      script.dataset.baselineLiteData='1';
+      script.onload=()=>{
+        Data=window.BaselineLiteOSM||null;
+        if(Data){
+          resolve(Data);
+        }else{
+          dataLoadPromise=null;
+          reject(new Error('lite data missing after load'));
+        }
+      };
+      script.onerror=()=>{
+        dataLoadPromise=null;
+        reject(new Error('lite data load failed'));
+      };
+      document.head.appendChild(script);
+    });
+    return dataLoadPromise;
+  }
   function terrainUrl(z,x,y){return 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/'+z+'/'+x+'/'+y+'.png';}
 
   async function blobToImage(blob){
@@ -198,7 +241,7 @@
     return {color:'#2f6e3d',weight:1.0,opacity:.72,dashArray:'3 5'};
   }
 
-  function decodePolyline(encoded,precision=Number(Data.precision)||4){
+  function decodePolyline(encoded,precision=Number(Data?.precision)||4){
     const factor=10**precision;
     let index=0,lat=0,lon=0;
     const points=[];
@@ -241,6 +284,7 @@
   }
 
   function roadLines(cls){
+    if(!Data)return [];
     if(Data.roads && !Array.isArray(Data.roads)){
       return decodedLines('road-'+cls,Data.roads[cls]||[]);
     }
@@ -257,7 +301,7 @@
   }
 
   function renderVectors(){
-    if(vectorReady)return;
+    if(vectorReady||!Data)return;
     vectorReady=true;
 
     const coastLines=decodedLines('coast',Data.coast||[]);
@@ -301,7 +345,7 @@
   function rebuildPlaces(){
     placeLayer.clearLayers();
     const z=map.getZoom();
-    (Data.places||[]).map(normalizedPlace).forEach(item=>{
+    (Data?.places||[]).map(normalizedPlace).forEach(item=>{
       if(!item?.p||!item.n)return;
       if(item.c==='T'&&z<10)return;
       L.marker(item.p,{icon:placeIcon(item),interactive:false,zIndexOffset:-100}).addTo(placeLayer);
@@ -368,14 +412,20 @@
     if(next==='lite'){
       if(map.hasLayer(App.topoLayer))map.removeLayer(App.topoLayer);
       if(map.hasLayer(App.roadBoostLayer))map.removeLayer(App.roadBoostLayer);
-      renderVectors();
       if(!map.hasLayer(terrainLayer))terrainLayer.addTo(map);
       if(!map.hasLayer(vectorLayer))vectorLayer.addTo(map);
       if(!map.hasLayer(gridLayer))gridLayer.addTo(map);
       if(!map.hasLayer(placeLayer))placeLayer.addTo(map);
       rebuildGrid();
-      rebuildPlaces();
-      updateSecondaryRoadVisibility();
+      loadLiteData().then(()=>{
+        renderVectors();
+        rebuildPlaces();
+        updateSecondaryRoadVisibility();
+        emit('lite-data-ready');
+      }).catch(error=>{
+        console.error('[BASELINE LITE] vector data unavailable',error);
+        emit('lite-data-error');
+      });
     }else{
       if(map.hasLayer(terrainLayer))map.removeLayer(terrainLayer);
       if(map.hasLayer(vectorLayer))map.removeLayer(vectorLayer);
@@ -398,16 +448,18 @@
 
   function status(){
     const offline=Offline?.snapshot?.()||null;
+    const loaded=Boolean(Data);
     return {
       requested:requestedMode,
       effective:effectiveMode,
       label:mapStatusLabel(),
-      dataReady:Boolean(
+      dataReady:Boolean(loaded && (
         (Array.isArray(Data.roads) ? Data.roads.length : Object.values(Data.roads||{}).some(list=>list?.length)) ||
         (Data.rivers||[]).length
-      ),
-      dataGeneratedAt:Data.generatedAt||null,
-      dataSource:Data.source||null,
+      )),
+      dataCached:Boolean(offline?.vectorReady),
+      dataGeneratedAt:Data?.generatedAt||null,
+      dataSource:Data?.source||null,
       packStatus:offline?.packStatus||'UNKNOWN',
       packCompleted:offline?.completed||0,
       packTotal:offline?.total||0,
@@ -461,7 +513,8 @@
     secondaryRoadLayer,
     gridLayer,
     placeLayer,
-    prepareLitePack:()=>Offline?.prepareLitePack?.()
+    prepareLitePack:()=>Offline?.prepareLitePack?.(),
+    loadLiteData
   });
 
   applyMode('init');
