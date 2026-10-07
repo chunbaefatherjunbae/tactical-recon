@@ -61,6 +61,12 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#followBtn svg').count(), 1);
       assert.equal(await page.evaluate(() => BaselineApp.topoLayer?._url.includes('opentopomap.org')), true);
       assert.equal(await page.evaluate(() => BaselineApp.roadBoostLayer?._url.includes('openstreetmap.org')), true);
+      assert.equal(await page.evaluate(() => BaselineApp.map.hasLayer(BaselineApp.roadBoostLayer)), false, 'legacy road boost must stay off by default');
+      assert.equal(await page.locator('#tempBtn').evaluate(el => getComputedStyle(el).touchAction), 'manipulation');
+      assert(parseFloat(await page.locator('.bottom-nav button').first().evaluate(el => getComputedStyle(el).fontSize)) >= 14);
+      assert(parseFloat(await page.locator('#positionCoord').evaluate(el => getComputedStyle(el).fontSize)) >= 13);
+      assert(parseFloat(await page.locator('#positionMeta').evaluate(el => getComputedStyle(el).fontSize)) >= 11);
+      assert.equal(await page.locator('#reticleCoord').count(), 1);
       assert.equal(await page.evaluate(() => document.body.classList.contains('theme-nvg-green')), true);
       assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--bg-base').trim()), '#020904');
       assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text-main').trim()), '#22ff66');
@@ -141,6 +147,14 @@ const server = http.createServer((req, res) => {
       });
       assert(Math.abs(center.lat - savedTemp.lat) < 0.002 && Math.abs(center.lon - savedTemp.lon) < 0.002, 'TEMP hold must move map to saved TEMP');
       assert.equal(await page.evaluate(() => BaselineState.state.gps.follow), false, 'TEMP hold must suspend follow');
+      await page.waitForTimeout(40);
+      const topCoords = await page.evaluate(() => ({
+        pos:document.getElementById('positionCoord')?.textContent || '',
+        ret:document.getElementById('reticleCoord')?.textContent || ''
+      }));
+      assert(/^POS\s{2}/.test(topCoords.pos));
+      assert(/^RET\s{2}/.test(topCoords.ret));
+      assert(/\d{1,2}[C-X]\s[A-Z]{2}\s\d{5}\s\d{5}/.test(topCoords.ret), 'reticle MGRS must be grouped for readability');
 
       await page.locator('.bottom-nav button[data-panel="sites"]').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '거점');
@@ -273,7 +287,18 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.evaluate(() => Number.isFinite(BaselineNavigationCore.bearingBundle([37.5,127],[37.6,127.1]).magneticBearing)), true);
       const seoulDeclination = await page.evaluate(() => BaselineNavigationCore.wmmField(37.5665,126.9780,0,new Date('2026-10-07T00:00:00Z')).declination);
       assert(seoulDeclination < -7 && seoulDeclination > -11);
+      assert.equal(await page.locator('.site-map-marker-wrap').first().evaluate(el => getComputedStyle(el).display), 'none', 'site markers must hide in plan mode');
+      assert.equal(await page.locator('[data-nav-action="CLOSE"]').count(), 1);
       await page.screenshot({ path:`ui-results-baseline/${name}-navigation-ready.png`, fullPage:true });
+
+      await page.locator('[data-nav-action="CLOSE"]').click();
+      assert.equal(await page.locator('#navRouteSummary').isHidden(), true);
+      assert.notEqual(await page.locator('.site-map-marker-wrap').first().evaluate(el => getComputedStyle(el).display), 'none', 'site markers must return when plan view closes');
+      await page.locator('.bottom-nav button[data-panel="plans"]').click();
+      assert.equal(await page.locator('#planContinueBtn').count(), 1);
+      await page.locator('#planContinueBtn').click();
+      assert.equal(await page.locator('#navRouteSummary').isVisible(), true);
+      assert.equal(await page.locator('.site-map-marker-wrap').first().evaluate(el => getComputedStyle(el).display), 'none');
 
       // Drawing: one finger draws. Drawing mode owns gestures instead of legacy PLAN handlers.
       await page.locator('[data-nav-action="DRAW"]').click();
