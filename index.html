@@ -2154,6 +2154,7 @@
     function epIsMapSurface() { return epSurfaceName() === 'MAP'; }
     function epIsPlanSurface() { return epSurfaceName() === 'PLAN'; }
     function epIsMissionSurface() { return epSurfaceName() === 'MISSION'; }
+    function epHasActiveContext() { return !epIsMapSurface(); }
 
     let routeLocateSearchToken = 0;
     let targetReferenceLine = null;
@@ -2556,7 +2557,7 @@
     }
 
     function markerVisible(entry) {
-      if (targetModeActive && targetModeTarget) {
+      if (epHasActiveContext() && targetModeTarget) {
         return String(entry.data?.id ?? '') === String(targetModeTarget.id);
       }
       const layerKey = markerLayerKey(entry);
@@ -2580,7 +2581,7 @@
     }
 
     function syncRadiusCirclePosition() {
-      const shouldShowRadius = !targetModeActive && selectedRadius !== 'all' && hasGpsFix && markerLayerVisibility.REGISTERED;
+      const shouldShowRadius = epIsMapSurface() && selectedRadius !== 'all' && hasGpsFix && markerLayerVisibility.REGISTERED;
       if (!shouldShowRadius) {
         if (radiusCircle && map.hasLayer(radiusCircle)) map.removeLayer(radiusCircle);
         return;
@@ -3307,7 +3308,7 @@
       const backtrackBtn = document.getElementById('targetBacktrackBtn');
       const isNav = epIsMissionSurface();
 
-      if (panel) panel.classList.toggle('active', targetModeActive);
+      if (panel) panel.classList.toggle('active', epHasActiveContext());
       if (kicker) kicker.innerText = 'TARGET MODE // ROUTE PLAN';
       if (name) name.innerText = targetModeTarget?.name || 'NO TARGET';
       if (stats) stats.innerHTML = `ROUTE ${routeLengthKm().toFixed(1)} KM<br>${routeDraftSegments.length} SEG · ${routeViaPoints.length} VIA · ${routeMarkSegments.length} OVERLAY`;
@@ -3559,7 +3560,7 @@
     function renderRouteViaPoints() {
       if (!routeViaLayer) return;
       routeViaLayer.clearLayers();
-      if (!targetModeActive) return;
+      if (epIsMapSurface()) return;
       routeViaPoints.forEach(via => {
         const marker = L.marker(via.coords, { icon:routeViaIcon(via), keyboard:false, riseOnHover:true }).addTo(routeViaLayer);
         marker.on('click', e => {
@@ -3583,7 +3584,7 @@
     function renderRouteDraft() {
       if (!routeDraftLayer) return;
       routeDraftLayer.clearLayers();
-      if (!targetModeActive) { renderRouteViaPoints(); renderRouteEndpoints(); return; }
+      if (epIsMapSurface()) { renderRouteViaPoints(); renderRouteEndpoints(); return; }
       routeDraftSegments.forEach(segment => {
         L.polyline(segment, routeStyle()).addTo(routeDraftLayer);
       });
@@ -3609,7 +3610,7 @@
 
     function syncGpsMarkerVisibility() {
       if (!gpsMarker) return;
-      const shouldShow = hasGpsFix && (!targetModeActive || targetModeShowGps);
+      const shouldShow = hasGpsFix && (epIsMapSurface() || targetModeShowGps);
       const shown = map.hasLayer(gpsMarker);
       if (shouldShow && !shown) gpsMarker.addTo(map);
       if (!shouldShow && shown) map.removeLayer(gpsMarker);
@@ -3673,7 +3674,7 @@
     }
 
     function toggleRouteDraw() {
-      if (!targetModeActive) return;
+      if (epIsMapSurface()) return;
       setMapRouteDrawInteraction(!routeDrawEnabled);
     }
 
@@ -3737,7 +3738,7 @@
     }
 
     function exitTargetMode(force = false) {
-      if (!targetModeActive) return;
+      if (epIsMapSurface()) return;
       // force is reserved for explicit point deletion, never normal PLAN closing.
       if (!force && !preserveActivePlan()) return;
       closeRouteLocate();
@@ -3774,7 +3775,7 @@
     }
 
     function toggleTargetMyPosition() {
-      if (!targetModeActive) return;
+      if (epIsMapSurface()) return;
       if (!hasGpsFix) {
         targetModeShowGps = true;
         updateTargetModePanel();
@@ -3788,7 +3789,7 @@
     }
 
     function undoRouteStroke() {
-      if (!targetModeActive) return;
+      if (epIsMapSurface()) return;
       const bucket = routeDrawKind === 'MARK' ? routeMarkSegments : routeDraftSegments;
       if (!bucket.length) return;
       bucket.pop();
@@ -3797,7 +3798,7 @@
     }
 
     function clearRouteDraft() {
-      if (!targetModeActive) return;
+      if (epIsMapSurface()) return;
       const label = routeDrawKind === 'MARK' ? 'OVERLAY' : 'ROUTE';
       const bucket = routeDrawKind === 'MARK' ? routeMarkSegments : routeDraftSegments;
       if (!bucket.length) return;
@@ -3808,11 +3809,11 @@
     }
 
     function preserveActivePlan() {
-      return !targetModeActive || (!routeDirty && !(routeCurrentSegment?.length >= 2)) || saveTargetRoute();
+      return epIsMapSurface() || (!routeDirty && !(routeCurrentSegment?.length >= 2)) || saveTargetRoute();
     }
 
     function saveTargetRoute() {
-      if (!targetModeActive || !targetModeTarget) return false;
+      if (epIsMapSurface() || !targetModeTarget) return false;
       if (routePointerId !== null && routeCurrentSegment?.length >= 2) {
         finishRoutePointer({pointerId:routePointerId, preventDefault(){}});
       }
@@ -4024,7 +4025,7 @@
     }
 
     function activateTargetNavigation() {
-      if (!targetModeActive || !targetModeTarget) return;
+      if (!epIsPlanSurface() || !targetModeTarget) return;
       const ref = getReferencePosition();
       if (!ref?.coords) return;
       pendingNavStart = false;
@@ -4053,7 +4054,7 @@
     }
 
     function startTargetNavigation() {
-      if (!targetModeActive || !targetModeTarget) return;
+      if (!epIsPlanSurface() || !targetModeTarget) return;
       if (!preserveActivePlan()) return;
       setMapRouteDrawInteraction(false);
       const ref = getReferencePosition();
@@ -4081,7 +4082,7 @@
     }
 
     function returnToTargetPlan() {
-      if (!targetModeActive) return;
+      if (epIsMapSurface()) return;
       if (trackRecording || pendingTrackStart) stopTrackRecording(true, true);
       targetModePhase = 'PLAN';
       pendingNavStart = false;
@@ -4135,7 +4136,7 @@
     }
 
     function handleRoutePointerDown(event) {
-      if (!targetModeActive || !routeDrawEnabled || event.button > 0) return;
+      if (!epIsPlanSurface() || !routeDrawEnabled || event.button > 0) return;
       const point = routeContainerPoint(event);
       routeActivePointers.set(event.pointerId, point);
       try { map.getContainer().setPointerCapture(event.pointerId); } catch (e) {}
@@ -4155,7 +4156,7 @@
     }
 
     function handleRoutePointerMove(event) {
-      if (!targetModeActive || !routeDrawEnabled || !routeActivePointers.has(event.pointerId)) return;
+      if (!epIsPlanSurface() || !routeDrawEnabled || !routeActivePointers.has(event.pointerId)) return;
       const point = routeContainerPoint(event);
       routeActivePointers.set(event.pointerId, point);
       event.preventDefault();
@@ -4280,7 +4281,7 @@
         alert('개척 상태 저장에 실패했습니다. 브라우저 저장 공간을 확인하십시오.');
         return;
       }
-      if (targetModeActive && targetModeTarget && String(targetModeTarget.id) === String(list[idx].id)) {
+      if (epHasActiveContext() && targetModeTarget && String(targetModeTarget.id) === String(list[idx].id)) {
         targetModeTarget = list[idx];
       }
       openSitrep(list[idx], 'SECURED');
@@ -4341,7 +4342,7 @@
         lastGpsFollowPanAt = Date.now();
       }
       if (gpsFollowEnabled && navMapOrientation === 'TRACK') resumeTrackUpRotation();
-      if (targetModeActive) updateTargetModePanel();
+      if (epHasActiveContext()) updateTargetModePanel();
     }
 
     function toggleGpsFollow() {
@@ -4374,7 +4375,7 @@
       else syncRadiusCirclePosition();
 
       updateActiveTargetNavigation();
-      if (pendingNavStart && targetModeActive) {
+      if (pendingNavStart && epIsPlanSurface()) {
         activateTargetNavigation();
       }
       if (pendingTrackStart && epIsMissionSurface() && !trackRecording) {
@@ -4393,7 +4394,7 @@
         }
       }
       updateTrackUpFromGps(pos);
-      if (targetModeActive) updateTargetModePanel();
+      if (epHasActiveContext()) updateTargetModePanel();
     }
 
     function locateUser() {
@@ -4409,13 +4410,13 @@
 
       // 이미 FIX가 있으면 GPS 버튼은 FOLLOW 재활성화/현재 위치 복귀 역할을 한다.
       if (hasGpsFix) {
-        if (pendingNavStart && targetModeActive) activateTargetNavigation();
+        if (pendingNavStart && epIsPlanSurface()) activateTargetNavigation();
         else recenterPrimary();
         return;
       }
 
       navigator.geolocation.getCurrentPosition(pos => {
-        applyGpsPosition(pos, !targetModeActive);
+        applyGpsPosition(pos, epIsMapSurface());
         if (gpsWatchId === null) {
           gpsWatchId = navigator.geolocation.watchPosition(
             nextPos => applyGpsPosition(nextPos, false),
@@ -4549,7 +4550,7 @@
         alert('POINT 삭제에 실패했습니다.');
         return;
       }
-      if (targetModeActive && targetModeTarget && String(targetModeTarget.id) === String(id)) exitTargetMode(true);
+      if (epHasActiveContext() && targetModeTarget && String(targetModeTarget.id) === String(id)) exitTargetMode(true);
       if (deletingActive) closeSitrep();
       renderWpDrawerList();
     }
@@ -4563,7 +4564,7 @@
       if (!confirm(`저장된 POINTS ${localList.length}개를 모두 삭제하시겠습니까?\n등록 거점(REGISTERED)은 유지됩니다.\n삭제 전 DATA > 전체 백업을 권장합니다.`)) return;
 
       // Removing local points must not discard edits to an unrelated registered PLAN.
-      if (targetModeActive && isRegisteredTarget(targetModeTarget) && !preserveActivePlan()) return;
+      if (epHasActiveContext() && isRegisteredTarget(targetModeTarget) && !preserveActivePlan()) return;
 
       const activeWasLocal = currentActiveTarget && !RECON_TARGETS.some(t => String(t.id) === String(currentActiveTarget.id));
       try {
@@ -4573,7 +4574,7 @@
         alert('POINTS 전체 삭제에 실패했습니다.');
         return;
       }
-      if (targetModeActive) exitTargetMode(true);
+      if (epHasActiveContext()) exitTargetMode(true);
       if (activeWasLocal) closeSitrep();
       renderWpDrawerList();
     }
@@ -4876,7 +4877,7 @@
         gpsFollowEnabled = false;
         if (navMapOrientation === 'TRACK') stopTrackUpRotation(true);
         updateGpsTelemetry();
-        if (targetModeActive) updateTargetModePanel();
+        if (epHasActiveContext()) updateTargetModePanel();
       }
     });
     document.addEventListener('keydown', event => {
@@ -5066,7 +5067,7 @@
     }
 
     function openPlanShortcut(){
-      if(targetModeActive){ updateTargetModePanel(); return; }
+      if(epHasActiveContext()){ updateTargetModePanel(); return; }
       if(currentActiveTarget?.coords){ enterTargetModeFromSitrep(); return; }
       openWpDrawer();
     }
@@ -5089,7 +5090,7 @@
       if(routeStartMarker&&map.hasLayer(routeStartMarker)) map.removeLayer(routeStartMarker);
       if(routeEndMarker&&map.hasLayer(routeEndMarker)) map.removeLayer(routeEndMarker);
       routeStartMarker=routeEndMarker=null;
-      if(!targetModeActive) return;
+      if(epIsMapSurface()) return;
       if(routeStartPoint){ routeStartMarker=L.marker(routeStartPoint.coords,{icon:fieldDivIcon('route-start-marker','START'),keyboard:false,zIndexOffset:48}).addTo(map); }
       if(routeEndPoint){ routeEndMarker=L.marker(routeEndPoint.coords,{icon:fieldDivIcon('route-end-marker','END'),keyboard:false,zIndexOffset:48}).addTo(map); }
     }
@@ -5348,7 +5349,7 @@
       if (event) {
         try { event.originalEvent && L.DomEvent.stopPropagation(event.originalEvent); } catch (e) {}
       }
-      if (!targetModeActive || !epIsPlanSurface() || routeDrawEnabled) return;
+      if (!epIsPlanSurface() || routeDrawEnabled) return;
       selectedPlanPointRef = { role, id };
       const point = selectedPlanPoint();
       if (!point?.coords) { closePlanPointInfo(); return; }
@@ -5401,7 +5402,7 @@
       if (routeStartMarker && map.hasLayer(routeStartMarker)) map.removeLayer(routeStartMarker);
       if (routeEndMarker && map.hasLayer(routeEndMarker)) map.removeLayer(routeEndMarker);
       routeStartMarker = routeEndMarker = null;
-      if (!targetModeActive) return;
+      if (epIsMapSurface()) return;
       if (routeStartPoint) {
         routeStartMarker = L.marker(routeStartPoint.coords,{icon:fieldDivIcon('route-start-marker','START'),keyboard:false,zIndexOffset:48}).addTo(map);
         routeStartMarker.on('click', e => openPlanPointInfo('START', null, e));
@@ -5415,7 +5416,7 @@
     renderRouteViaPoints = function() {
       if (!routeViaLayer) return;
       routeViaLayer.clearLayers();
-      if (!targetModeActive) return;
+      if (epIsMapSurface()) return;
       routeViaPoints.forEach(via => {
         const marker = L.marker(via.coords,{icon:routeViaIcon(via),keyboard:false,riseOnHover:true}).addTo(routeViaLayer);
         marker.on('click', e => openPlanPointInfo('VIA', via.id, e));
@@ -5787,7 +5788,7 @@
     enterTargetMode = function(target) {
       const beforeId=targetModeTarget?.id;
       v271EnterTargetMode(target);
-      if (targetModeActive && String(targetModeTarget?.id||'') !== String(beforeId||'')) {
+      if (epHasActiveContext() && String(targetModeTarget?.id||'') !== String(beforeId||'')) {
         planUndoStack=[];
         planUiSubmode='MAIN';
         closeV271Sheets();
@@ -5818,7 +5819,7 @@
     // Better two-finger draw gesture: smaller zoom increments avoid the V27 one-level jump feel.
     const v271HandleRoutePointerMove = handleRoutePointerMove;
     handleRoutePointerMove = function(event) {
-      if (!targetModeActive || !routeDrawEnabled || !routeActivePointers.has(event.pointerId) || !routeGestureMode) {
+      if (!epIsPlanSurface() || !routeDrawEnabled || !routeActivePointers.has(event.pointerId) || !routeGestureMode) {
         return v271HandleRoutePointerMove(event);
       }
       const point=routeContainerPoint(event);

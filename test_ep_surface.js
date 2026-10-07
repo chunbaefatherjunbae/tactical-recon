@@ -49,6 +49,24 @@ test('runtime behavior gates prefer EP surface helpers',()=>{
   assert(index.includes("if (!epIsMissionSurface() || navPanelCollapsed) return;"));
 });
 
+test('targetModeActive is reduced to transition mirror and migration-port compatibility',()=>{
+  const index=fs.readFileSync('index.html','utf8');
+  assert(index.includes('function epHasActiveContext()'));
+  const lines=index.split('\n').filter(line=>line.includes('targetModeActive'));
+  const semanticReads=lines.filter(line=>
+    !line.includes('let targetModeActive') &&
+    !line.includes('if (!targetModeActive) return \'MAP\'') &&
+    !line.includes('targetModeActive = true') &&
+    !line.includes('targetModeActive = false') &&
+    !line.includes('const wasActive=targetModeActive') &&
+    !line.includes('wasActive && !targetModeActive') &&
+    !line.includes('if (!snapshot || !targetModeActive)') &&
+    !line.includes('if (!targetModeActive) return null') &&
+    !line.includes('if (!targetModeActive) return false')
+  );
+  assert.deepEqual(semanticReads,[]);
+});
+
 test('direct legacy phase reads are reduced to compatibility mirror and fallback',()=>{
   const index=fs.readFileSync('index.html','utf8');
   const lines=index.split('\n').filter(line=>line.includes('targetModePhase'));
