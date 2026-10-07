@@ -11,6 +11,36 @@ function test(name,fn){
   catch(e){console.error('[FAIL] '+name+': '+e.message);failed++;}
 }
 
+test('runtime loads in deterministic legacy-to-EP order',()=>{
+  const order=[
+    './v27-stable.js',
+    './v28.js',
+    './v29-storage.js',
+    './v28-runtime.js',
+    './v29.js',
+    './v29-ui.js',
+    './v29-stabilize.js',
+    './ep-core/location-core.js',
+    './ep-core/plan-core.js',
+    './ep-core/mission-core.js',
+    './ep-runtime-bridge.js',
+    './ep-plan-bridge.js',
+    './ep-mission-bridge.js',
+    './ep-surface-bridge.js',
+    './ep-overlay-bridge.js',
+    './ep-ui-shell.js'
+  ].map(src=>index.indexOf('src="'+src+'"'));
+  order.forEach(pos=>assert(pos>=0));
+  for(let i=1;i<order.length;i++)assert(order[i]>order[i-1]);
+});
+
+test('service worker keeps EP shell as old-cache fallback',()=>{
+  const sw=fs.readFileSync('service-worker.js','utf8');
+  assert(sw.includes("'./ep-ui.css'"));
+  assert(sw.includes("'./ep-ui-shell.js'"));
+  assert(sw.includes("html.includes('ep-ui-shell.js')"));
+});
+
 test('EP shell exposes required map-first controls',()=>{
   ['epPosReadout','epTgtReadout','epGpsBtn','epFollowBtn','epTempBtn','epTrackBtn','epPointsBtn','epRandomBtn','epRecordsBtn','epToolsBtn'].forEach(id=>{
     assert(shell.includes("id=\""+id+"\""));
