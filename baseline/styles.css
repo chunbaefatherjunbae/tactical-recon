@@ -847,6 +847,7 @@ body.baseline-drawing .reticle { opacity:.28; }
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+.point-picker-address,
 .point-picker-coord,
 .point-picker-site {
   display:grid;
@@ -863,6 +864,7 @@ body.baseline-drawing .reticle { opacity:.28; }
   padding:0 8px;
   outline:none;
 }
+.point-picker-address button,
 .point-picker-coord button,
 .point-picker-site button,
 .point-picker-random button,
@@ -953,4 +955,39 @@ body.baseline-drawing .reticle { opacity:.28; }
   .drawing-controls { left:5px; right:5px; gap:3px; }
   .nav-session-controls button,
   .drawing-controls button { font-size:8px; }
+}
+
+
+.point-address-results {
+  display:grid;
+  gap:5px;
+  max-height:170px;
+  overflow:auto;
+}
+.point-address-results button {
+  min-height:48px;
+  padding:7px 8px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,.12);
+  color:var(--text-main);
+  text-align:left;
+}
+.point-address-results button strong {
+  display:block;
+  color:var(--accent);
+  font-size:8.5px;
+  line-height:1.35;
+}
+.point-address-results button span {
+  display:block;
+  margin-top:3px;
+  color:var(--text-dim);
+  font-size:7px;
+}
+.point-address-empty {
+  padding:10px 8px;
+  border:1px dashed var(--border);
+  color:var(--text-dim);
+  font-size:8px;
+  text-align:center;
 }
