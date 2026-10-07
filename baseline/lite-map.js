@@ -1,0 +1,384 @@
+(() => {
+  'use strict';
+
+  const App=window.BaselineApp;
+  const Offline=window.BaselineOffline;
+  const Data=window.BaselineLiteOSM || {roads:[],rivers:[],rails:[],coast:[],places:[]};
+  if(!App||!window.L){
+    console.error('[BASELINE LITE] dependency missing');
+    return;
+  }
+
+  const map=App.map;
+  const MODE_KEY='tr_baseline_map_mode_v1';
+  const VALID_MODES=new Set(['auto','online','lite']);
+  const processedTerrain=new Map();
+  let requestedMode=VALID_MODES.has(localStorage.getItem(MODE_KEY)) ? localStorage.getItem(MODE_KEY) : 'auto';
+  let effectiveMode='online';
+  let vectorReady=false;
+  let onlineTileErrors=[];
+  let fallbackReason=null;
+
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+  function terrainUrl(z,x,y){return 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/'+z+'/'+x+'/'+y+'.png';}
+
+  async function blobToImage(blob){
+    if('createImageBitmap' in window){
+      return await createImageBitmap(blob);
+    }
+    return await new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(blob);
+      const img=new Image();
+      img.onload=()=>{URL.revokeObjectURL(url);resolve(img);};
+      img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('terrain image decode failed'));};
+      img.src=url;
+    });
+  }
+
+  function decodeElevation(r,g,b){
+    return (r*256 + g + b/256) - 32768;
+  }
+
+  async function processedTerrainCanvas(z,x,y){
+    const key=z+'/'+x+'/'+y;
+    if(processedTerrain.has(key)) return processedTerrain.get(key);
+
+    const promise=(async()=>{
+      const response=await fetch(terrainUrl(z,x,y),{mode:'cors',credentials:'omit'});
+      if(!response.ok) throw new Error('terrain '+response.status);
+      const image=await blobToImage(await response.blob());
+      const source=document.createElement('canvas');
+      source.width=256;source.height=256;
+      const sctx=source.getContext('2d',{willReadFrequently:true});
+      sctx.drawImage(image,0,0,256,256);
+      image.close?.();
+
+      const raw=sctx.getImageData(0,0,256,256);
+      const out=sctx.createImageData(256,256);
+      const elevation=new Float32Array(256*256);
+      for(let i=0,p=0;i<raw.data.length;i+=4,p++){
+        elevation[p]=decodeElevation(raw.data[i],raw.data[i+1],raw.data[i+2]);
+      }
+
+      const centerLat=Math.atan(Math.sinh(Math.PI*(1-2*(y+.5)/(2**z))))*180/Math.PI;
+      const metersPerPixel=156543.03392*Math.cos(centerLat*Math.PI/180)/(2**z);
+      const contourInterval=z>=10?100:200;
+
+      for(let py=0;py<256;py++){
+        for(let px=0;px<256;px++){
+          const idx=py*256+px;
+          const e=elevation[idx];
+          const o=idx*4;
+          if(!Number.isFinite(e)||e<=1){
+            out.data[o]=1;out.data[o+1]=8;out.data[o+2]=4;out.data[o+3]=255;
+            continue;
+          }
+
+          const left=elevation[py*256+Math.max(0,px-1)];
+          const right=elevation[py*256+Math.min(255,px+1)];
+          const up=elevation[Math.max(0,py-1)*256+px];
+          const down=elevation[Math.min(255,py+1)*256+px];
+
+          const dzdx=(right-left)/(2*Math.max(1,metersPerPixel));
+          const dzdy=(down-up)/(2*Math.max(1,metersPerPixel));
+          const directional=clamp(.76 + (-dzdx*.78 + dzdy*.55),.34,1.18);
+
+          let base=18;
+          if(e>=100)base=22;
+          if(e>=300)base=28;
+          if(e>=600)base=35;
+          if(e>=1000)base=43;
+          if(e>=1500)base=50;
+
+          let green=clamp(Math.round(base*directional),7,74);
+          let red=Math.round(green*.08);
+          let blue=Math.round(green*.18);
+
+          const band=Math.floor(e/contourInterval);
+          const indexBand=Math.floor(e/500);
+          const contour=
+            Math.floor(left/contourInterval)!==band ||
+            Math.floor(right/contourInterval)!==band ||
+            Math.floor(up/contourInterval)!==band ||
+            Math.floor(down/contourInterval)!==band;
+          const indexContour=
+            Math.floor(left/500)!==indexBand ||
+            Math.floor(right/500)!==indexBand ||
+            Math.floor(up/500)!==indexBand ||
+            Math.floor(down/500)!==indexBand;
+
+          if(contour){
+            green=indexContour?94:62;
+            red=indexContour?10:5;
+            blue=indexContour?18:12;
+          }
+
+          out.data[o]=red;
+          out.data[o+1]=green;
+          out.data[o+2]=blue;
+          out.data[o+3]=255;
+        }
+      }
+
+      sctx.putImageData(out,0,0);
+      return source;
+    })();
+
+    processedTerrain.set(key,promise);
+    try{return await promise;}
+    catch(error){
+      processedTerrain.delete(key);
+      throw error;
+    }
+  }
+
+  const TerrainLayer=L.GridLayer.extend({
+    createTile(coords,done){
+      const tile=document.createElement('canvas');
+      tile.width=256;tile.height=256;
+      tile.className='lite-terrain-tile';
+      const ctx=tile.getContext('2d');
+      ctx.fillStyle='#020904';
+      ctx.fillRect(0,0,256,256);
+
+      const targetZ=coords.z;
+      const preferredZ=Math.min(targetZ,10);
+
+      const drawFrom=async sourceZ=>{
+        const factor=2**Math.max(0,targetZ-sourceZ);
+        const srcX=Math.floor(coords.x/factor);
+        const srcY=Math.floor(coords.y/factor);
+        const src=await processedTerrainCanvas(sourceZ,srcX,srcY);
+        const sw=256/factor;
+        const sx=(coords.x-srcX*factor)*sw;
+        const sy=(coords.y-srcY*factor)*sw;
+        ctx.imageSmoothingEnabled=true;
+        ctx.imageSmoothingQuality='high';
+        ctx.drawImage(src,sx,sy,sw,sw,0,0,256,256);
+      };
+
+      (async()=>{
+        try{
+          await drawFrom(preferredZ);
+        }catch(error){
+          if(preferredZ>9){
+            try{await drawFrom(9);}catch{}
+          }
+        }
+        done(null,tile);
+      })();
+
+      return tile;
+    }
+  });
+
+  const terrainLayer=new TerrainLayer({
+    pane:'tilePane',
+    tileSize:256,
+    updateWhenIdle:true,
+    keepBuffer:1,
+    maxZoom:19,
+    minZoom:5,
+    attribution:'Terrain © Mapzen / AWS Open Data'
+  });
+
+  const vectorLayer=L.layerGroup();
+  const gridLayer=L.layerGroup();
+  const placeLayer=L.layerGroup();
+
+  function roadStyle(cls){
+    if(cls==='M') return {color:'#9de3a4',weight:2.3,opacity:.92};
+    if(cls==='T') return {color:'#70bc7b',weight:1.9,opacity:.86};
+    if(cls==='P') return {color:'#4e945b',weight:1.45,opacity:.82};
+    return {color:'#2f6e3d',weight:1.0,opacity:.78};
+  }
+
+  function renderVectors(){
+    if(vectorReady)return;
+    vectorReady=true;
+
+    (Data.coast||[]).forEach(item=>{
+      if(item?.p?.length>=2)L.polyline(item.p,{interactive:false,color:'#386d48',weight:1.25,opacity:.8}).addTo(vectorLayer);
+    });
+
+    (Data.rivers||[]).forEach(item=>{
+      if(item?.p?.length>=2)L.polyline(item.p,{
+        interactive:false,color:'#1e6043',weight:item.c==='R'?1.15:.8,opacity:.82
+      }).addTo(vectorLayer);
+    });
+
+    (Data.rails||[]).forEach(item=>{
+      if(item?.p?.length>=2)L.polyline(item.p,{
+        interactive:false,color:'#5f8f67',weight:.9,opacity:.72,dashArray:'5 5'
+      }).addTo(vectorLayer);
+    });
+
+    (Data.roads||[]).forEach(item=>{
+      if(item?.p?.length>=2)L.polyline(item.p,{interactive:false,...roadStyle(item.c)}).addTo(vectorLayer);
+    });
+
+    rebuildPlaces();
+  }
+
+  function placeIcon(item){
+    return L.divIcon({
+      className:'lite-place-wrap',
+      html:'<span class="lite-place-dot"></span><b>'+String(item.n||'').replace(/[&<>"]/g,'')+'</b>',
+      iconSize:[90,18],
+      iconAnchor:[4,9]
+    });
+  }
+
+  function rebuildPlaces(){
+    placeLayer.clearLayers();
+    const z=map.getZoom();
+    (Data.places||[]).forEach(item=>{
+      if(!item?.p||!item.n)return;
+      if(item.c==='T'&&z<10)return;
+      L.marker(item.p,{icon:placeIcon(item),interactive:false,zIndexOffset:-100}).addTo(placeLayer);
+    });
+  }
+
+  function gridStep(){
+    const z=map.getZoom();
+    if(z<8)return 1;
+    if(z<10)return .25;
+    if(z<12)return .1;
+    if(z<14)return .05;
+    return .02;
+  }
+
+  function rebuildGrid(){
+    gridLayer.clearLayers();
+    if(effectiveMode!=='lite')return;
+    const bounds=map.getBounds();
+    const step=gridStep();
+    const south=Math.floor(bounds.getSouth()/step)*step;
+    const north=Math.ceil(bounds.getNorth()/step)*step;
+    const west=Math.floor(bounds.getWest()/step)*step;
+    const east=Math.ceil(bounds.getEast()/step)*step;
+    const style={interactive:false,color:'#1a5128',weight:.55,opacity:.38,dashArray:'2 7'};
+
+    for(let lat=south;lat<=north+step/2;lat+=step){
+      L.polyline([[lat,west],[lat,east]],style).addTo(gridLayer);
+    }
+    for(let lon=west;lon<=east+step/2;lon+=step){
+      L.polyline([[south,lon],[north,lon]],style).addTo(gridLayer);
+    }
+  }
+
+  function mapStatusLabel(){
+    return 'MAP · '+(effectiveMode==='lite'?'LITE':'ONLINE');
+  }
+
+  function updateStatusHud(){
+    const node=document.getElementById('mapModeStatus');
+    if(node)node.textContent=mapStatusLabel();
+  }
+
+  function emit(reason){
+    updateStatusHud();
+    window.dispatchEvent(new CustomEvent('baseline-map-mode-change',{
+      detail:{reason,requested:requestedMode,effective:effectiveMode,fallbackReason}
+    }));
+  }
+
+  function desiredEffective(){
+    if(requestedMode==='lite')return 'lite';
+    if(requestedMode==='online')return 'online';
+    if(!navigator.onLine)return 'lite';
+    if(fallbackReason==='tile-errors')return 'lite';
+    return 'online';
+  }
+
+  function applyMode(reason='apply'){
+    const next=desiredEffective();
+    effectiveMode=next;
+    if(next==='lite'){
+      if(map.hasLayer(App.topoLayer))map.removeLayer(App.topoLayer);
+      if(map.hasLayer(App.roadBoostLayer))map.removeLayer(App.roadBoostLayer);
+      renderVectors();
+      if(!map.hasLayer(terrainLayer))terrainLayer.addTo(map);
+      if(!map.hasLayer(vectorLayer))vectorLayer.addTo(map);
+      if(!map.hasLayer(gridLayer))gridLayer.addTo(map);
+      if(!map.hasLayer(placeLayer))placeLayer.addTo(map);
+      rebuildGrid();
+      rebuildPlaces();
+    }else{
+      if(map.hasLayer(terrainLayer))map.removeLayer(terrainLayer);
+      if(map.hasLayer(vectorLayer))map.removeLayer(vectorLayer);
+      if(map.hasLayer(gridLayer))map.removeLayer(gridLayer);
+      if(map.hasLayer(placeLayer))map.removeLayer(placeLayer);
+      if(!map.hasLayer(App.topoLayer))App.topoLayer.addTo(map);
+      if(!map.hasLayer(App.roadBoostLayer))App.roadBoostLayer.addTo(map);
+    }
+    emit(reason);
+  }
+
+  function setMode(mode){
+    const clean=VALID_MODES.has(mode)?mode:'auto';
+    requestedMode=clean;
+    fallbackReason=null;
+    localStorage.setItem(MODE_KEY,clean);
+    applyMode('set-mode');
+    return status();
+  }
+
+  function status(){
+    const offline=Offline?.snapshot?.()||null;
+    return {
+      requested:requestedMode,
+      effective:effectiveMode,
+      label:mapStatusLabel(),
+      dataReady:Boolean((Data.roads||[]).length||(Data.rivers||[]).length),
+      dataGeneratedAt:Data.generatedAt||null,
+      dataSource:Data.source||null,
+      packStatus:offline?.packStatus||'UNKNOWN',
+      packCompleted:offline?.completed||0,
+      packTotal:offline?.total||0,
+      packFailed:offline?.failed||0
+    };
+  }
+
+  function noteOnlineTileError(){
+    const now=Date.now();
+    onlineTileErrors=onlineTileErrors.filter(t=>now-t<5000);
+    onlineTileErrors.push(now);
+    if(requestedMode==='auto'&&onlineTileErrors.length>=3){
+      fallbackReason='tile-errors';
+      applyMode('tile-errors');
+    }
+  }
+
+  App.topoLayer.on('tileerror',noteOnlineTileError);
+  App.topoLayer.on('tileload',()=>{
+    if(requestedMode==='auto'&&fallbackReason==='tile-errors'){
+      onlineTileErrors=[];
+    }
+  });
+
+  window.addEventListener('online',()=>{
+    fallbackReason=null;
+    applyMode('online');
+  });
+  window.addEventListener('offline',()=>applyMode('offline'));
+  map.on('zoomend moveend',()=>{
+    if(effectiveMode==='lite'){
+      rebuildGrid();
+      rebuildPlaces();
+    }
+  });
+
+  window.BaselineLiteMap=Object.freeze({
+    setMode,
+    status,
+    applyMode,
+    terrainLayer,
+    vectorLayer,
+    gridLayer,
+    placeLayer,
+    prepareLitePack:()=>Offline?.prepareLitePack?.()
+  });
+
+  applyMode('init');
+})();
