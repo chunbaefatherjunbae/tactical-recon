@@ -22,7 +22,7 @@
   --panel: var(--bg-panel);
   --panel-soft: var(--bg-osd);
   --glow: var(--accent-glow);
-  --road-filter: grayscale(100%) sepia(18%) hue-rotate(70deg) saturate(72%) contrast(108%) brightness(61%);
+  --road-filter: grayscale(100%) sepia(18%) hue-rotate(70deg) saturate(72%) contrast(112%) brightness(64%);
   --danger: #ff8787;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
