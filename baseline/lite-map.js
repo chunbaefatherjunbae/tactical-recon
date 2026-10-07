@@ -18,6 +18,8 @@
   let requestedMode=VALID_MODES.has(localStorage.getItem(MODE_KEY)) ? localStorage.getItem(MODE_KEY) : 'auto';
   let effectiveMode='online';
   let vectorReady=false;
+  let secondaryRoadReady=false;
+  let secondaryRoadScheduled=false;
   let onlineTileErrors=[];
   let fallbackReason=null;
 
@@ -291,10 +293,26 @@
     return decodedLines('road-'+cls,(Data.roads||[]).filter(item=>item?.c===cls));
   }
 
+  function ensureSecondaryRoads(){
+    if(secondaryRoadReady||secondaryRoadScheduled||!Data||map.getZoom()<11)return;
+    secondaryRoadScheduled=true;
+    const build=()=>{
+      secondaryRoadScheduled=false;
+      if(secondaryRoadReady||!Data||map.getZoom()<11)return;
+      const secondary=roadLines('S');
+      if(secondary.length)L.polyline(secondary,{interactive:false,...roadStyle('S')}).addTo(secondaryRoadLayer);
+      secondaryRoadReady=true;
+      updateSecondaryRoadVisibility();
+    };
+    if('requestIdleCallback' in window)requestIdleCallback(build,{timeout:1200});
+    else setTimeout(build,120);
+  }
+
   function updateSecondaryRoadVisibility(){
     if(effectiveMode!=='lite')return;
-    if(map.getZoom()>=10){
-      if(!vectorLayer.hasLayer(secondaryRoadLayer))vectorLayer.addLayer(secondaryRoadLayer);
+    if(map.getZoom()>=11){
+      ensureSecondaryRoads();
+      if(secondaryRoadReady&&!vectorLayer.hasLayer(secondaryRoadLayer))vectorLayer.addLayer(secondaryRoadLayer);
     }else if(vectorLayer.hasLayer(secondaryRoadLayer)){
       vectorLayer.removeLayer(secondaryRoadLayer);
     }
@@ -317,9 +335,6 @@
       const lines=roadLines(cls);
       if(lines.length)L.polyline(lines,{interactive:false,...roadStyle(cls)}).addTo(vectorLayer);
     });
-
-    const secondary=roadLines('S');
-    if(secondary.length)L.polyline(secondary,{interactive:false,...roadStyle('S')}).addTo(secondaryRoadLayer);
 
     rebuildPlaces();
     updateSecondaryRoadVisibility();
@@ -345,9 +360,11 @@
   function rebuildPlaces(){
     placeLayer.clearLayers();
     const z=map.getZoom();
+    const visible=map.getBounds().pad(.28);
     (Data?.places||[]).map(normalizedPlace).forEach(item=>{
       if(!item?.p||!item.n)return;
       if(item.c==='T'&&z<10)return;
+      if(!visible.contains(item.p))return;
       L.marker(item.p,{icon:placeIcon(item),interactive:false,zIndexOffset:-100}).addTo(placeLayer);
     });
   }
