@@ -127,9 +127,81 @@
   /* ---------- unified location service ---------- */
   const locationTokens={address:0,route:0,plan:0};
 
+  const EP_WORKING_GRID_KEY='tactical_recon_working_grid_v1';
+
+  function epStoredWorkingGrid(){
+    const core=root.EpLocationCore;
+    if(!core)return null;
+    const raw=readJson(EP_WORKING_GRID_KEY,null);
+    const parsed=core.parsePrefix(raw?.compactPrefix||raw?.prefix||'');
+    return parsed?{...parsed,source:'SAVED',point:null}:null;
+  }
+
+  function epSaveWorkingGrid(prefix,source='INPUT'){
+    const core=root.EpLocationCore;
+    if(!core)return null;
+    const parsed=core.parsePrefix(prefix?.compactPrefix||prefix?.prefix||prefix||'');
+    if(!parsed)return null;
+    writeJson(EP_WORKING_GRID_KEY,{compactPrefix:parsed.compactPrefix,source,timestamp:Date.now()});
+    return {...parsed,source};
+  }
+
+  function epWorkingGridContext(){
+    const searchCore=root.EpSearchCore,locationCore=root.EpLocationCore;
+    if(!searchCore||!locationCore)return epStoredWorkingGrid();
+
+    const ref=currentReference();
+    if(ref?.coords&&validCoords(ref.coords)){
+      const point={lat:Number(ref.coords[0]),lon:Number(ref.coords[1])};
+      const prefix=searchCore.prefixForPoint(point,root.mgrs,locationCore);
+      if(prefix)return {...prefix,source:String(ref.type||'REF'),point};
+    }
+
+    try{
+      if(typeof map!=='undefined'&&map?.getCenter){
+        const c=map.getCenter();
+        const point={lat:Number(c.lat),lon:Number(c.lng)};
+        const prefix=searchCore.prefixForPoint(point,root.mgrs,locationCore);
+        if(prefix)return {...prefix,source:'MAP',point};
+      }
+    }catch(e){}
+
+    return epStoredWorkingGrid();
+  }
+
   function parseLocation(query){
     const raw=String(query||'').trim();
     if(!raw)return null;
+
+    const locationCore=root.EpLocationCore;
+    const searchCore=root.EpSearchCore;
+    if(locationCore&&searchCore){
+      const ctx=epWorkingGridContext();
+      const direct=searchCore.parseDirect(raw,{
+        locationCore,
+        mgrsLib:root.mgrs,
+        workingGrid:ctx,
+        contextPoint:ctx?.point||null,
+        maxContextKm:165
+      });
+      if(direct){
+        if(direct.source==='MGRS'){
+          const prefix=locationCore.parsePrefix(direct.compactPrefix||direct.prefix?.compactPrefix||direct.prefix?.prefix||'');
+          if(prefix)epSaveWorkingGrid(prefix,direct.workingGridApplied?'SHORT':'FULL');
+        }
+        return {
+          lat:Number(direct.lat),lon:Number(direct.lon),
+          name:direct.name||((direct.source||'COORDINATE')+' POSITION'),
+          address:direct.address||'',
+          source:direct.workingGridApplied?'MGRS_SHORT':String(direct.source||'INPUT'),
+          mgrs:typeof calcMGRS==='function'?calcMGRS(Number(direct.lat),Number(direct.lon)):'',
+          workingGridApplied:Boolean(direct.workingGridApplied),
+          workingGridSource:ctx?.source||null
+        };
+      }
+      return null;
+    }
+
     try{
       if(typeof parseDirectRouteLocation==='function'){
         const direct=parseDirectRouteLocation(raw);
@@ -151,6 +223,15 @@
     }catch(e){}
     return null;
   }
+
+  function epLocationSearchError(error){
+    if(error?.code==='OFFLINE')return lang()==='ko'?'OFFLINE · 주소 검색 불가 · MGRS/WGS84 사용':'OFFLINE · ADDRESS SEARCH UNAVAILABLE · USE MGRS/WGS84';
+    if(error?.code==='GRID_PREFIX_REQUIRED')return lang()==='ko'?'작업격자 없음 · 전체 MGRS를 먼저 입력':'WORKING GRID REQUIRED · ENTER FULL MGRS FIRST';
+    if(error?.code==='GRID_CONTEXT_MISMATCH')return lang()==='ko'?'작업격자와 좌표가 너무 멉니다 · 전체 MGRS 확인':'WORKING GRID MISMATCH · VERIFY FULL MGRS';
+    if(error?.code==='INVALID_COORDINATE_FORMAT'||error?.code==='INVALID_MGRS'||error?.code==='INVALID_WGS84')return lang()==='ko'?'좌표 형식 오류':'INVALID COORDINATE';
+    return lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.';
+  }
+
 
   async function searchLocations(query){
     const direct=parseLocation(query);
@@ -212,9 +293,7 @@
           });
         }catch(e){
           if(token!==locationTokens.address)return;
-          results.innerHTML='<div class="address-search-empty">'+(e?.code==='OFFLINE'
-            ? (lang()==='ko'?'OFFLINE · 주소 검색은 사용할 수 없습니다. WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ADDRESS SEARCH UNAVAILABLE. ENTER WGS84 OR MGRS.')
-            : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
+          results.innerHTML='<div class="address-search-empty">'+epLocationSearchError(e)+'</div>';
         }finally{if(button&&token===locationTokens.address)button.disabled=false;}
       };
       wrapped.__v29Unified=true;
@@ -254,9 +333,7 @@
           });
         }catch(e){
           if(token!==locationTokens.route)return;
-          results.innerHTML='<div class="address-search-empty">'+(e?.code==='OFFLINE'
-            ? (lang()==='ko'?'OFFLINE · WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ENTER WGS84 OR MGRS.')
-            : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
+          results.innerHTML='<div class="address-search-empty">'+epLocationSearchError(e)+'</div>';
         }finally{if(button&&token===locationTokens.route)button.disabled=false;}
       };
       wrapped.__v29Unified=true;
@@ -286,9 +363,7 @@
           });
         }catch(e){
           if(token!==locationTokens.plan)return;
-          results.innerHTML='<div class="address-search-empty">'+(e?.code==='OFFLINE'
-            ? (lang()==='ko'?'OFFLINE · WGS84 또는 MGRS를 입력하세요.':'OFFLINE · ENTER WGS84 OR MGRS.')
-            : (lang()==='ko'?'위치 검색에 실패했습니다.':'LOCATION SEARCH FAILED.'))+'</div>';
+          results.innerHTML='<div class="address-search-empty">'+epLocationSearchError(e)+'</div>';
         }finally{if(button&&token===locationTokens.plan)button.disabled=false;}
       };
       wrapped.__v29Unified=true;
