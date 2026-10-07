@@ -841,13 +841,20 @@
     }));
   }
 
+  function recordDateLabel(value) {
+    const date=new Date(Number(value));
+    if(Number.isNaN(date.getTime())) return '--';
+    const pad=n=>String(n).padStart(2,'0');
+    return date.getFullYear() + '.' + pad(date.getMonth()+1) + '.' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+  }
+
   function recordsHtml() {
     const records=Records.list();
     if (!records.length) return '<div class="site-empty">항법 기록 없음</div>';
     return '<div class="record-list">' + records.map(record =>
       '<button type="button" class="record-row" data-record-id="' + esc(record.id) + '">' +
         '<strong>' + esc(record.name) + '</strong>' +
-        '<span>' + new Date(record.startedAt).toLocaleString('ko-KR') + ' · ' + formatDuration(record.elapsedMs) + ' · LAP ' + record.laps.length + ' · TRACK ' + ((Number(record.track?.distanceMeters)||0)/1000).toFixed(2) + ' KM</span>' +
+        '<span>' + recordDateLabel(record.startedAt) + ' · ' + formatDuration(record.elapsedMs) + ' · LAP ' + record.laps.length + ' · 궤적 ' + ((Number(record.track?.distanceMeters)||0)/1000).toFixed(2) + ' km</span>' +
       '</button>'
     ).join('') + '</div>';
   }
@@ -878,7 +885,7 @@
           '<span>운용시간</span><b>' + formatDuration(record.elapsedMs) + '</b>' +
           '<span>정지시간</span><b>' + formatDuration(pauseMs) + '</b>' +
           '<span>LAP</span><b>' + record.laps.length + '</b>' +
-          '<span>TRACK</span><b>' + (trackDistance/1000).toFixed(2) + ' KM · ' + trackPoints + ' PTS</b>' +
+          '<span>궤적</span><b>' + (trackDistance/1000).toFixed(2) + ' km · ' + trackPoints + ' 지점</b>' +
         '</div>' +
         '<div class="record-laps">' + laps + '</div>' +
         '<div class="record-actions">' +
