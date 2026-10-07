@@ -1272,3 +1272,17 @@ body.baseline-site-placement .nav-session-controls {
 .lite-pack-btn:disabled {
   opacity:.55;
 }
+
+
+/* Keep map attribution readable above transient field controls. */
+body.baseline-navigation-active #map .leaflet-bottom.leaflet-right,
+body.baseline-drawing #map .leaflet-bottom.leaflet-right,
+body.baseline-site-placement #map .leaflet-bottom.leaflet-right {
+  bottom:56px;
+}
+#map .leaflet-control-attribution {
+  max-width:76vw;
+  white-space:normal;
+  text-align:right;
+  line-height:1.15;
+}
