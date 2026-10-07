@@ -122,6 +122,29 @@
     emit('plans');
   }
 
+  function importPlan(raw) {
+    const source = raw?.format === 'TACTICAL_RECON_PLAN' ? raw.plan : raw?.plan || raw;
+    if (!source || typeof source !== 'object' || !source.start || !source.destination) {
+      throw new Error('INVALID_PLAN');
+    }
+    const now = Date.now();
+    const imported = {
+      ...blankDraft(),
+      ...clone(source),
+      id: 'PLAN-' + now,
+      name: String(source.name || '가져온 계획').trim() || '가져온 계획',
+      createdAt: now,
+      savedAt: now,
+      updatedAt: now,
+      vias: Array.isArray(source.vias) ? clone(source.vias) : [],
+      sketches: Array.isArray(source.sketches) ? clone(source.sketches) : []
+    };
+    plans = [imported, ...plans];
+    localStorage.setItem(PLAN_KEY, JSON.stringify(plans));
+    emit('plans');
+    return clone(imported);
+  }
+
   function elapsedMs(now = Date.now()) {
     return runtime.elapsedBeforeRun +
       (runtime.status === 'RUNNING' && runtime.runStartedAt ? Math.max(0, now - runtime.runStartedAt) : 0);
@@ -199,7 +222,7 @@
 
   window.BaselineNavigation = {
     snapshot, point, setStart, setDestination, addVia, setVia, removeVia, moveVia,
-    setSketches, newDraft, savePlan, loadPlan, deletePlan,
+    setSketches, newDraft, savePlan, loadPlan, deletePlan, importPlan,
     start, pause, resume, lap, stop, resetRuntime, elapsedMs
   };
 })();
