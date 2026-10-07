@@ -1,9 +1,10 @@
 'use strict';
 
-const VERSION='baseline-offline-v4';
+const VERSION='baseline-offline-v5';
 const SHELL_CACHE=VERSION+'-shell';
 const TERRAIN_CACHE=VERSION+'-terrain';
 const ONLINE_TILE_CACHE=VERSION+'-online-tiles';
+const ONLINE_TILE_LIMIT=384;
 const BASE=new URL('./',self.location.href);
 const local=path=>new URL(path,BASE).href;
 const CORE_MARKER=local('__lite_core_ready__');
@@ -62,6 +63,14 @@ function koreaTerrainUrls(levels=[5,6,7,8,9]){
     }
   }
   return urls;
+}
+
+async function trimCache(cacheName,limit){
+  const cache=await caches.open(cacheName);
+  const keys=await cache.keys();
+  if(keys.length<=limit)return;
+  const excess=keys.length-limit;
+  await Promise.all(keys.slice(0,excess).map(req=>cache.delete(req)));
 }
 
 async function notify(type,detail={}){
@@ -248,14 +257,20 @@ self.addEventListener('fetch',event=>{
         event.waitUntil((async()=>{
           try{
             const fresh=await fetch(req);
-            if(fresh.ok||fresh.type==='opaque') await cache.put(req,fresh.clone());
+            if(fresh.ok||fresh.type==='opaque'){
+              await cache.put(req,fresh.clone());
+              await trimCache(ONLINE_TILE_CACHE,ONLINE_TILE_LIMIT);
+            }
           }catch{}
         })());
         return cached;
       }
       try{
         const res=await fetch(req);
-        if(res.ok||res.type==='opaque') await cache.put(req,res.clone());
+        if(res.ok||res.type==='opaque'){
+          await cache.put(req,res.clone());
+          await trimCache(ONLINE_TILE_CACHE,ONLINE_TILE_LIMIT);
+        }
         return res;
       }catch{
         return new Response('',{status:504,statusText:'Offline map tile unavailable'});
