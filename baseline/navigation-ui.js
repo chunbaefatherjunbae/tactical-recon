@@ -662,7 +662,11 @@
 
   function renderSessionControls() {
     const node=$('navSessionControls');
-    if (!node || !draft) return;
+    if (!node) return;
+    if (!draft || !$('sheet')?.hidden || drawingMode) {
+      node.hidden=true;
+      return;
+    }
     node.hidden=false;
     const session=sessionState();
     if (!session) {
