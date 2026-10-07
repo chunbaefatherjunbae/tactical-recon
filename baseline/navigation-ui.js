@@ -19,6 +19,8 @@
   const routeLayer = L.layerGroup().addTo(map);
   const drawingLayer = L.layerGroup().addTo(map);
   const pointLayer = L.layerGroup().addTo(map);
+  const trackLayer = L.layerGroup().addTo(map);
+  const recordPreviewLayer = L.layerGroup().addTo(map);
 
   let draft = null;
   let drawingMode = false;
@@ -281,8 +283,46 @@
     renderSessionControls();
   }
 
+  function trackSegments(track) {
+    const groups = new Map();
+    (track?.points || []).forEach(point => {
+      const key = Number.isInteger(point.segment) ? point.segment : 0;
+      if (!groups.has(key)) groups.set(key,[]);
+      groups.get(key).push(point);
+    });
+    return [...groups.values()].filter(points => points.length > 0);
+  }
+
+  function renderActiveTrack() {
+    trackLayer.clearLayers();
+    const session=Records.getActive();
+    if (!session?.track?.points?.length) return;
+    trackSegments(session.track).forEach(segment => {
+      if (segment.length < 2) return;
+      L.polyline(segment.map(p => [p.lat,p.lon]),{
+        interactive:false,
+        color:'#22ff66',
+        weight:2.5,
+        opacity:.92
+      }).addTo(trackLayer);
+    });
+  }
+
+  function currentGpsTrackPoint() {
+    const fix=S.state.gps.fix;
+    if (!S.state.gps.enabled || !fix) return null;
+    return {
+      lat:Number(fix.lat),
+      lon:Number(fix.lon),
+      at:Number(fix.at)||Date.now(),
+      accuracy:Number.isFinite(Number(fix.accuracy))?Number(fix.accuracy):null,
+      altitude:Number.isFinite(Number(fix.altitude))?Number(fix.altitude):null
+    };
+  }
+
   function routeChanged(reason = 'ROUTE_UPDATED') {
     renderPlanMap();
+    renderActiveTrack();
     renderHud();
     const active = Records.getActive();
     if (active) Records.routeUpdated(draft);
@@ -707,6 +747,9 @@
     }
     const session=Records.start(draft);
     if (!session) return toast('항법 시작 실패');
+    const gpsPoint=currentGpsTrackPoint();
+    if (gpsPoint) Records.addTrackPoint(gpsPoint);
+    renderActiveTrack();
     renderHud();
     toast('항법 시작');
   }
@@ -715,12 +758,17 @@
     const session=sessionState();
     if (!session) return;
     if (session.status === 'RUNNING') {
+      const gpsPoint=currentGpsTrackPoint();
+      if (gpsPoint) Records.addTrackPoint(gpsPoint);
       Records.pause();
       toast('일시정지');
     } else if (session.status === 'PAUSED') {
       Records.resume();
+      const gpsPoint=currentGpsTrackPoint();
+      if (gpsPoint) Records.addTrackPoint(gpsPoint);
       toast('재개');
     }
+    renderActiveTrack();
     renderHud();
   }
 
@@ -735,7 +783,10 @@
   function stopSession() {
     if (!sessionState()) return;
     if (!confirm('항법을 종료하고 기록으로 저장할까요?')) return;
+    const gpsPoint=currentGpsTrackPoint();
+    if (gpsPoint) Records.addTrackPoint(gpsPoint);
     const record=Records.finish(draft);
+    renderActiveTrack();
     renderHud();
     toast(record ? '항법 기록 저장' : '종료 실패');
   }
@@ -773,7 +824,7 @@
     return '<div class="record-list">' + records.map(record =>
       '<button type="button" class="record-row" data-record-id="' + esc(record.id) + '">' +
         '<strong>' + esc(record.name) + '</strong>' +
-        '<span>' + new Date(record.startedAt).toLocaleString('ko-KR') + ' · ' + formatDuration(record.elapsedMs) + ' · LAP ' + record.laps.length + '</span>' +
+        '<span>' + new Date(record.startedAt).toLocaleString('ko-KR') + ' · ' + formatDuration(record.elapsedMs) + ' · LAP ' + record.laps.length + ' · TRACK ' + ((Number(record.track?.distanceMeters)||0)/1000).toFixed(2) + ' KM</span>' +
       '</button>'
     ).join('') + '</div>';
   }
@@ -792,6 +843,8 @@
     ).join('') : '<div class="site-empty">LAP 없음</div>';
 
     const pauseMs=Math.max(0,(record.endedAt-record.startedAt)-record.elapsedMs);
+    const trackPoints=record.track?.points?.length || 0;
+    const trackDistance=Math.max(0,Number(record.track?.distanceMeters)||0);
     App.openSheet('records',{
       title:'기록 상세',
       html:'<div class="record-detail">' +
@@ -802,9 +855,65 @@
           '<span>운용시간</span><b>' + formatDuration(record.elapsedMs) + '</b>' +
           '<span>정지시간</span><b>' + formatDuration(pauseMs) + '</b>' +
           '<span>LAP</span><b>' + record.laps.length + '</b>' +
+          '<span>TRACK</span><b>' + (trackDistance/1000).toFixed(2) + ' KM · ' + trackPoints + ' PTS</b>' +
         '</div>' +
         '<div class="record-laps">' + laps + '</div>' +
+        '<button class="record-map-btn" id="recordMapView" type="button">지도에서 보기</button>' +
       '</div>'
+    });
+
+    $('recordMapView')?.addEventListener('click',() => {
+      recordPreviewLayer.clearLayers();
+      const planNodes=[];
+      if (plan.start?.coords) planNodes.push(plan.start.coords);
+      (plan.vias || []).forEach(v => { if (v?.coords) planNodes.push(v.coords); });
+      if (plan.destination?.coords) planNodes.push(plan.destination.coords);
+
+      if (planNodes.length >= 2) {
+        L.polyline(planNodes,{
+          interactive:false,
+          color:'#9de3a4',
+          weight:1.5,
+          opacity:.55,
+          dashArray:'7 7'
+        }).addTo(recordPreviewLayer);
+      }
+
+      trackSegments(record.track).forEach(segment => {
+        if (segment.length < 2) return;
+        L.polyline(segment.map(p => [p.lat,p.lon]),{
+          interactive:false,
+          color:'#22ff66',
+          weight:2.7,
+          opacity:.95
+        }).addTo(recordPreviewLayer);
+      });
+
+      (record.laps || []).forEach(lap => {
+        const coords=lap.reference?.coords;
+        if (!Core.validCoords(coords)) return;
+        L.circleMarker(coords,{
+          radius:4,
+          color:'#9de3a4',
+          weight:1.2,
+          fillColor:'#020904',
+          fillOpacity:.8,
+          interactive:false
+        }).addTo(recordPreviewLayer);
+      });
+
+      const allPoints=[
+        ...planNodes,
+        ...(record.track?.points || []).map(p => [p.lat,p.lon]),
+        ...(record.laps || []).map(l => l.reference?.coords).filter(coords => Core.validCoords(coords))
+      ];
+      if (allPoints.length >= 2) {
+        map.fitBounds(L.latLngBounds(allPoints),{padding:[48,72],maxZoom:16,animate:false});
+      } else if (allPoints.length === 1) {
+        map.setView(allPoints[0],16,{animate:false});
+      }
+      App.closeSheet();
+      toast('기록 경로 표시');
     });
   }
 
@@ -965,8 +1074,20 @@
   $('drawDoneBtn')?.addEventListener('click',exitDrawing);
   $('navRouteSummary')?.addEventListener('click',openEditor);
 
-  window.addEventListener('baseline-state-change',() => renderHud());
-  window.addEventListener('baseline-session-change',() => renderHud());
+  window.addEventListener('baseline-state-change',event => {
+    if (event.detail?.reason === 'gps-fix') {
+      const session=Records.getActive();
+      if (session?.status === 'RUNNING') {
+        const point=currentGpsTrackPoint();
+        if (point) Records.addTrackPoint(point);
+      }
+    }
+    renderHud();
+  });
+  window.addEventListener('baseline-session-change',() => {
+    renderActiveTrack();
+    renderHud();
+  });
   window.addEventListener('baseline-plans-change',() => {
     if (S.state.activePanel === 'plans' && $('sheetTitle')?.textContent === '계획') openPlans();
   });
@@ -999,7 +1120,9 @@
     exitDrawing,
     saveCurrent,
     startSession,
-    setDestinationFromSite
+    setDestinationFromSite,
+    trackLayer,
+    recordPreviewLayer
   });
 
   restoreActiveSession();
