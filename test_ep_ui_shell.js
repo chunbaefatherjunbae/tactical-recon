@@ -46,7 +46,7 @@ test('V skin keeps adaptive position and text-only bottom toolbar',()=>{
   assert(shell.includes('id="epFollowGlyph"'));
   assert(shell.includes('<b>TEMP</b><span>임시위치</span>'));
   ['⌾','✣','≋','⌁'].forEach(icon=>assert.strictEqual(shell.includes(icon),false));
-  assert(css.includes('Bottom navigation: one segmented field bar, text only.'));
+  assert(css.includes('Bottom bar: V compact field toolbar, four text-only actions'));
   assert(css.includes('.ep-bottom-nav button b{display:none!important}'));
 });
 
@@ -82,7 +82,7 @@ test('MAP shell hides legacy HUD stack but preserves legacy DOM',()=>{
 });
 
 test('bottom navigation is map-only and four-function',()=>{
-  assert(css.includes('body:not(.ep-surface-map) #epShell .ep-bottom-nav{display:none}'));
+  assert(css.includes('body:not(.ep-surface-map) #epShell .ep-bottom-nav{display:none!important}'));
   assert(shell.includes('<span>거점</span>'));
   assert(shell.includes('<span>무작위</span>'));
   assert(shell.includes('<span>기록</span>'));
@@ -97,8 +97,11 @@ test('TRACK short and long press use V28 TrackV2 state',()=>{
   assert(shell.includes('stopTrack();'));
 });
 
-test('existing SITREP is transitional Location Card',()=>{
-  assert(css.includes('body.ep-shell-ready.ep-overlay-location .sitrep-panel'));
+test('legacy SITREP stays hidden because EP flow owns the Location Card',()=>{
+  assert(css.includes('body.ep-shell-ready .sitrep-panel'));
+  const flowCss=fs.readFileSync('ep-ui-flow.css','utf8');
+  assert(flowCss.includes('.ep-location-card{'));
+  assert(flowCss.includes('border-top:3px solid var(--ep-field-active)'));
 });
 
 test('coordinate HUD copies without TAP TO COPY copywriting',()=>{
