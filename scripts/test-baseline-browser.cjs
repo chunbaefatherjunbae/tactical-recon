@@ -52,7 +52,11 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.evaluate(() => BaselineApp.topoLayer?._url.includes('opentopomap.org')), true);
       assert.equal(await page.evaluate(() => BaselineApp.roadBoostLayer?._url.includes('openstreetmap.org')), true);
       assert.equal(await page.evaluate(() => document.body.classList.contains('theme-nvg-green')), true);
-      assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--map-filter').includes('hue-rotate(76deg)')), true);
+      assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--bg-base').trim()), '#020904');
+      assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text-main').trim()), '#22ff66');
+      assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim()), '#9de3a4');
+      assert.equal(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--map-filter').includes('hue-rotate(76deg)')), true);
+      assert.equal(await page.evaluate(() => getComputedStyle(document.body, '::after').opacity), '0.18');
       await page.waitForTimeout(120);
       const topoTileFilter = await page.locator('.leaflet-tile:not(.road-boost-tiles)').first().evaluate(el => getComputedStyle(el).filter).catch(() => '');
       if (topoTileFilter) assert(topoTileFilter.includes('hue-rotate'));
@@ -121,7 +125,30 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('.site-row').count(), 1);
       await page.locator('#sheetClose').click();
 
-      for (const [panel, title] of [['explore','탐색'],['plans','계획'],['records','기록']]) {
+      await page.locator('.bottom-nav button[data-panel="explore"]').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '탐색');
+      assert.equal(await page.locator('[data-explore-radius]').count(), 4);
+      assert.equal(await page.locator('#exploreRegisteredBtn').count(), 1);
+      assert.equal(await page.locator('#exploreWildBtn').count(), 1);
+      await page.locator('[data-explore-radius="30"]').click();
+      assert(await page.locator('[data-explore-radius="30"]').evaluate(el => el.classList.contains('active')));
+      await page.evaluate(() => BaselineState.setTemp({lat:37.4267,lon:127.0544}));
+      await page.waitForTimeout(60);
+      assert.equal(await page.locator('.leaflet-interactive').count() > 0, true);
+      const beforeWild = await page.evaluate(() => BaselineSites.getUserSites().length);
+      await page.locator('#exploreWildBtn').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '거점 정보');
+      assert.equal(await page.locator('.site-detail-grid').textContent().then(t => t.includes('미개척')), true);
+      assert.equal(await page.evaluate(() => BaselineSites.getUserSites().length), beforeWild + 1);
+      assert.equal(await page.locator('.site-map-marker').count(), 25);
+      await page.locator('#sheetClose').click();
+
+      await page.locator('.bottom-nav button[data-panel="sites"]').click();
+      await page.locator('[data-site-filter="mine"]').click();
+      assert.equal(await page.locator('.site-row').count(), 1);
+      await page.locator('#sheetClose').click();
+
+      for (const [panel, title] of [['plans','계획'],['records','기록']]) {
         await page.locator(`.bottom-nav button[data-panel="${panel}"]`).click();
         assert.equal(await page.locator('#sheetTitle').textContent(), title);
         assert(await page.locator('#sheet').isVisible());
