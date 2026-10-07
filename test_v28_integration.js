@@ -20,8 +20,8 @@ function test(name, fn) {
   }
 }
 
-test('PWA cache version follows current R2 runtime cache', () => {
-  assert(sw.includes("const CACHE_VERSION = 'r2-3-1-field-polish-topo-20261006-1';"));
+test('PWA cache version follows EP V29 root runtime', () => {
+  assert(sw.includes("const CACHE_VERSION = 'ep-v5-v29-stable-20261007-1';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
@@ -36,7 +36,12 @@ test('Index loads foundation before integrated runtime', () => {
   const runtimePos = index.indexOf('src="./v28-runtime.js"');
   assert(foundation >= 0);
   assert(runtimePos > foundation);
-  assert.strictEqual(sw.includes('injectStableOverlay'), false);
+  // Root loads directly; SW injection remains only to repair old cached HTML.
+  assert(sw.includes('injectStableOverlay'));
+  assert(index.includes('src="./ep-runtime-bridge.js"'));
+  assert(index.includes('src="./ep-ui-flow.js"'));
+  assert(index.indexOf('src="./ep-runtime-bridge.js"') > runtimePos);
+  assert(index.indexOf('src="./ep-ui-flow.js"') > index.indexOf('src="./ep-runtime-bridge.js"'));
 });
 
 test('V28 main navigation is PLAN / SITES / MENU', () => {

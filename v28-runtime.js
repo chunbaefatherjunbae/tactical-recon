@@ -25,6 +25,22 @@
     renderedPlanId: null
   };
 
+  function emitTrackLifecycle(kind, track) {
+    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+    try {
+      window.dispatchEvent(new CustomEvent('ep-track-lifecycle', {
+        detail:{
+          kind:String(kind || ''),
+          trackId:track?.id || session.activeTrackId || null,
+          planId:track?.planId || null,
+          startedAt:Number(track?.startedAt || 0) || null,
+          endedAt:Number(track?.endedAt || 0) || null,
+          state:session.state
+        }
+      }));
+    } catch (e) {}
+  }
+
   let trackLayer = null;
   let browserReady = false;
   let gapTimer = null;
@@ -385,7 +401,9 @@
     renderPlanTracks();
     renderTrackSheet();
     syncBrowserTrackState();
-    return getTrack(track.id);
+    const started=getTrack(track.id);
+    emitTrackLifecycle('START', started);
+    return started;
   }
 
   function pauseTrack() {
@@ -397,6 +415,7 @@
     saveRecovery();
     syncBrowserTrackState();
     renderTrackSheet();
+    emitTrackLifecycle('PAUSE', currentTrack());
     return true;
   }
 
@@ -411,6 +430,7 @@
     else if (seed?.kind === 'TEMP') recordTemp(seed.coords, seed.timestamp);
     syncBrowserTrackState();
     renderTrackSheet();
+    emitTrackLifecycle('RESUME', currentTrack());
     return true;
   }
 
@@ -440,6 +460,7 @@
     syncBrowserTrackState();
     renderPlanTracks();
     renderTrackSheet();
+    emitTrackLifecycle('STOP', finished);
     return finished;
   }
 
@@ -474,7 +495,9 @@
     base.state.activeTrackId = track.id;
     if (track.planId && getPlan(track.planId)) base.state.activePlanId = track.planId;
     saveRecovery();
-    return getTrack(track.id);
+    const recoveredTrack=getTrack(track.id);
+    emitTrackLifecycle('RECOVER', recoveredTrack);
+    return recoveredTrack;
   }
 
   function trackDurationMs(track) {
