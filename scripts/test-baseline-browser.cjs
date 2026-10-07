@@ -282,7 +282,7 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.evaluate(() => BaselineNavigationUI.getDraft().start?.source), 'TEMP');
       await page.locator('#planNameInput').fill('BASELINE TEST PLAN');
       await page.locator('[data-edit-point="DEST"]').click();
-      assert.equal(await page.locator('#sheetTitle').textContent(), '도착지 선택');
+      assert.equal(await page.locator('#sheetTitle').textContent(), '목적지 선택');
       assert.equal(await page.locator('#pointAddressInput').count(), 1);
       await page.locator('#pointAddressInput').fill('서울시청');
       await page.locator('#pointAddressSearch').click();
