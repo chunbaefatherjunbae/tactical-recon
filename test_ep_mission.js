@@ -59,6 +59,28 @@ test('TRACK return is a guidance override, not a mission mode',()=>{
   assert.equal(Mission.currentTarget(m).name,'VIA 1');
 });
 
+test('TRACK started during mission is linked and closes independently',()=>{
+  const m=Mission.createMission(plan,{startedAt:1000});
+  const link=Mission.linkTrack(m,'TRK-1',2000);
+  assert(link);
+  assert.equal(m.trackLinks.length,1);
+  assert.equal(link.startPointIndex,1);
+  Mission.step(m,1,3000);
+  assert(Mission.closeTrackLink(m,'TRK-1',{at:4000,trackEndedAt:4000}));
+  assert.equal(m.trackLinks[0].associationEndedAt,4000);
+  assert.equal(m.trackLinks[0].endPointIndex,2);
+  assert.equal(m.trackLinks[0].endReason,'TRACK_STOP');
+});
+
+test('mission end detaches linked TRACK without stopping the TRACK itself',()=>{
+  const m=Mission.createMission(plan,{startedAt:1000});
+  Mission.linkTrack(m,'TRK-2',2000);
+  const record=Mission.finish(m,5000);
+  assert.equal(record.trackLinks[0].associationEndedAt,5000);
+  assert.equal(record.trackLinks[0].endReason,'MISSION_END');
+  assert.equal(record.trackLinks[0].trackEndedAt,null);
+});
+
 test('mission finish snapshots state and clears guidance override',()=>{
   const m=Mission.createMission(plan,{startedAt:1000});
   Mission.setTrackReturn(m,{name:'RETURN',lat:36.9,lon:126.9});
@@ -66,6 +88,23 @@ test('mission finish snapshots state and clears guidance override',()=>{
   assert.equal(record.status,'ENDED');
   assert.equal(record.endedAt,5000);
   assert.equal(record.guidanceOverride,null);
+});
+
+test('V28 TrackV2 emits lifecycle events without changing track engine ownership',()=>{
+  const runtime=fs.readFileSync('v28-runtime.js','utf8');
+  assert(runtime.includes("emitTrackLifecycle('START'"));
+  assert(runtime.includes("emitTrackLifecycle('PAUSE'"));
+  assert(runtime.includes("emitTrackLifecycle('RESUME'"));
+  assert(runtime.includes("emitTrackLifecycle('STOP'"));
+  assert(runtime.includes("emitTrackLifecycle('RECOVER'"));
+});
+
+test('mission bridge links only TRACK START events that occur during active mission',()=>{
+  const bridge=fs.readFileSync('ep-mission-bridge.js','utf8');
+  assert(bridge.includes("if(kind==='START')"));
+  assert(bridge.includes("if(state.mission?.status==='ACTIVE')"));
+  assert(bridge.includes('Mission.linkTrack(state.mission,trackId'));
+  assert.strictEqual(bridge.includes("if(kind==='RECOVER'){"),false);
 });
 
 test('mission bridge owns NEXT destination and BACKTRACK as track return',()=>{

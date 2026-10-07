@@ -167,6 +167,46 @@
     emit();
   }
 
+  function handleTrackLifecycle(event){
+    const detail=event?.detail||{};
+    const kind=String(detail.kind||'').toUpperCase();
+    const trackId=detail.trackId;
+    if(!trackId)return;
+
+    if(kind==='START'){
+      if(state.mission?.status==='ACTIVE'){
+        Mission.linkTrack(state.mission,trackId,detail.startedAt||Date.now());
+        emit();
+      }
+      return;
+    }
+
+    if(kind==='STOP'){
+      let changed=false;
+      if(state.mission?.status==='ACTIVE'){
+        changed=Mission.closeTrackLink(state.mission,trackId,{
+          at:detail.endedAt||Date.now(),
+          trackEndedAt:detail.endedAt,
+          reason:'TRACK_STOP'
+        })||changed;
+      }
+      if(state.lastMissionRecord){
+        changed=Mission.closeTrackLink(state.lastMissionRecord,trackId,{
+          at:detail.endedAt||Date.now(),
+          trackEndedAt:detail.endedAt,
+          reason:'TRACK_STOP'
+        })||changed;
+      }
+      if(changed)emit();
+    }
+  }
+
+  function installTrackLinking(){
+    if(root.__epMissionTrackLinkingInstalled)return;
+    root.__epMissionTrackLinkingInstalled=true;
+    root.addEventListener?.('ep-track-lifecycle',handleTrackLifecycle);
+  }
+
   function installWrappers(){
     const start=root.startTargetNavigation;
     if(typeof start==='function'&&!start.__epMissionOwner){
@@ -247,6 +287,7 @@
 
   function install(){
     installWrappers();
+    installTrackLinking();
     syncFromLegacy();
   }
 

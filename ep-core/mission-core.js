@@ -98,12 +98,49 @@
     return true;
   }
 
+  function linkTrack(mission,trackId,at=Date.now()){
+    if(!mission||mission.status!=='ACTIVE'||!trackId)return null;
+    const id=String(trackId);
+    const existing=mission.trackLinks.find(link=>String(link.trackId)===id&&!link.associationEndedAt);
+    if(existing)return existing;
+    const link={
+      trackId:id,
+      associationStartedAt:Number(at)||Date.now(),
+      associationEndedAt:null,
+      trackEndedAt:null,
+      startPointIndex:Number(mission.currentIndex)||0,
+      endPointIndex:null,
+      endReason:null
+    };
+    mission.trackLinks.push(link);
+    return link;
+  }
+
+  function closeTrackLink(mission,trackId,{at=Date.now(),trackEndedAt=null,reason='TRACK_STOP'}={}){
+    if(!mission||!trackId)return false;
+    const id=String(trackId);
+    const link=[...mission.trackLinks].reverse().find(item=>String(item.trackId)===id&&!item.associationEndedAt);
+    if(!link)return false;
+    link.associationEndedAt=Number(at)||Date.now();
+    link.trackEndedAt=Number.isFinite(Number(trackEndedAt))&&Number(trackEndedAt)>0?Number(trackEndedAt):null;
+    link.endPointIndex=Number(mission.currentIndex)||0;
+    link.endReason=String(reason||'TRACK_STOP');
+    return true;
+  }
+
   function finish(mission,at=Date.now()){
     if(!mission)return null;
     const now=Number(at)||Date.now();
     if(mission.status==='ACTIVE'){
       const key=String(mission.currentIndex);
       mission.legTimes[key]=Math.max(0,now-Number(mission.legStartedAt||now));
+    }
+    for(const link of mission.trackLinks||[]){
+      if(!link.associationEndedAt){
+        link.associationEndedAt=now;
+        link.endPointIndex=Number(mission.currentIndex)||0;
+        link.endReason='MISSION_END';
+      }
     }
     mission.status='ENDED';
     mission.endedAt=now;
@@ -124,7 +161,7 @@
 
   return {
     clone,validPoint,firstActionIndex,createMission,currentPlanPoint,currentTarget,
-    canStep,step,setCurrentIndex,setTrackReturn,clearGuidanceOverride,finish,
+    canStep,step,setCurrentIndex,setTrackReturn,clearGuidanceOverride,linkTrack,closeTrackLink,finish,
     planIndexToLegacyLeg,legacyLegToPlanIndex
   };
 });
