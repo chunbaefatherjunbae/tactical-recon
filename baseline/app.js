@@ -2,7 +2,8 @@
   'use strict';
 
   const S = window.BaselineState;
-  if (!S || !window.L) {
+  const Sites = window.BaselineSites;
+  if (!S || !Sites || !window.L) {
     console.error('[BASELINE] runtime dependency missing');
     return;
   }
@@ -16,6 +17,9 @@
   let tempHoldTriggered = false;
   let tempMarker = null;
   let gpsMarker = null;
+  let activeSiteFilter = 'registered';
+  const siteMarkers = new Map();
+  const siteLayer = L.layerGroup();
 
   const map = L.map('map', {
     center: DEFAULT_CENTER,
@@ -28,6 +32,7 @@
   const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
     maxNativeZoom: 17,
     maxZoom: 19,
+    className: 'baseline-topo-tiles',
     attribution: 'Map data © OpenStreetMap contributors · Map style © OpenTopoMap'
   }).addTo(map);
 
@@ -43,6 +48,8 @@
     className: 'road-boost-tiles',
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
+
+  siteLayer.addTo(map);
 
   function toast(message) {
     const node = $('toast');
@@ -73,6 +80,17 @@
       }
     } catch {}
     return Number(point.lat).toFixed(5) + ', ' + Number(point.lon).toFixed(5);
+  }
+
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+    })[char]);
+  }
+
+  function siteMgrs(site) {
+    if (!site?.coords) return '--';
+    return formatMgrs({ lat:site.coords[0], lon:site.coords[1] });
   }
 
   function renderReference() {
@@ -123,6 +141,46 @@
       iconSize: [20, 20],
       iconAnchor: [10, 10]
     });
+  }
+
+  function makeSiteIcon(site) {
+    const secured = site?.status === 'SECURED';
+    return L.divIcon({
+      className: 'site-map-marker-wrap',
+      html: '<span class="site-map-marker' + (secured ? ' secured' : '') + '"></span>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+  }
+
+  function renderSiteMarkers() {
+    const registered = Sites.getRegistered();
+    const liveIds = new Set();
+
+    registered.forEach(site => {
+      const id = String(site.id);
+      liveIds.add(id);
+      let marker = siteMarkers.get(id);
+      if (!marker) {
+        marker = L.marker(site.coords, {
+          icon: makeSiteIcon(site),
+          zIndexOffset: 100
+        });
+        marker.on('click', () => openSiteDetail(id));
+        marker.addTo(siteLayer);
+        siteMarkers.set(id, marker);
+      } else {
+        marker.setLatLng(site.coords);
+        marker.setIcon(makeSiteIcon(site));
+      }
+    });
+
+    for (const [id, marker] of siteMarkers.entries()) {
+      if (!liveIds.has(id)) {
+        marker.remove();
+        siteMarkers.delete(id);
+      }
+    }
   }
 
   function renderMarkers() {
@@ -330,14 +388,101 @@
     btn.addEventListener('contextmenu', event => event.preventDefault());
   }
 
+  function siteList(filter) {
+    if (filter === 'secured') return Sites.getSecured();
+    if (filter === 'mine') return Sites.getUserSites();
+    return Sites.getRegistered();
+  }
+
+  function sitesHtml(filter) {
+    const registeredCount = Sites.getRegistered().length;
+    const mineCount = Sites.getUserSites().length;
+    const securedCount = Sites.getSecured().length;
+    const list = siteList(filter);
+
+    const rows = list.length
+      ? list.map(site => {
+          const secured = site.status === 'SECURED';
+          return '<button class="site-row' + (secured ? ' secured' : '') + '" type="button" data-site-id="' + esc(site.id) + '">' +
+            '<strong>' + esc(site.name) + '</strong>' +
+            '<small>' + esc(site.cat) + ' · ' + esc(site.opCode || site.id) + '</small>' +
+            '<em>' + (secured ? '개척 완료' : (site.source === 'USER' ? '내 거점' : '등록')) + '</em>' +
+          '</button>';
+        }).join('')
+      : '<div class="site-empty">' + (filter === 'mine' ? '내 거점 없음' : '개척 완료 거점 없음') + '</div>';
+
+    return '<div class="site-filter-row">' +
+      '<button class="site-filter ' + (filter === 'registered' ? 'active' : '') + '" type="button" data-site-filter="registered">등록 ' + registeredCount + '</button>' +
+      '<button class="site-filter ' + (filter === 'mine' ? 'active' : '') + '" type="button" data-site-filter="mine">내 거점 ' + mineCount + '</button>' +
+      '<button class="site-filter ' + (filter === 'secured' ? 'active' : '') + '" type="button" data-site-filter="secured">개척 ' + securedCount + '</button>' +
+      '</div><div class="site-list">' + rows + '</div>';
+  }
+
+  function bindSitesPanel() {
+    document.querySelectorAll('[data-site-filter]').forEach(btn => {
+      btn.addEventListener('click', () => openSites(btn.dataset.siteFilter));
+    });
+    document.querySelectorAll('[data-site-id]').forEach(btn => {
+      btn.addEventListener('click', () => openSiteDetail(btn.dataset.siteId));
+    });
+  }
+
+  function openSites(filter = activeSiteFilter) {
+    activeSiteFilter = ['registered','mine','secured'].includes(filter) ? filter : 'registered';
+    openSheet('sites', { title:'거점', html:sitesHtml(activeSiteFilter) });
+    bindSitesPanel();
+  }
+
+  function openSiteDetail(id) {
+    const site = Sites.find(id);
+    if (!site) {
+      toast('거점 정보 없음');
+      return;
+    }
+
+    const secured = site.status === 'SECURED';
+    const html =
+      '<div class="site-detail">' +
+        '<div class="site-detail-head">' +
+          '<small>' + esc(site.cat) + ' · ' + esc(site.opCode || site.id) + '</small>' +
+          '<strong>' + esc(site.name) + '</strong>' +
+        '</div>' +
+        '<div class="site-detail-grid">' +
+          '<span>상태</span><strong>' + (secured ? '개척 완료' : (site.source === 'USER' ? '내 거점' : '등록 거점')) + '</strong>' +
+          '<span>MGRS</span><strong>' + esc(siteMgrs(site)) + '</strong>' +
+          '<span>WGS84</span><strong>' + Number(site.coords[0]).toFixed(5) + ', ' + Number(site.coords[1]).toFixed(5) + '</strong>' +
+        '</div>' +
+        '<div class="site-copy"><b>정보</b><br>' + esc(site.desc || '정보 없음') + '</div>' +
+        '<div class="site-copy"><b>참고</b><br>' + esc(site.tips || '참고 없음') + '</div>' +
+        '<div class="site-actions">' +
+          '<button type="button" id="siteMapGo">지도에서 보기</button>' +
+          (site.source === 'REGISTERED'
+            ? '<button class="primary" type="button" id="siteSecureToggle">' + (secured ? '미개척으로' : '개척 완료') + '</button>'
+            : '<button class="primary" type="button" disabled>내 거점</button>') +
+        '</div>' +
+      '</div>';
+
+    openSheet('sites', { title:'거점 정보', html });
+
+    $('siteMapGo')?.addEventListener('click', () => {
+      map.setView(site.coords, Math.max(map.getZoom(), 15), { animate:true });
+      closeSheet();
+      toast('거점으로 이동');
+    });
+
+    $('siteSecureToggle')?.addEventListener('click', () => {
+      if (secured) {
+        Sites.unsecure(site.id);
+        toast('개척 상태 해제');
+      } else {
+        Sites.secure(site.id);
+        toast('개척 완료');
+      }
+      openSiteDetail(site.id);
+    });
+  }
+
   const panels = {
-    sites: {
-      title: '거점',
-      html: '<div class="sheet-grid">' +
-        '<button class="sheet-action" type="button" disabled><strong>등록 거점</strong><span>BASELINE에서 새 데이터 흐름으로 재구축 예정</span></button>' +
-        '<button class="sheet-action" type="button" disabled><strong>내 거점</strong><span>직접 추가한 거점과 개척 완료 거점</span></button>' +
-        '</div>'
-    },
     explore: {
       title: '탐색',
       html: '<div class="sheet-grid">' +
@@ -445,7 +590,11 @@
     btn.addEventListener('click', () => {
       const panel = btn.dataset.panel;
       if (!panel) return;
-      if (S.state.activePanel === panel && !$('sheet').hidden) closeSheet();
+      if (S.state.activePanel === panel && !$('sheet').hidden) {
+        closeSheet();
+        return;
+      }
+      if (panel === 'sites') openSites();
       else openSheet(panel);
     });
   });
@@ -461,6 +610,12 @@
   });
 
   window.addEventListener('baseline-state-change', refresh);
+  window.addEventListener('baseline-sites-change', () => {
+    renderSiteMarkers();
+    if (S.state.activePanel === 'sites' && !$('sheet').hidden && $('sheetTitle')?.textContent === '거점') {
+      openSites(activeSiteFilter);
+    }
+  });
   window.addEventListener('pageshow', () => {
     setTimeout(() => {
       map.invalidateSize();
@@ -474,6 +629,7 @@
     map,
     topoLayer,
     roadBoostLayer,
+    siteLayer,
     refresh,
     setTempAtReticle,
     moveToTemp,
@@ -482,6 +638,7 @@
     closeSheet
   });
 
+  renderSiteMarkers();
   renderScale();
   refresh();
 })();
