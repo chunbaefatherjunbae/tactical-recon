@@ -77,6 +77,14 @@ test('DISPLAY modes resolve EP HUD colors on body instead of root snapshot',()=>
   assert.strictEqual(rootBlock.includes('--ep-field-active'),false);
 });
 
+test('corner frame matches reticle visibility and uses active HUD color',()=>{
+  assert(css.includes('border-color:var(--ep-field-active)!important;opacity:.92!important'));
+  assert(css.includes('drop-shadow(0 0 2px color-mix(in srgb,var(--ep-field-active) 34%,transparent))'));
+  assert(css.includes('background:var(--ep-field-active)!important;opacity:.76!important'));
+  assert(css.includes('left:18px!important'));
+  assert(css.includes('right:18px!important'));
+});
+
 test('V final corner frame uses 34px brackets and 70px extensions',()=>{
   assert(css.includes('width:34px!important;height:34px!important'));
   assert(css.includes('bottom:calc(76px + var(--ep-safe-bottom))!important'));
@@ -126,6 +134,17 @@ test('legacy SITREP stays hidden because EP flow owns the Location Card',()=>{
   const flowCss=fs.readFileSync('ep-ui-flow.css','utf8');
   assert(flowCss.includes('.ep-location-card{'));
   assert(flowCss.includes('border-top:3px solid var(--ep-field-active)'));
+});
+
+test('coordinate HUD is frameless and uses text-level guidance only',()=>{
+  assert(css.includes('background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important'));
+  assert(css.includes('.ep-coordinate .ep-label::after'));
+  assert(css.includes('width:18px!important;height:1px!important'));
+  const hudStart=css.indexOf('.ep-top-hud{');
+  const coordStart=css.indexOf('.ep-coordinate{',hudStart);
+  const hudBlock=css.slice(hudStart,coordStart);
+  assert.strictEqual(hudBlock.includes('var(--ep-field-osd)'),false);
+  assert.strictEqual(hudBlock.includes('border-left'),false);
 });
 
 test('coordinate HUD copies without TAP TO COPY copywriting',()=>{
