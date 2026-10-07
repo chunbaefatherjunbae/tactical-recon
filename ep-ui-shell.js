@@ -105,8 +105,11 @@
   }
 
   function toggleFollow(){
-    if(typeof root.toggleGpsFollow==='function')root.toggleGpsFollow();
-    else if(typeof root.centerGpsNow==='function')root.centerGpsNow();
+    // V-series adaptive control: recenter first, engage FOLLOW when already centered,
+    // tap again to disengage. Dragging the map is handled by the stable V runtime.
+    if(typeof root.centerGpsNow==='function')root.centerGpsNow();
+    else if(typeof root.toggleGpsFollow==='function')root.toggleGpsFollow();
+    refresh();
   }
 
   function setTemp(){
@@ -182,15 +185,15 @@
       '</div>'+
       '<aside class="ep-global-tools">'+
         '<button class="ep-global-tool" id="epGpsBtn" type="button"><b>GPS</b><span id="epGpsState">OFF</span></button>'+
-        '<button class="ep-global-tool" id="epFollowBtn" type="button"><b>◎</b><span>추적</span></button>'+
-        '<button class="ep-global-tool" id="epTempBtn" type="button"><b>⌖</b><span>TEMP</span></button>'+
+        '<button class="ep-global-tool" id="epFollowBtn" type="button"><b id="epFollowGlyph"></b><span id="epFollowLabel">위치</span></button>'+
+        '<button class="ep-global-tool" id="epTempBtn" type="button"><b>TEMP</b><span>임시위치</span></button>'+
         '<button class="ep-global-tool" id="epTrackBtn" type="button"><b id="epTrackState">○</b><span>트랙</span></button>'+
       '</aside>'+
       '<nav class="ep-bottom-nav" aria-label="주요 기능">'+
-        '<button id="epPointsBtn" type="button"><b>⌾</b><span>거점</span></button>'+
-        '<button id="epRandomBtn" type="button"><b>✣</b><span>무작위</span></button>'+
-        '<button id="epRecordsBtn" type="button"><b>≋</b><span>기록</span></button>'+
-        '<button id="epToolsBtn" type="button"><b>⌁</b><span>도구</span></button>'+
+        '<button id="epPointsBtn" type="button"><span>거점</span></button>'+
+        '<button id="epRandomBtn" type="button"><span>무작위</span></button>'+
+        '<button id="epRecordsBtn" type="button"><span>기록</span></button>'+
+        '<button id="epToolsBtn" type="button"><span>도구</span></button>'+
       '</nav>'+
       '<div class="ep-shell-toast" id="epShellToast"></div>';
     document.body.appendChild(shell);
@@ -232,7 +235,17 @@
     const temp=safeBool('temp');
     el('epGpsBtn').classList.toggle('active',gpsOn);
     el('epGpsState').textContent=gpsOn?(fix?'FIX':'ON'):'OFF';
-    el('epFollowBtn').classList.toggle('active',follow);
+    const followBtn=el('epFollowBtn');
+    const followGlyph=el('epFollowGlyph');
+    const followLabel=el('epFollowLabel');
+    followBtn.classList.toggle('active',follow);
+    followBtn.classList.toggle('following',follow);
+    if(followGlyph){
+      followGlyph.innerHTML=follow
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M4 16v4h4M20 16v4h-4"/><circle cx="12" cy="12" r="2.5" class="ep-follow-core"/><path d="M12 7v2M12 15v2M7 12h2M15 12h2"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5" class="ep-follow-core"/></svg>';
+    }
+    if(followLabel)followLabel.textContent=follow?'추적':'위치';
     el('epTempBtn').classList.toggle('active',temp);
 
     const trackState=root.v28?.track?.state||'OFF';
