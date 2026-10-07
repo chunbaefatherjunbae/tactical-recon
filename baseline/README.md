@@ -10,7 +10,7 @@ Neutral dependencies reused:
 - Leaflet
 - MGRS library
 
-BASELINE has its own isolated service worker at `/baseline/sw.js`. It only owns the `/baseline/` scope, precaches the BASELINE shell, and caches the dedicated lightweight terrain source. It never rewrites HTML.
+BASELINE has its own isolated service worker at `/baseline/sw.js`. It only owns the `/baseline/` scope, precaches the BASELINE shell, caches viewed online map tiles, and owns the dedicated lightweight terrain cache. It never rewrites HTML.
 
 ## Current model
 
@@ -29,12 +29,12 @@ BASELINE has its own isolated service worker at `/baseline/sw.js`. It only owns 
 
 ## Map modes
 
-- `AUTO`: online map when available, lightweight map when offline or the online base repeatedly fails
+- `AUTO`: online map → already-viewed cached tiles → lightweight map when cached coverage is missing or the online base repeatedly fails
 - `ONLINE`: OpenTopoMap + OSM road boost
 - `LITE`: DEM terrain shading/elevation bands/index contours + compact OSM roads/rivers/rail/coast/places + coordinate grid
 
 The compact OSM vector bundle is generated from the Geofabrik South Korea extract by `scripts/build-lite-map.py` and `.github/workflows/build-lite-map.yml`. It is generated data, not hand-authored geometry.
 
-The low-resolution nationwide terrain pack is intentionally prepared by explicit user action before field use rather than silently bulk-downloaded.
+Low-resolution nationwide terrain (z5-z7, 21 tiles for the Korea field envelope) is warmed automatically after an online BASELINE boot. Higher-detail nationwide terrain (z8-z9, 218 additional tiles) is opt-in from Settings before field use. LITE rendering falls back through lower cached DEM zooms instead of turning into a blank map when detailed terrain is unavailable.
 
 Later feature work must be added to BASELINE as new modules instead of wrapping legacy globals.
