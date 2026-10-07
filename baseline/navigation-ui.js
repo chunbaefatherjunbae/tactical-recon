@@ -23,6 +23,7 @@
   const recordPreviewLayer = L.layerGroup().addTo(map);
 
   let draft = null;
+  let planViewActive = false;
   let drawingMode = false;
   let drawKind = 'ROUTE';
   let liveLine = null;
@@ -120,13 +121,8 @@
 
   function formatMgrs(coords) {
     if (!Core.validCoords(coords)) return '--';
-    try {
-      return window.mgrs?.forward
-        ? window.mgrs.forward([coords[1],coords[0]],5)
-        : coords.map(n => Number(n).toFixed(5)).join(', ');
-    } catch {
-      return coords.map(n => Number(n).toFixed(5)).join(', ');
-    }
+    if (App.formatMgrs) return App.formatMgrs({lat:coords[0],lon:coords[1]});
+    return coords.map(n => Number(n).toFixed(5)).join(', ');
   }
 
   function uniqueAddressParts(parts) {
@@ -183,7 +179,7 @@
     routeLayer.clearLayers();
     drawingLayer.clearLayers();
     pointLayer.clearLayers();
-    if (!draft) return;
+    if (!draft || !planViewActive) return;
 
     const nodes = [];
     if (draft.start) nodes.push(draft.start.coords);
@@ -245,8 +241,9 @@
     const summary = $('navRouteSummary');
     const hud = $('navigationHud');
     const controls = $('navSessionControls');
-    document.body.classList.toggle('baseline-navigation-active',Boolean(draft));
-    if (!draft) {
+    const visible=Boolean(draft && planViewActive);
+    document.body.classList.toggle('baseline-navigation-active',visible);
+    if (!visible) {
       if (summary) summary.hidden = true;
       if (hud) hud.hidden = true;
       if (controls) controls.hidden = true;
@@ -330,6 +327,7 @@
   }
 
   function newDraft() {
+    planViewActive = true;
     draft = Plans.createDraft(referencePoint('START'));
     renderPlanMap();
     renderHud();
@@ -342,6 +340,7 @@
       toast('계획을 불러올 수 없음');
       return;
     }
+    planViewActive = true;
     draft = Plans.normalize(plan);
     renderPlanMap();
     renderHud();
@@ -463,6 +462,7 @@
   }
 
   function openEditor() {
+    planViewActive = true;
     if (!draft) {
       newDraft();
       return;
@@ -610,6 +610,9 @@
 
   function plansLibraryHtml() {
     const plans = Plans.list();
+    const current = draft
+      ? '<button type="button" class="plan-current" id="planContinueBtn"><strong>현재 계획 계속</strong><span>' + esc(routeLabel() || draft.name || '저장 전 계획') + '</span></button>'
+      : '';
     const rows = plans.length ? plans.map(plan =>
       '<div class="plan-library-row">' +
         '<button type="button" class="plan-open" data-plan-open="' + esc(plan.id) + '">' +
@@ -626,6 +629,7 @@
         '<button type="button" id="planImportBtn">가져오기</button>' +
         '<input id="planImportFile" type="file" accept=".reconplan,application/json" hidden>' +
       '</div>' +
+      current +
       '<div class="plan-library">' + rows + '</div>';
   }
 
@@ -656,6 +660,12 @@
   }
 
   function bindPlanLibrary() {
+    $('planContinueBtn')?.addEventListener('click',() => {
+      planViewActive=true;
+      renderPlanMap();
+      renderHud();
+      App.closeSheet();
+    });
     $('planNewBtn')?.addEventListener('click',newDraft);
     $('planImportBtn')?.addEventListener('click',() => $('planImportFile')?.click());
     $('planImportFile')?.addEventListener('change',async e => {
@@ -665,6 +675,7 @@
         const payload=JSON.parse(await file.text());
         const imported=Plans.importPayload(payload);
         if (!imported) throw new Error('invalid');
+        planViewActive=true;
         draft=imported;
         renderPlanMap();
         renderHud();
@@ -690,6 +701,7 @@
     const point = sitePoint(site,'DEST');
     if (!point) return false;
     if (!draft) draft = Plans.createDraft(referencePoint('START'));
+    planViewActive = true;
     draft.destination = point;
     routeChanged('DEST_FROM_SITE');
     openEditor();
@@ -791,6 +803,15 @@
     toast(record ? '항법 기록 저장' : '종료 실패');
   }
 
+  function closePlanView() {
+    if (sessionState()) return toast('항법 종료 후 계획을 닫을 수 있음');
+    planViewActive=false;
+    renderPlanMap();
+    renderHud();
+    App.closeSheet();
+    toast('계획 닫음');
+  }
+
   function renderSessionControls() {
     const node=$('navSessionControls');
     if (!node) return;
@@ -801,7 +822,7 @@
     node.hidden=false;
     const session=sessionState();
     if (!session) {
-      node.innerHTML='<button type="button" data-nav-action="DRAW">드로잉</button><button type="button" data-nav-action="SAVE">저장</button><button type="button" class="primary" data-nav-action="START">시작</button>';
+      node.innerHTML='<button type="button" data-nav-action="CLOSE">종료</button><button type="button" data-nav-action="DRAW">드로잉</button><button type="button" data-nav-action="SAVE">저장</button><button type="button" class="primary" data-nav-action="START">시작</button>';
     } else if (session.status === 'PAUSED') {
       node.innerHTML='<button type="button" data-nav-action="DRAW">드로잉</button><button type="button" class="primary" data-nav-action="PAUSE">재개</button><button type="button" data-nav-action="LAP">LAP</button><button type="button" data-nav-action="STOP">종료</button>';
     } else {
@@ -809,6 +830,7 @@
     }
     node.querySelectorAll('[data-nav-action]').forEach(btn => btn.addEventListener('click',() => {
       const action=btn.dataset.navAction;
+      if (action === 'CLOSE') closePlanView();
       if (action === 'DRAW') enterDrawing();
       if (action === 'SAVE') saveCurrent(false);
       if (action === 'START') startSession();
@@ -1098,6 +1120,7 @@
   function restoreActiveSession() {
     const active=Records.getActive();
     if (!active) return false;
+    planViewActive=true;
     draft=Plans.normalize(active.finalPlan || active.initialPlan || {});
     renderPlanMap();
     renderActiveTrack();
@@ -1122,6 +1145,7 @@
     saveCurrent,
     startSession,
     setDestinationFromSite,
+    closePlanView,
     trackLayer,
     recordPreviewLayer
   });
