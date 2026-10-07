@@ -46,7 +46,8 @@ test('V skin keeps adaptive position and text-only bottom toolbar',()=>{
   assert(shell.includes('id="epFollowGlyph"'));
   assert(shell.includes('<b>TEMP</b><span>임시위치</span>'));
   ['⌾','✣','≋','⌁'].forEach(icon=>assert.strictEqual(shell.includes(icon),false));
-  assert(css.includes('Bottom bar: V compact field toolbar, four text-only actions'));
+  assert(css.includes('.ep-bottom-nav{'));
+  assert(css.includes('grid-template-columns:repeat(4,minmax(0,1fr))!important'));
   assert(css.includes('.ep-bottom-nav button b{display:none!important}'));
 });
 
