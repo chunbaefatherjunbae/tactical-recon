@@ -505,7 +505,7 @@
     sitePlacementActive = true;
     closeSheet();
     if (coords && Number.isFinite(Number(coords[0])) && Number.isFinite(Number(coords[1]))) {
-      map.setView([Number(coords[0]),Number(coords[1])], Math.max(map.getZoom(), 16), {animate:true});
+      map.setView([Number(coords[0]),Number(coords[1])], Math.max(map.getZoom(), 16), {animate:false});
     }
     updateSitePlacementBar();
     toast('지도를 움직여 위치 조정');
