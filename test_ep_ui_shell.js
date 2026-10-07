@@ -87,7 +87,7 @@ test('corner frame matches reticle visibility and uses active HUD color',()=>{
 
 test('V final corner frame uses 34px brackets and 70px extensions',()=>{
   assert(css.includes('width:34px!important;height:34px!important'));
-  assert(css.includes('bottom:calc(76px + var(--ep-safe-bottom))!important'));
+  assert(css.includes('bottom:calc(var(--ep-toolbar-h) + 16px)!important'));
   assert(css.includes('width:70px!important;height:1px!important'));
 });
 
