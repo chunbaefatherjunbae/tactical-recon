@@ -25,9 +25,23 @@
     preferCanvas: true
   });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxNativeZoom: 17,
     maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: 'Map data © OpenStreetMap contributors · Map style © OpenTopoMap'
+  }).addTo(map);
+
+  map.createPane('roadBoostPane');
+  map.getPane('roadBoostPane').style.zIndex = '250';
+  map.getPane('roadBoostPane').style.pointerEvents = 'none';
+
+  const roadBoostLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    minZoom: 10,
+    maxZoom: 19,
+    opacity: 0.24,
+    pane: 'roadBoostPane',
+    className: 'road-boost-tiles',
+    attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
   function toast(message) {
@@ -90,7 +104,14 @@
     gps?.classList.toggle('active', S.state.gps.enabled);
     gps?.setAttribute('aria-pressed', String(S.state.gps.enabled));
     follow?.classList.toggle('active', S.state.gps.follow);
+    follow?.classList.toggle('following', S.state.gps.follow);
     follow?.setAttribute('aria-pressed', String(S.state.gps.follow));
+    const followGlyph = $('followGlyph');
+    if (followGlyph) {
+      followGlyph.innerHTML = S.state.gps.follow
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M4 16v4h4M20 16v4h-4"/><circle cx="12" cy="12" r="2.5" class="follow-core"/><path d="M12 7v2M12 15v2M7 12h2M15 12h2"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5" class="follow-core"/></svg>';
+    }
     temp?.classList.toggle('active', Boolean(S.state.temp));
     temp?.setAttribute('aria-pressed', String(Boolean(S.state.temp)));
   }
@@ -451,6 +472,8 @@
   window.BaselineApp = Object.freeze({
     version: 'R0.1-BASELINE',
     map,
+    topoLayer,
+    roadBoostLayer,
     refresh,
     setTempAtReticle,
     moveToTemp,
