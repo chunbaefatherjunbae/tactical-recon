@@ -21,6 +21,9 @@
   let activeSiteFilter = 'registered';
   let exploreRadius = 'all';
   let exploreCircle = null;
+  let sitePlacementActive = false;
+  let sitePlacementAddressToken = 0;
+  let editingSiteId = null;
   const siteMarkers = new Map();
   const siteLayer = L.layerGroup();
 
@@ -405,6 +408,34 @@
     return '등록 거점';
   }
 
+  function uniqueAddressParts(parts) {
+    const seen = new Set();
+    return parts.filter(value => {
+      const clean = String(value || '').trim();
+      if (!clean || clean === '대한민국' || /^\d{5}$/.test(clean) || seen.has(clean)) return false;
+      seen.add(clean);
+      return true;
+    }).map(value => String(value).trim());
+  }
+
+  function normalizeKoreanAddress(data, fallback = '') {
+    const a = data?.address || {};
+    const province = a.state || a.province || a.region;
+    const city = a.city || a.municipality;
+    const district = a.city_district || a.borough || a.county;
+    const locality = a.town || a.village || a.suburb || a.quarter || a.neighbourhood;
+    const road = a.road || a.pedestrian || a.residential || a.path;
+    const house = a.house_number;
+    const building = a.building || a.amenity || a.shop || a.tourism;
+    let parts = uniqueAddressParts([province, city, district]);
+    if (road) parts = uniqueAddressParts([...parts, road, house]);
+    else parts = uniqueAddressParts([...parts, locality, building]);
+    if (parts.length >= 2) return parts.join(' ');
+    const display = String(data?.display_name || '').split(',').map(v => v.trim())
+      .filter(v => v && v !== '대한민국' && !/^\d{5}$/.test(v));
+    return display.length ? display.reverse().join(' ') : fallback;
+  }
+
   function sitesHtml(filter) {
     const registeredCount = Sites.getRegistered().length;
     const mineCount = Sites.getUserSites().length;
@@ -426,10 +457,11 @@
       '<button class="site-filter ' + (filter === 'registered' ? 'active' : '') + '" type="button" data-site-filter="registered">등록 ' + registeredCount + '</button>' +
       '<button class="site-filter ' + (filter === 'mine' ? 'active' : '') + '" type="button" data-site-filter="mine">내 거점 ' + mineCount + '</button>' +
       '<button class="site-filter ' + (filter === 'secured' ? 'active' : '') + '" type="button" data-site-filter="secured">개척 ' + securedCount + '</button>' +
-      '</div><div class="site-list">' + rows + '</div>';
+      '</div><button class="site-add-btn" id="siteAddBtn" type="button">+ 거점 추가</button><div class="site-list">' + rows + '</div>';
   }
 
   function bindSitesPanel() {
+    $('siteAddBtn')?.addEventListener('click', openSiteAdd);
     document.querySelectorAll('[data-site-filter]').forEach(btn => {
       btn.addEventListener('click', () => openSites(btn.dataset.siteFilter));
     });
@@ -444,6 +476,166 @@
     bindSitesPanel();
   }
 
+  function ensureSitePlacementBar() {
+    let bar = $('sitePlacementBar');
+    if (bar) return bar;
+    bar = document.createElement('div');
+    bar.id = 'sitePlacementBar';
+    bar.className = 'site-placement-bar';
+    bar.hidden = true;
+    bar.innerHTML = '<div><small>거점 위치</small><strong id="sitePlacementCoord">--</strong></div>' +
+      '<button type="button" id="sitePlacementCancel">취소</button>' +
+      '<button class="primary" type="button" id="sitePlacementConfirm">지점 선택</button>';
+    document.body.appendChild(bar);
+    $('sitePlacementCancel')?.addEventListener('click', cancelSitePlacement);
+    $('sitePlacementConfirm')?.addEventListener('click', confirmSitePlacement);
+    return bar;
+  }
+
+  function updateSitePlacementBar() {
+    const bar = ensureSitePlacementBar();
+    if (!sitePlacementActive) { bar.hidden = true; return; }
+    bar.hidden = false;
+    const center = map.getCenter();
+    const node = $('sitePlacementCoord');
+    if (node) node.textContent = formatMgrs({lat:center.lat,lon:center.lng});
+  }
+
+  function beginSitePlacement(coords = null) {
+    sitePlacementActive = true;
+    closeSheet();
+    if (coords && Number.isFinite(Number(coords[0])) && Number.isFinite(Number(coords[1]))) {
+      map.setView([Number(coords[0]),Number(coords[1])], Math.max(map.getZoom(), 16), {animate:true});
+    }
+    updateSitePlacementBar();
+    toast('지도를 움직여 위치 조정');
+  }
+
+  function cancelSitePlacement() {
+    sitePlacementActive = false;
+    editingSiteId = null;
+    updateSitePlacementBar();
+    openSites('mine');
+  }
+
+  function confirmSitePlacement() {
+    if (!sitePlacementActive) return;
+    const center = map.getCenter();
+    sitePlacementActive = false;
+    updateSitePlacementBar();
+    openSiteForm([center.lat, center.lng], editingSiteId);
+  }
+
+  function siteAddHtml() {
+    const ref = S.reference();
+    const temp = S.state.temp;
+    return '<div class="site-add-source">' +
+      '<button type="button" data-site-add-source="MAP"><strong>지도에서 직접 선택</strong><span>현재 조준점에서 시작</span></button>' +
+      '<button type="button" data-site-add-source="REF" ' + (ref ? '' : 'disabled') + '><strong>현재 기준 위치</strong><span>' + (ref ? esc(ref.type + ' · ' + formatMgrs(ref)) : '없음') + '</span></button>' +
+      '<button type="button" data-site-add-source="TEMP" ' + (temp ? '' : 'disabled') + '><strong>TEMP</strong><span>' + (temp ? esc(formatMgrs(temp)) : '없음') + '</span></button>' +
+      '</div>' +
+      '<div class="site-add-search"><input id="siteAddAddress" type="search" autocomplete="street-address" placeholder="주소 검색 (온라인)"><button id="siteAddAddressGo" type="button">검색</button></div>' +
+      '<div class="site-add-results" id="siteAddAddressResults"></div>' +
+      '<div class="site-add-search"><input id="siteAddCoord" type="text" placeholder="MGRS / 37.12345, 127.12345"><button id="siteAddCoordGo" type="button">이동</button></div>' +
+      '<p class="sheet-note">입력한 위치는 바로 저장되지 않습니다. 지도 이동 후 조준점으로 확인하고 ‘지점 선택’을 눌러야 등록됩니다.</p>';
+  }
+
+  function openSiteAdd() {
+    editingSiteId = null;
+    openSheet('sites', {title:'거점 추가', html:siteAddHtml()});
+    document.querySelectorAll('[data-site-add-source]').forEach(btn => btn.addEventListener('click', () => {
+      const source = btn.dataset.siteAddSource;
+      if (source === 'MAP') beginSitePlacement();
+      if (source === 'REF') {
+        const ref = S.reference();
+        if (ref) beginSitePlacement([ref.lat,ref.lon]);
+      }
+      if (source === 'TEMP' && S.state.temp) beginSitePlacement([S.state.temp.lat,S.state.temp.lon]);
+    }));
+    $('siteAddCoordGo')?.addEventListener('click', () => {
+      const parsed = parseDirectLocation($('siteAddCoord')?.value);
+      if (!parsed) return toast('좌표 확인 필요');
+      beginSitePlacement([parsed.lat,parsed.lon]);
+    });
+    const searchAddress = async () => {
+      const input = $('siteAddAddress');
+      const results = $('siteAddAddressResults');
+      const query = String(input?.value || '').trim();
+      if (!query) return input?.focus();
+      if (!navigator.onLine) {
+        results.innerHTML = '<div class="site-add-empty">OFFLINE · 주소 검색은 네트워크가 필요합니다.</div>';
+        return;
+      }
+      const token = ++sitePlacementAddressToken;
+      results.innerHTML = '<div class="site-add-empty">SEARCHING...</div>';
+      try {
+        const res = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=6&addressdetails=1&accept-language=ko&q=' + encodeURIComponent(query), {headers:{Accept:'application/json'}});
+        if (!res.ok) throw new Error('search failed');
+        const data = await res.json();
+        if (token !== sitePlacementAddressToken) return;
+        if (!Array.isArray(data) || !data.length) {
+          results.innerHTML = '<div class="site-add-empty">검색 결과 없음</div>';
+          return;
+        }
+        results.innerHTML = data.map((row,index) => {
+          const lat = Number(row.lat), lon = Number(row.lon);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
+          const address = normalizeKoreanAddress(row,row.display_name || query);
+          return '<button type="button" data-site-address-result="' + index + '"><strong>' + esc(address || query) + '</strong><span>' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '</span></button>';
+        }).join('');
+        results.querySelectorAll('[data-site-address-result]').forEach(btn => btn.addEventListener('click', () => {
+          const row = data[Number(btn.dataset.siteAddressResult)];
+          const lat = Number(row?.lat), lon = Number(row?.lon);
+          if (Number.isFinite(lat) && Number.isFinite(lon)) beginSitePlacement([lat,lon]);
+        }));
+      } catch {
+        if (token === sitePlacementAddressToken) results.innerHTML = '<div class="site-add-empty">주소 검색 실패</div>';
+      }
+    };
+    $('siteAddAddressGo')?.addEventListener('click', searchAddress);
+    $('siteAddAddress')?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); searchAddress(); }
+    });
+  }
+
+  function openSiteForm(coords, id = null) {
+    const existing = id ? Sites.find(id) : null;
+    const html = '<div class="site-form">' +
+      '<div class="site-form-position"><span>MGRS</span><strong>' + esc(formatMgrs({lat:coords[0],lon:coords[1]})) + '</strong><span>WGS84</span><strong>' + Number(coords[0]).toFixed(5) + ', ' + Number(coords[1]).toFixed(5) + '</strong></div>' +
+      '<label><span>거점명</span><input id="siteFormName" maxlength="80" value="' + esc(existing?.name || '') + '" placeholder="거점 이름"></label>' +
+      '<label><span>분류</span><input id="siteFormCat" maxlength="40" value="' + esc(existing?.cat || '사용자 거점') + '" placeholder="분류"></label>' +
+      '<label><span>메모</span><textarea id="siteFormMemo" maxlength="800" placeholder="메모">' + esc(existing?.desc || '') + '</textarea></label>' +
+      '<div class="site-form-actions"><button type="button" id="siteFormRelocate">위치 다시 지정</button><button class="primary" type="button" id="siteFormSave">저장</button></div>' +
+      '</div>';
+    openSheet('sites', {title:existing ? '거점 수정' : '거점 등록', html});
+    $('siteFormRelocate')?.addEventListener('click', () => {
+      editingSiteId = existing?.id || null;
+      beginSitePlacement(coords);
+    });
+    $('siteFormSave')?.addEventListener('click', () => {
+      const name = String($('siteFormName')?.value || '').trim();
+      if (!name) return toast('거점명 필요');
+      const patch = {
+        name,
+        cat:String($('siteFormCat')?.value || '사용자 거점').trim() || '사용자 거점',
+        coords:[Number(coords[0]),Number(coords[1])],
+        desc:String($('siteFormMemo')?.value || '').trim()
+      };
+      let saved = null;
+      if (existing) saved = Sites.updateUserSite(existing.id, patch);
+      else saved = Sites.addUserSite({
+        ...patch,
+        opCode:'USER-' + Date.now().toString(36).toUpperCase(),
+        status:'UNEXPLORED',
+        source:'USER'
+      });
+      editingSiteId = null;
+      if (!saved) return toast('거점 저장 실패');
+      toast(existing ? '거점 수정' : '거점 저장');
+      openSiteDetail(saved.id);
+    });
+  }
+
   function openSiteDetail(id) {
     const site = Sites.find(id);
     if (!site) {
@@ -452,6 +644,7 @@
     }
 
     const secured = site.status === 'SECURED';
+    const editable = site.source === 'USER' || site.source === 'WILD';
     const html =
       '<div class="site-detail">' +
         '<div class="site-detail-head">' +
@@ -467,7 +660,9 @@
         '<div class="site-copy"><b>참고</b><br>' + esc(site.tips || '참고 없음') + '</div>' +
         '<div class="site-actions">' +
           '<button type="button" id="siteMapGo">지도에서 보기</button>' +
-          '<button class="primary" type="button" id="siteSecureToggle">' + (secured ? '미개척으로' : '개척 완료') + '</button>' +
+          '<button class="primary" type="button" id="siteDestinationSet">목적지 설정</button>' +
+          '<button type="button" id="siteSecureToggle">' + (secured ? '미개척으로' : '개척 완료') + '</button>' +
+          (editable ? '<button type="button" id="siteEditBtn">수정</button><button class="danger" type="button" id="siteDeleteBtn">삭제</button>' : '') +
         '</div>' +
       '</div>';
 
@@ -477,6 +672,24 @@
       map.setView(site.coords, Math.max(map.getZoom(), 15), { animate:true });
       closeSheet();
       toast('거점으로 이동');
+    });
+
+    $('siteDestinationSet')?.addEventListener('click', () => {
+      const ok = window.BaselineNavigationUI?.setDestinationFromSite?.(site);
+      if (!ok) toast('목적지 설정 실패');
+    });
+
+    $('siteEditBtn')?.addEventListener('click', () => {
+      editingSiteId = site.id;
+      openSiteForm(site.coords, site.id);
+    });
+
+    $('siteDeleteBtn')?.addEventListener('click', () => {
+      if (!confirm('이 거점을 삭제할까요?')) return;
+      if (Sites.removeUserSite(site.id)) {
+        toast('거점 삭제');
+        openSites('mine');
+      }
     });
 
     $('siteSecureToggle')?.addEventListener('click', () => {
@@ -723,7 +936,10 @@
 
   bindTempGesture();
 
-  map.on('move zoom resize', renderScale);
+  map.on('move zoom resize', () => {
+    renderScale();
+    if (sitePlacementActive) updateSitePlacementBar();
+  });
   map.on('dragstart', () => {
     if (S.state.gps.follow) {
       S.setFollow(false);
@@ -763,6 +979,7 @@
     closeSheet,
     openSites,
     openExplore,
+    openSiteAdd,
     toast,
     formatMgrs
   });
