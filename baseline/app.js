@@ -927,7 +927,7 @@
     plans: {
       title: '계획',
       html: '<div class="sheet-grid">' +
-        '<button class="sheet-action" type="button" disabled><strong>새 계획</strong><span>출발 · 경유 · 도착 · 드로잉을 하나의 항법 화면에서 구성</span></button>' +
+        '<button class="sheet-action" type="button" disabled><strong>새 계획</strong><span>출발지 · 경유지 · 목적지 · 드로잉을 하나의 항법 화면에서 구성</span></button>' +
         '<button class="sheet-action" type="button" disabled><strong>저장된 계획</strong><span>계획 이름으로 저장하고 열기/공유 가능하게 재구축 예정</span></button>' +
         '</div>'
     },
