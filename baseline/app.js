@@ -18,6 +18,7 @@
   let tempHoldTriggered = false;
   let tempMarker = null;
   let gpsMarker = null;
+  let lastMarker = null;
   let activeSiteFilter = 'registered';
   let exploreRadius = 'all';
   let exploreCircle = null;
@@ -49,12 +50,14 @@
   const roadBoostLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     minZoom: 10,
     maxZoom: 19,
-    opacity: 0.24,
+    opacity: 0.14,
     pane: 'roadBoostPane',
     className: 'road-boost-tiles',
     attribution: ''
   });
 
+  roadBoostLayer.addTo(map);
+  map.attributionControl?.setPrefix(false);
   siteLayer.addTo(map);
 
   function toast(message) {
@@ -145,6 +148,8 @@
     gps?.classList.toggle('active', S.state.gps.enabled);
     gps?.setAttribute('aria-pressed', String(S.state.gps.enabled));
     follow?.classList.toggle('active', S.state.gps.follow);
+    gps?.classList.toggle('inactive-state', !S.state.gps.enabled);
+    follow?.classList.toggle('inactive-state', !S.state.gps.follow);
     follow?.classList.toggle('following', S.state.gps.follow);
     follow?.setAttribute('aria-pressed', String(S.state.gps.follow));
     const followGlyph = $('followGlyph');
@@ -225,7 +230,13 @@
     }
 
     const fix = S.state.gps.fix;
+    const last = S.state.lastFix;
+
     if (S.state.gps.enabled && fix) {
+      if (lastMarker) {
+        lastMarker.remove();
+        lastMarker = null;
+      }
       if (!gpsMarker) {
         gpsMarker = L.marker([fix.lat, fix.lon], {
           icon: makeDot('gps'),
@@ -235,9 +246,25 @@
       } else {
         gpsMarker.setLatLng([fix.lat, fix.lon]);
       }
-    } else if (gpsMarker) {
-      gpsMarker.remove();
-      gpsMarker = null;
+    } else {
+      if (gpsMarker) {
+        gpsMarker.remove();
+        gpsMarker = null;
+      }
+      if (last) {
+        if (!lastMarker) {
+          lastMarker = L.marker([last.lat, last.lon], {
+            icon: makeDot('last'),
+            interactive:false,
+            zIndexOffset:350
+          }).addTo(map);
+        } else {
+          lastMarker.setLatLng([last.lat,last.lon]);
+        }
+      } else if (lastMarker) {
+        lastMarker.remove();
+        lastMarker = null;
+      }
     }
   }
 
