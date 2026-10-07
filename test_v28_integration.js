@@ -21,7 +21,7 @@ function test(name, fn) {
 }
 
 test('PWA cache version follows EP V29 root runtime', () => {
-  assert(sw.includes("const CACHE_VERSION = 'ep-v5-field-polish-20261007-2';"));
+  assert(sw.includes("const CACHE_VERSION = 'ep-v6-v-ui-20261007-1';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {

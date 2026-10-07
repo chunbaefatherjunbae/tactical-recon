@@ -41,22 +41,30 @@ test('service worker keeps EP shell as old-cache fallback',()=>{
   assert(sw.includes("html.includes('ep-ui-shell.js')"));
 });
 
-test('field polish restores V-style adaptive position and text-only bottom bar',()=>{
+test('V skin keeps adaptive position and text-only bottom toolbar',()=>{
   assert(shell.includes("if(typeof root.centerGpsNow==='function')root.centerGpsNow()"));
   assert(shell.includes('id="epFollowGlyph"'));
   assert(shell.includes('<b>TEMP</b><span>임시위치</span>'));
   ['⌾','✣','≋','⌁'].forEach(icon=>assert.strictEqual(shell.includes(icon),false));
-  assert(css.includes('Bottom navigation: one segmented field bar, text only.'));
+  assert(css.includes('.ep-bottom-nav{'));
+  assert(css.includes('grid-template-columns:repeat(4,minmax(0,1fr))!important'));
   assert(css.includes('.ep-bottom-nav button b{display:none!important}'));
 });
 
-test('field polish removes scale card and restores compact V reticle geometry',()=>{
+test('V skin restores exact compact reticle and field scale geometry',()=>{
   assert(css.includes('background:transparent!important'));
   assert(css.includes('border:0!important'));
   assert(css.includes('width:44px!important'));
   assert(css.includes('height:44px!important'));
   assert(css.includes('width:20px!important'));
   assert(css.includes('height:20px!important'));
+});
+
+test('V skin uses V27 global control dimensions and toolbar rhythm',()=>{
+  assert(css.includes('width:48px!important'));
+  assert(css.includes('min-height:38px!important'));
+  assert(css.includes('min-height:42px!important'));
+  assert(css.includes('border-top:1px solid var(--ep-field-line-strong)!important'));
 });
 
 test('EP shell exposes required map-first controls',()=>{
@@ -75,7 +83,7 @@ test('MAP shell hides legacy HUD stack but preserves legacy DOM',()=>{
 });
 
 test('bottom navigation is map-only and four-function',()=>{
-  assert(css.includes('body:not(.ep-surface-map) #epShell .ep-bottom-nav{display:none}'));
+  assert(css.includes('body:not(.ep-surface-map) #epShell .ep-bottom-nav{display:none!important}'));
   assert(shell.includes('<span>거점</span>'));
   assert(shell.includes('<span>무작위</span>'));
   assert(shell.includes('<span>기록</span>'));
@@ -90,8 +98,11 @@ test('TRACK short and long press use V28 TrackV2 state',()=>{
   assert(shell.includes('stopTrack();'));
 });
 
-test('existing SITREP is transitional Location Card',()=>{
-  assert(css.includes('body.ep-shell-ready.ep-overlay-location .sitrep-panel'));
+test('legacy SITREP stays hidden because EP flow owns the Location Card',()=>{
+  assert(css.includes('body.ep-shell-ready .sitrep-panel'));
+  const flowCss=fs.readFileSync('ep-ui-flow.css','utf8');
+  assert(flowCss.includes('.ep-location-card{'));
+  assert(flowCss.includes('border-top:3px solid var(--ep-field-active)'));
 });
 
 test('coordinate HUD copies without TAP TO COPY copywriting',()=>{
