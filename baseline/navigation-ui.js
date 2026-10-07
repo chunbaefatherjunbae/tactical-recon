@@ -190,6 +190,7 @@
     if (nodes.length >= 2) {
       L.polyline(nodes,{
         interactive:false,
+        className:'baseline-plan-path',
         color:'#9de3a4',
         weight:1.6,
         opacity:.7,
@@ -211,6 +212,7 @@
       if (!Array.isArray(seg.points) || seg.points.length < 2) return;
       L.polyline(seg.points,{
         interactive:false,
+        className:'baseline-plan-drawing',
         color:'#9de3a4',
         weight:2,
         opacity:seg.kind === 'MARK' ? .9 : .78,
@@ -299,6 +301,7 @@
       if (segment.length < 2) return;
       L.polyline(segment.map(p => [p.lat,p.lon]),{
         interactive:false,
+        className:'baseline-track-path',
         color:'#22ff66',
         weight:2.5,
         opacity:.92
