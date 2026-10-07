@@ -38,7 +38,7 @@ html, body, #app { width:100%; height:100%; margin:0; overflow:hidden; backgroun
 body { color:var(--text-main); user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
 button, input { font:inherit; }
 
-#map { position:absolute; inset:0 0 var(--bottom-h); background:#020904; }
+#map { position:absolute; z-index:0; isolation:isolate; inset:0 0 var(--bottom-h); background:#020904; }
 .leaflet-tile-pane .leaflet-tile { filter:var(--map-filter); }
 .leaflet-tile-pane .road-boost-tiles { filter:var(--road-filter) !important; }
 .leaflet-control-zoom { display:none !important; }
