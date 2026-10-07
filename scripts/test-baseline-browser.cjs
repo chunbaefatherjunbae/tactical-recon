@@ -87,11 +87,12 @@ const server = http.createServer((req, res) => {
 
       const liteBundleBytes = fs.statSync(path.join(root,'baseline/data/lite-map-osm.js')).size;
       assert(liteBundleBytes < 4_000_000, 'lite vector bundle must remain mobile-sized');
-      assert.equal(await page.evaluate(() => BaselineLiteMap.status().dataReady), true);
+      assert.equal(await page.evaluate(() => BaselineLiteMap.status().dataReady), false, 'lite vectors must not parse during normal online boot');
+      assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').some(x => x.name.includes('/baseline/data/lite-map-osm.js'))), false, 'lite vector bundle must be lazy-loaded');
       assert.equal(await page.evaluate(() => BaselineLiteMap.status().requested), 'auto');
 
       await page.evaluate(() => BaselineLiteMap.setMode('lite'));
-      await page.waitForFunction(() => BaselineLiteMap.status().effective === 'lite');
+      await page.waitForFunction(() => BaselineLiteMap.status().effective === 'lite' && BaselineLiteMap.status().dataReady);
       assert.equal(await page.locator('#mapModeStatus').textContent(), 'MAP · LITE');
       assert.equal(await page.evaluate(() => BaselineApp.map.hasLayer(BaselineLiteMap.terrainLayer)), true);
       assert.equal(await page.evaluate(() => BaselineApp.map.hasLayer(BaselineLiteMap.vectorLayer)), true);
