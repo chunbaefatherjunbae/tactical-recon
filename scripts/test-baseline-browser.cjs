@@ -53,6 +53,9 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.evaluate(() => BaselineApp.roadBoostLayer?._url.includes('openstreetmap.org')), true);
       assert.equal(await page.evaluate(() => document.body.classList.contains('theme-nvg-green')), true);
       assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--map-filter').includes('hue-rotate(76deg)')), true);
+      await page.waitForTimeout(120);
+      const topoTileFilter = await page.locator('.leaflet-tile:not(.road-boost-tiles)').first().evaluate(el => getComputedStyle(el).filter).catch(() => '');
+      if (topoTileFilter) assert(topoTileFilter.includes('hue-rotate'));
       assert.equal(await page.evaluate(() => BaselineSites.getRegistered().length), 24);
       assert.equal(await page.locator('.site-map-marker').count(), 24);
       assert.equal(await page.locator('.reticle').count(), 1);
@@ -103,6 +106,7 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#sheetTitle').textContent(), '거점');
       assert.equal(await page.locator('[data-site-filter]').count(), 3);
       assert.equal(await page.locator('.site-row').count(), 24);
+      await page.screenshot({ path:`ui-results-baseline/${name}-sites.png`, fullPage:true });
       await page.locator('.site-row').first().click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '거점 정보');
       assert(await page.locator('#siteMapGo').isVisible());
