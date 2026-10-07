@@ -67,8 +67,8 @@ const server = http.createServer((req, res) => {
       assert(parseFloat(await page.locator('.bottom-nav button').first().evaluate(el => getComputedStyle(el).fontSize)) >= 14);
       assert(parseFloat(await page.locator('#positionCoord').evaluate(el => getComputedStyle(el).fontSize)) >= 13);
       assert(parseFloat(await page.locator('#positionMeta').evaluate(el => getComputedStyle(el).fontSize)) >= 11);
-      assert.equal(await page.locator('#positionMeta').evaluate(el => getComputedStyle(el).color), 'rgb(121, 200, 138)');
-      assert.equal(await page.locator('#mapModeStatus').evaluate(el => getComputedStyle(el).color), 'rgb(121, 200, 138)');
+      assert.equal(await page.locator('#positionMeta').evaluate(el => getComputedStyle(el).color), 'rgb(142, 211, 156)');
+      assert.equal(await page.locator('#mapModeStatus').evaluate(el => getComputedStyle(el).color), 'rgb(121, 189, 136)');
       assert.equal(await page.locator('#reticleCoord').count(), 1);
       const scaleShape = await page.locator('#scaleLine').evaluate(el => {
         const s=getComputedStyle(el);
