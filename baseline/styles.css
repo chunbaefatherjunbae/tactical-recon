@@ -1173,3 +1173,10 @@ body.baseline-drawing .reticle { opacity:.28; }
   color:#ff9c9c;
   border-color:rgba(255,100,100,.45);
 }
+
+
+body.baseline-site-placement .nav-route-summary,
+body.baseline-site-placement .navigation-hud,
+body.baseline-site-placement .nav-session-controls {
+  display:none !important;
+}
