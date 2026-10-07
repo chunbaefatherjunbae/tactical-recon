@@ -1,9 +1,8 @@
 'use strict';
 
-const VERSION='baseline-offline-v5';
-const SHELL_CACHE=VERSION+'-shell';
-const TERRAIN_CACHE=VERSION+'-terrain';
-const ONLINE_TILE_CACHE=VERSION+'-online-tiles';
+const SHELL_CACHE='baseline-shell-v6';
+const TERRAIN_CACHE='baseline-terrain-v1';
+const ONLINE_TILE_CACHE='baseline-online-tiles-v1';
 const ONLINE_TILE_LIMIT=384;
 const BASE=new URL('./',self.location.href);
 const local=path=>new URL(path,BASE).href;
@@ -196,7 +195,10 @@ self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
     const keep=new Set([SHELL_CACHE,TERRAIN_CACHE,ONLINE_TILE_CACHE]);
     const names=await caches.keys();
-    await Promise.all(names.filter(name=>name.startsWith('baseline-offline-')&&!keep.has(name)).map(name=>caches.delete(name)));
+    await Promise.all(names.filter(name => {
+      if(keep.has(name)) return false;
+      return name.startsWith('baseline-shell-') || name.startsWith('baseline-offline-');
+    }).map(name=>caches.delete(name)));
     await self.clients.claim();
   })());
 });
