@@ -2,7 +2,7 @@ const fs=require('fs');
 const assert=require('assert');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
-const index=fs.readFileSync('index.html','utf8');
+const index=fs.readFileSync('index.html','utf8').replace(/\?v=[^"']+/g,'');
 const runtime=fs.readFileSync('v28-runtime.js','utf8');
 const core=fs.readFileSync('v29.js','utf8');
 const ui=fs.readFileSync('v29-ui.js','utf8');

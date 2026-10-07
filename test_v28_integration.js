@@ -21,7 +21,7 @@ function test(name, fn) {
 }
 
 test('PWA cache version follows EP V29 root runtime', () => {
-  assert(sw.includes("const CACHE_VERSION = 'ep-v7-usability-pass-20261007-1';"));
+  assert(sw.includes("const CACHE_VERSION = 'ep-v7-overlay-fix-20261007-2';"));
 });
 
 test('PWA static cache includes V28 CSS, foundation and runtime', () => {
@@ -31,7 +31,7 @@ test('PWA static cache includes V28 CSS, foundation and runtime', () => {
 });
 
 test('Index loads foundation before integrated runtime', () => {
-  const index = fs.readFileSync('index.html','utf8');
+  const index = fs.readFileSync('index.html','utf8').replace(/\?v=[^"']+/g,'');
   const foundation = index.indexOf('src="./v28.js"');
   const runtimePos = index.indexOf('src="./v28-runtime.js"');
   assert(foundation >= 0);

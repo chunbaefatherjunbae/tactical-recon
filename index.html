@@ -12,9 +12,9 @@
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
   
   <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="./vendor/leaflet-1.9.4.css" />
+  <link rel="stylesheet" href="./vendor/leaflet-1.9.4.css?v=ep-v7-overlay-fix-20261007-2" />
   <!-- MGRS.js CDN -->
-  <script src="./vendor/mgrs-1.0.0.js"></script>
+  <script src="./vendor/mgrs-1.0.0.js?v=ep-v7-overlay-fix-20261007-2"></script>
 
   <style>
     /* ============================================================
@@ -1501,12 +1501,12 @@
     }
 
   </style>
-  <link rel="stylesheet" href="./v27-stable.css" />
-  <link rel="stylesheet" href="./v28.css" />
-  <link rel="stylesheet" href="./v29.css" />
-  <link rel="stylesheet" href="./v29-stabilize.css" />
-  <link rel="stylesheet" href="./ep-ui.css" />
-  <link rel="stylesheet" href="./ep-ui-flow.css" />
+  <link rel="stylesheet" href="./v27-stable.css?v=ep-v7-overlay-fix-20261007-2" />
+  <link rel="stylesheet" href="./v28.css?v=ep-v7-overlay-fix-20261007-2" />
+  <link rel="stylesheet" href="./v29.css?v=ep-v7-overlay-fix-20261007-2" />
+  <link rel="stylesheet" href="./v29-stabilize.css?v=ep-v7-overlay-fix-20261007-2" />
+  <link rel="stylesheet" href="./ep-ui.css?v=ep-v7-overlay-fix-20261007-2" />
+  <link rel="stylesheet" href="./ep-ui-flow.css?v=ep-v7-overlay-fix-20261007-2" />
 </head>
 <body class="theme-nvg-green">
 
@@ -2044,7 +2044,7 @@
   </div>
 
   <!-- Leaflet JS -->
-  <script src="./vendor/leaflet-1.9.4.js"></script>
+  <script src="./vendor/leaflet-1.9.4.js?v=ep-v7-overlay-fix-20261007-2"></script>
   <!-- TRACK UP rotation is intentionally disabled in V25 stable build.
        External rotation code must never block core app initialization. -->
   <script>window.__reconRotateUnavailable = true;</script>
@@ -5990,13 +5990,13 @@
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js?v=ep-v7-usability-pass-20261007-1', { scope: './', updateViaCache: 'none' })
+      navigator.serviceWorker.register('./service-worker.js?v=ep-v7-overlay-fix-20261007-2', { scope: './', updateViaCache: 'none' })
           .then(registration => registration.update())
           .catch(err => console.warn('Service Worker 등록 실패:', err));
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        const reloadKey = 'tactical-recon-sw-reload-ep-v7-usability-pass-20261007-1';
+        const reloadKey = 'tactical-recon-sw-reload-ep-v7-overlay-fix-20261007-2';
         if (sessionStorage.getItem(reloadKey)) return;
         sessionStorage.setItem(reloadKey, '1');
         location.reload();
@@ -6004,29 +6004,29 @@
     }
   </script>
   <!-- Deterministic runtime order. Service-worker injection remains only as an old-cache fallback. -->
-  <script src="./v27-stable.js"></script>
-  <script src="./v28.js"></script>
-  <script src="./v29-storage.js"></script>
-  <script src="./v28-runtime.js"></script>
-  <script src="./v29.js"></script>
-  <script src="./v29-ui.js"></script>
-  <script src="./v29-stabilize.js"></script>
-  <script src="./ep-core/location-core.js"></script>
-  <script src="./ep-core/search-core.js"></script>
-  <script src="./ep-core/reference-core.js"></script>
-  <script src="./ep-core/plan-core.js"></script>
-  <script src="./ep-core/mission-core.js"></script>
-  <script src="./ep-core/plan-legacy-adapter.js"></script>
-  <script src="./ep-core/state-core.js"></script>
-  <script src="./ep-core/surface-core.js"></script>
-  <script src="./ep-core/overlay-core.js"></script>
-  <script src="./ep-core/legacy-adapter.js"></script>
-  <script src="./ep-runtime-bridge.js"></script>
-  <script src="./ep-plan-bridge.js"></script>
-  <script src="./ep-mission-bridge.js"></script>
-  <script src="./ep-surface-bridge.js"></script>
-  <script src="./ep-overlay-bridge.js"></script>
-  <script src="./ep-ui-shell.js"></script>
-  <script src="./ep-ui-flow.js"></script>
+  <script src="./v27-stable.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./v28.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./v29-storage.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./v28-runtime.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./v29.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./v29-ui.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./v29-stabilize.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/location-core.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/search-core.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/reference-core.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/plan-core.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/mission-core.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/plan-legacy-adapter.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/state-core.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/surface-core.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/overlay-core.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-core/legacy-adapter.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-runtime-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-plan-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-mission-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-surface-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-overlay-bridge.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-ui-shell.js?v=ep-v7-overlay-fix-20261007-2"></script>
+  <script src="./ep-ui-flow.js?v=ep-v7-overlay-fix-20261007-2"></script>
 </body>
 </html>

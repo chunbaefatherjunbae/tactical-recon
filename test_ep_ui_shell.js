@@ -3,7 +3,7 @@ const assert=require('assert');
 
 const css=fs.readFileSync('ep-ui.css','utf8');
 const shell=fs.readFileSync('ep-ui-shell.js','utf8');
-const index=fs.readFileSync('index.html','utf8');
+const index=fs.readFileSync('index.html','utf8').replace(/\?v=[^"']+/g,'');
 
 let passed=0,failed=0;
 function test(name,fn){
@@ -53,8 +53,8 @@ test('V skin keeps adaptive position and text-only bottom toolbar',()=>{
 
 test('search and operation menu match GPS control dimensions and GPS has no redundant status label',()=>{
   assert(css.includes('grid-template-columns:48px!important'));
-  assert(css.includes('width:48px!important;height:38px!important'));
-  assert(css.includes('width:48px!important;min-height:38px!important;height:38px!important'));
+  assert(css.includes('width:48px!important;height:44px!important'));
+  assert(css.includes('width:48px!important;min-height:44px!important;height:44px!important'));
   assert.strictEqual(shell.includes('id="epGpsState"'),false);
   assert.strictEqual(shell.includes("el('epGpsState')"),false);
 });
@@ -93,7 +93,7 @@ test('V final corner frame uses 34px brackets and 70px extensions',()=>{
 
 test('V skin uses V27 global control dimensions and toolbar rhythm',()=>{
   assert(css.includes('width:48px!important'));
-  assert(css.includes('min-height:38px!important'));
+  assert(css.includes('min-height:44px!important'));
   assert(css.includes('min-height:42px!important'));
   assert(css.includes('border-top:1px solid var(--ep-field-line-strong)!important'));
 });
@@ -136,7 +136,7 @@ test('TRACK short and long press use V28 TrackV2 state',()=>{
 });
 
 test('legacy SITREP stays hidden because EP flow owns the Location Card',()=>{
-  assert(css.includes('body.ep-shell-ready .sitrep-panel'));
+  assert(css.includes('body.ep-shell-ready.ep-flow-ready .sitrep-panel'));
   const flowCss=fs.readFileSync('ep-ui-flow.css','utf8');
   assert(flowCss.includes('.ep-location-card{'));
   assert(flowCss.includes('border-top:3px solid var(--ep-field-active)'));
