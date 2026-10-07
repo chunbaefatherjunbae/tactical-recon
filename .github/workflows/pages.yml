@@ -33,6 +33,7 @@ jobs:
           node --check v29-stabilize.js
           node --check service-worker.js
           node --check ep-core/location-core.js
+          node --check ep-core/search-core.js
           node --check ep-core/reference-core.js
           node --check ep-core/plan-core.js
           node --check ep-core/state-core.js
@@ -41,6 +42,7 @@ jobs:
           node --check test_v29_stabilize.js
           node --check test_ep_core.js
           node --check test_ep_bridge.js
+          node --check test_ep_search.js
 
       - name: Run regression tests
         run: |
@@ -52,6 +54,7 @@ jobs:
           node test_v29_stabilize.js
           node test_ep_core.js
           node test_ep_bridge.js
+          node test_ep_search.js
 
   deploy:
     needs: validate
