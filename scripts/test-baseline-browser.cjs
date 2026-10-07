@@ -158,6 +158,55 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('.site-row').count(), 1);
       await page.locator('#sheetClose').click();
 
+      // User site creation: location first, then form, then management.
+      const beforeManualSites = await page.evaluate(() => BaselineSites.getUserSites().length);
+      await page.locator('.bottom-nav button[data-panel="sites"]').click();
+      await page.locator('#siteAddBtn').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '거점 추가');
+      await page.locator('#siteAddCoord').fill('37.55123, 126.98876');
+      await page.locator('#siteAddCoordGo').click();
+      assert.equal(await page.locator('#sheet').isHidden(), true);
+      assert.equal(await page.locator('#sitePlacementBar').isVisible(), true);
+      const placementCenter = await page.evaluate(() => {
+        const c = BaselineApp.map.getCenter();
+        return [c.lat,c.lng];
+      });
+      assert(Math.abs(placementCenter[0]-37.55123) < 0.002);
+      assert(Math.abs(placementCenter[1]-126.98876) < 0.002);
+      await page.locator('#sitePlacementConfirm').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '거점 등록');
+      await page.locator('#siteFormName').fill('테스트 관측점');
+      await page.locator('#siteFormCat').fill('관측');
+      await page.locator('#siteFormMemo').fill('BASELINE 사용자 거점 테스트');
+      await page.locator('#siteFormSave').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '거점 정보');
+      assert.equal(await page.evaluate(() => BaselineSites.getUserSites().length), beforeManualSites + 1);
+      assert.equal(await page.locator('#siteEditBtn').count(), 1);
+      assert.equal(await page.locator('#siteDeleteBtn').count(), 1);
+      assert.equal(await page.locator('#siteDestinationSet').count(), 1);
+
+      await page.locator('#siteEditBtn').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '거점 수정');
+      await page.locator('#siteFormName').fill('테스트 거점 수정');
+      await page.locator('#siteFormSave').click();
+      assert.equal(await page.locator('.site-detail-head strong').textContent(), '테스트 거점 수정');
+      const manualSiteId = await page.evaluate(() => BaselineSites.getUserSites().find(s => s.name === '테스트 거점 수정')?.id);
+      assert(manualSiteId);
+
+      await page.locator('#siteDestinationSet').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '계획 편집');
+      assert.equal(await page.evaluate(() => BaselineNavigationUI.getDraft().destination?.name), '테스트 거점 수정');
+      await page.locator('#sheetClose').click();
+
+      await page.locator('.bottom-nav button[data-panel="sites"]').click();
+      await page.locator('[data-site-filter="mine"]').click();
+      await page.locator('.site-row', { hasText:'테스트 거점 수정' }).click();
+      page.once('dialog', dialog => dialog.accept());
+      await page.locator('#siteDeleteBtn').click();
+      assert.equal(await page.evaluate(() => BaselineSites.getUserSites().length), beforeManualSites);
+      await page.screenshot({ path:`ui-results-baseline/${name}-user-sites.png`, fullPage:true });
+      await page.locator('#sheetClose').click();
+
       // Unified PLAN + NAVIGATION vertical flow.
       await page.locator('.bottom-nav button[data-panel="plans"]').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '계획');
