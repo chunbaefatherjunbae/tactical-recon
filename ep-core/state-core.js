@@ -6,7 +6,7 @@
   'use strict';
 
   const SURFACE=Object.freeze({MAP:'MAP',PLAN:'PLAN',MISSION:'MISSION'});
-  const OVERLAY=Object.freeze({NONE:'NONE',SEARCH:'SEARCH',LOCATION:'LOCATION',RECORDS:'RECORDS',TOOLS:'TOOLS'});
+  const OVERLAY=Object.freeze({NONE:'NONE',SEARCH:'SEARCH',LOCATION:'LOCATION',POINTS:'POINTS',RECORDS:'RECORDS',TOOLS:'TOOLS'});
   const DRAW=Object.freeze({NONE:'NONE',PEN:'PEN',ERASER:'ERASER',HAND:'HAND'});
 
   function createState(){
