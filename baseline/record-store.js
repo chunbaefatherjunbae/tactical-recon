@@ -199,7 +199,16 @@
     return record ? clone(record) : null;
   }
 
+  function remove(id) {
+    const key=String(id);
+    const before=records.length;
+    records=records.filter(record=>String(record.id)!==key);
+    if(records.length===before) return false;
+    persistRecords();
+    return true;
+  }
+
   window.BaselineRecordStore = Object.freeze({
-    start,pause,resume,lap,addTrackPoint,routeUpdated,finish,discardActive,getActive,list,get,elapsedMs
+    start,pause,resume,lap,addTrackPoint,routeUpdated,finish,discardActive,getActive,list,get,remove,elapsedMs
   });
 })();
