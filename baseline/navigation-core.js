@@ -313,12 +313,20 @@ function bearingBundle(current, target, options = {}) {
   const convergence=gridConvergence(current[0],current[1]);
   const field=wmmField(current[0],current[1],Number(options.altitudeKm)||0,options.date||new Date());
   const declination=field?.valid?field.declination:NaN;
+  const gridMagneticAngle=(Number.isFinite(declination)&&Number.isFinite(convergence))
+    ? declination-convergence
+    : NaN;
+  const gridToMagneticCorrection=Number.isFinite(gridMagneticAngle)
+    ? -gridMagneticAngle
+    : NaN;
   return {
     distanceKm:haversineKm(current,target),
     trueBearing,
     convergence,
     gridBearing:Number.isFinite(convergence)?normalize360(trueBearing-convergence):NaN,
     declination,
+    gridMagneticAngle,
+    gridToMagneticCorrection,
     magneticBearing:Number.isFinite(declination)?normalize360(trueBearing-declination):NaN,
     zone:utmZone(current[1]),
     model:field
