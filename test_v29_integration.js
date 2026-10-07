@@ -18,7 +18,10 @@ test('PWA caches V29 and index loads it in dependency order',()=>{
   ["'./v29.css'","'./v29.js'","'./v29-ui.js'"].forEach(x=>assert(sw.includes(x)));
   assert(index.indexOf('src="./v29.js"')>index.indexOf('src="./v28-runtime.js"'));
   assert(index.indexOf('src="./v29-ui.js"')>index.indexOf('src="./v29.js"'));
-  assert.strictEqual(sw.includes('injectStableOverlay'),false);
+  // Root loads V29/EP directly; injection remains only for old cached HTML recovery.
+  assert(sw.includes('injectStableOverlay'));
+  assert(index.includes('src="./ep-runtime-bridge.js"'));
+  assert(index.includes('src="./ep-ui-flow.js"'));
 });
 
 test('V29 exposes all specification feature groups',()=>{
