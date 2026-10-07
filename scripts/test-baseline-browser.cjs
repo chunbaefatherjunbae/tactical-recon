@@ -7,7 +7,7 @@ const http = require('node:http');
 const root = path.resolve(__dirname, '..');
 const server = http.createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
-  const target = pathname === '/' ? '/baseline/index.html' : pathname;
+  const target = (pathname === '/' || pathname === '/baseline/' || pathname === '/baseline') ? '/baseline/index.html' : pathname;
   const file = path.join(root, target);
   if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
   try {
