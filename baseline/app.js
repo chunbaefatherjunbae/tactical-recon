@@ -623,7 +623,7 @@
     },
     settings: {
       title: '설정',
-      html: '<p class="sheet-note">테마 기능은 배치가 확정될 때까지 중단. BASELINE에서는 지도/좌표/운용 설정만 새 구조로 추가할 예정.</p>'
+      html: '<p class="sheet-note">현재 기본 디스플레이는 기존 NVG-G로 고정되어 있습니다. 테마 선택 기능은 전체 배치가 확정된 뒤 다시 추가합니다.</p>'
     }
   };
 
@@ -715,6 +715,8 @@
       }
       if (panel === 'sites') openSites();
       else if (panel === 'explore') openExplore();
+      else if (panel === 'plans' && window.BaselineNavigationUI) window.BaselineNavigationUI.openPlans();
+      else if (panel === 'records' && window.BaselineNavigationUI) window.BaselineNavigationUI.openRecords();
       else openSheet(panel);
     });
   });
