@@ -1,14 +1,10 @@
-const CACHE_VERSION = 'r2-3-1-field-polish-topo-20261006-1';
+const CACHE_VERSION = 'v29-track-context-hotfix-20261005-4';
 const STATIC_CACHE = `tactical-recon-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `tactical-recon-pages-${CACHE_VERSION}`;
-
 const STATIC_ASSETS = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './app-base.css',
-  './location-core.js',
-  './app-base.js',
   './v27-stable.css',
   './v27-stable.js',
   './v28.css',
@@ -21,13 +17,27 @@ const STATIC_ASSETS = [
   './vendor/mgrs-1.0.0.js',
   './vendor/leaflet-1.9.4.js',
   './vendor/leaflet-1.9.4.css',
-  './r1.css',
-  './r1.js',
-  './r2.css',
-  './r2.js',
-  './offline/kr-low.geojson',
-  './offline/kr-contours.geojson',
-  './offline/NOTICE.txt'
+  './v29-stabilize.css',
+  './v29-stabilize.js',
+  './ep-ui.css',
+  './ep-ui-flow.css',
+  './ep-core/location-core.js',
+  './ep-core/search-core.js',
+  './ep-core/reference-core.js',
+  './ep-core/plan-core.js',
+  './ep-core/mission-core.js',
+  './ep-core/plan-legacy-adapter.js',
+  './ep-core/state-core.js',
+  './ep-core/surface-core.js',
+  './ep-core/overlay-core.js',
+  './ep-core/legacy-adapter.js',
+  './ep-runtime-bridge.js',
+  './ep-plan-bridge.js',
+  './ep-mission-bridge.js',
+  './ep-surface-bridge.js',
+  './ep-overlay-bridge.js',
+  './ep-ui-shell.js',
+  './ep-ui-flow.js'
 ];
 
 self.addEventListener('install', event => {
@@ -51,34 +61,130 @@ self.addEventListener('activate', event => {
   })());
 });
 
+async function injectStableOverlay(response) {
+  if (!response || !response.ok) return response;
+  const type = response.headers.get('content-type') || '';
+  if (type && !type.includes('text/html')) return response;
+  let html = await response.text();
+  // Cached pages from older workers may already contain legacy overlay tags.
+  // Strip them before inserting the single stable bundle to avoid double execution.
+  html = html
+    .replace(/\s*<link[^>]+href=["']\.\/v27-2\.css["'][^>]*>\s*/g, '\n')
+    .replace(/\s*<link[^>]+href=["']\.\/v27-2-1\.css["'][^>]*>\s*/g, '\n')
+    .replace(/\s*<link[^>]+href=["']\.\/v27-3\.css["'][^>]*>\s*/g, '\n')
+    .replace(/\s*<script[^>]+src=["']\.\/v27-2\.js["'][^>]*><\/script>\s*/g, '\n')
+    .replace(/\s*<script[^>]+src=["']\.\/v27-2-1\.js["'][^>]*><\/script>\s*/g, '\n')
+    .replace(/\s*<script[^>]+src=["']\.\/v27-3\.js["'][^>]*><\/script>\s*/g, '\n');
+
+  if (!html.includes('v27-stable.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v27-stable.css" />\n</head>');
+  }
+  if (!html.includes('v27-stable.js')) {
+    html = html.replace('</body>', '  <script src="./v27-stable.js"></script>\n</body>');
+  }
+  if (!html.includes('v28.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v28.css" />\n</head>');
+  }
+  if (!html.includes('v28.js')) {
+    html = html.replace('</body>', '  <script src="./v28.js"></script>\n</body>');
+  }
+  if (!html.includes('v29-storage.js')) {
+    html = html.replace('</body>', '  <script src="./v29-storage.js"></script>\n</body>');
+  }
+  if (!html.includes('v28-runtime.js')) {
+    html = html.replace('</body>', '  <script src="./v28-runtime.js"></script>\n</body>');
+  }
+  if (!html.includes('v29.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v29.css" />\n</head>');
+  }
+  if (!html.includes('v29.js')) {
+    html = html.replace('</body>', '  <script src="./v29.js"></script>\n</body>');
+  }
+  if (!html.includes('v29-ui.js')) {
+    html = html.replace('</body>', '  <script src="./v29-ui.js"></script>\n</body>');
+  }
+  if (!html.includes('v29-stabilize.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./v29-stabilize.css" />\n</head>');
+  }
+  if (!html.includes('ep-ui.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./ep-ui.css" />\n</head>');
+  }
+  if (!html.includes('ep-ui-flow.css')) {
+    html = html.replace('</head>', '  <link rel="stylesheet" href="./ep-ui-flow.css" />\n</head>');
+  }
+  if (!html.includes('v29-stabilize.js')) {
+    html = html.replace('</body>', '  <script src="./v29-stabilize.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/location-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/location-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/search-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/search-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/reference-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/reference-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/plan-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/plan-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/mission-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/mission-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/plan-legacy-adapter.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/plan-legacy-adapter.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/state-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/state-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/surface-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/surface-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/overlay-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/overlay-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/legacy-adapter.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/legacy-adapter.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-runtime-bridge.js')) {
+    html = html.replace('</body>', '  <script src="./ep-runtime-bridge.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-plan-bridge.js')) {
+    html = html.replace('</body>', '  <script src="./ep-plan-bridge.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-mission-bridge.js')) {
+    html = html.replace('</body>', '  <script src="./ep-mission-bridge.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-surface-bridge.js')) {
+    html = html.replace('</body>', '  <script src="./ep-surface-bridge.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-overlay-bridge.js')) {
+    html = html.replace('</body>', '  <script src="./ep-overlay-bridge.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-ui-shell.js')) {
+    html = html.replace('</body>', '  <script src="./ep-ui-shell.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-ui-flow.js')) {
+    html = html.replace('</body>', '  <script src="./ep-ui-flow.js"></script>\n</body>');
+  }
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  headers.set('content-type', 'text/html; charset=utf-8');
+  return new Response(html, { status:response.status, statusText:response.statusText, headers });
+}
+
 async function networkFirstPage(request) {
   const cache = await caches.open(PAGE_CACHE);
   try {
     const response = await fetch(request, { cache: 'reload' });
-    if (response && response.ok) await cache.put(request, response.clone());
-    return response;
+    const injected = await injectStableOverlay(response);
+    if (injected && injected.ok) await cache.put(request, injected.clone());
+    return injected;
   } catch (error) {
     const cached = await cache.match(request);
-    if (cached) return cached;
+    if (cached) return injectStableOverlay(cached);
     const fallback = await cache.match('./index.html') || await caches.match('./index.html');
-    if (fallback) return fallback;
+    if (fallback) return injectStableOverlay(fallback);
     throw error;
-  }
-}
-
-async function cacheFirstAsset(request) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
-
-  try {
-    const response = await fetch(request);
-    if (response && response.ok) {
-      const cache = await caches.open(STATIC_CACHE);
-      await cache.put(request, response.clone());
-    }
-    return response;
-  } catch (error) {
-    return Response.error();
   }
 }
 
@@ -93,6 +199,16 @@ self.addEventListener('fetch', event => {
   }
 
   if (url.origin === self.location.origin) {
-    event.respondWith(cacheFirstAsset(request));
+    event.respondWith((async () => {
+      const cached = await caches.match(request);
+      const networkPromise = fetch(request).then(async response => {
+        if (response && response.ok) {
+          const cache = await caches.open(STATIC_CACHE);
+          await cache.put(request, response.clone());
+        }
+        return response;
+      }).catch(() => null);
+      return cached || await networkPromise || Response.error();
+    })());
   }
 });
