@@ -52,7 +52,7 @@
     opacity: 0.24,
     pane: 'roadBoostPane',
     className: 'road-boost-tiles',
-    attribution: '© OpenStreetMap contributors'
+    attribution: ''
   }).addTo(map);
 
   siteLayer.addTo(map);
