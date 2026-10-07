@@ -18,7 +18,13 @@ const STATIC_ASSETS = [
   './vendor/leaflet-1.9.4.js',
   './vendor/leaflet-1.9.4.css',
   './v29-stabilize.css',
-  './v29-stabilize.js'
+  './v29-stabilize.js',
+  './ep-core/location-core.js',
+  './ep-core/reference-core.js',
+  './ep-core/plan-core.js',
+  './ep-core/state-core.js',
+  './ep-core/legacy-adapter.js',
+  './ep-runtime-bridge.js'
 ];
 
 self.addEventListener('install', event => {
@@ -89,6 +95,24 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('v29-stabilize.js')) {
     html = html.replace('</body>', '  <script src="./v29-stabilize.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/location-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/location-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/reference-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/reference-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/plan-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/plan-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/state-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/state-core.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-core/legacy-adapter.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/legacy-adapter.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-runtime-bridge.js')) {
+    html = html.replace('</body>', '  <script src="./ep-runtime-bridge.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
