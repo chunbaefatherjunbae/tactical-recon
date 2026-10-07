@@ -185,9 +185,9 @@
       '</div>'+
       '<aside class="ep-global-tools">'+
         '<button class="ep-global-tool" id="epGpsBtn" type="button"><b>GPS</b><span id="epGpsState">OFF</span></button>'+
-        '<button class="ep-global-tool" id="epFollowBtn" type="button"><b id="epFollowGlyph"></b><span id="epFollowLabel">위치</span></button>'+
-        '<button class="ep-global-tool" id="epTempBtn" type="button"><b>TEMP</b><span>임시위치</span></button>'+
-        '<button class="ep-global-tool" id="epTrackBtn" type="button"><b id="epTrackState">○</b><span>트랙</span></button>'+
+        '<button class="ep-global-tool" id="epFollowBtn" type="button" aria-label="현재 위치 / 추적"><b id="epFollowGlyph"></b><span id="epFollowLabel">위치</span></button>'+
+        '<button class="ep-global-tool" id="epTempBtn" type="button" aria-label="TEMP 위치 지정"><b>TEMP</b><span>임시위치</span></button>'+
+        '<button class="ep-global-tool" id="epTrackBtn" type="button" aria-label="트랙 기록"><b id="epTrackState">○</b><span>트랙</span></button>'+
       '</aside>'+
       '<nav class="ep-bottom-nav" aria-label="주요 기능">'+
         '<button id="epPointsBtn" type="button"><span>거점</span></button>'+
