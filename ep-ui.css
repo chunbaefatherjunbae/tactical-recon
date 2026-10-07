@@ -1,0 +1,281 @@
+/* ECHOPOINT map-first shell */
+:root{
+  --ep-safe-top:max(10px,env(safe-area-inset-top));
+  --ep-safe-bottom:max(8px,env(safe-area-inset-bottom));
+  --ep-touch:48px;
+  --ep-line:color-mix(in srgb,var(--field-text,var(--text-main)) 18%,transparent);
+  --ep-active:var(--field-active,var(--accent));
+  --ep-text:var(--field-text,var(--text-main));
+  --ep-dim:var(--field-dim,var(--text-dim));
+  --ep-shadow:0 1px 4px rgba(0,0,0,.95);
+}
+
+body.ep-shell-ready .top-compass-bar,
+body.ep-shell-ready .telemetry-osd,
+body.ep-shell-ready .gps-status-osd,
+body.ep-shell-ready .global-gps-controls,
+body.ep-shell-ready .mfd-bottom-bar{
+  display:none!important;
+}
+
+body.ep-shell-ready .viewfinder-frame{
+  pointer-events:none;
+  opacity:.72;
+}
+body.ep-shell-ready .viewfinder-frame .bracket{
+  width:22px!important;
+  height:22px!important;
+  border-color:var(--ep-active)!important;
+  filter:drop-shadow(0 1px 2px #000);
+}
+body.ep-shell-ready .viewfinder-frame .bracket.tl{top:7px!important;left:7px!important}
+body.ep-shell-ready .viewfinder-frame .bracket.tr{top:7px!important;right:7px!important}
+body.ep-shell-ready .viewfinder-frame .bracket.bl{bottom:7px!important;left:7px!important}
+body.ep-shell-ready .viewfinder-frame .bracket.br{bottom:7px!important;right:7px!important}
+
+body.ep-shell-ready .reticle-container{
+  width:88px!important;
+  height:88px!important;
+  opacity:.94;
+  filter:drop-shadow(0 1px 2px #000);
+}
+body.ep-shell-ready .reticle-axis-v,
+body.ep-shell-ready .reticle-axis-h{
+  opacity:.86!important;
+}
+body.ep-shell-ready .reticle-container .target-gate::before,
+body.ep-shell-ready .reticle-container .target-gate::after{
+  background:var(--ep-active)!important;
+  opacity:1!important;
+}
+
+#epShell{
+  position:fixed;
+  inset:0;
+  z-index:1260;
+  pointer-events:none;
+  font-family:var(--font-mono);
+  color:var(--ep-text);
+}
+#epShell button{
+  font:inherit;
+  color:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+.ep-top-hud{
+  position:absolute;
+  top:calc(var(--ep-safe-top) + 1px);
+  left:14px;
+  right:104px;
+  display:grid;
+  gap:2px;
+  pointer-events:none;
+  text-shadow:var(--ep-shadow);
+}
+.ep-coordinate{
+  width:max-content;
+  max-width:min(76vw,560px);
+  padding:0;
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  grid-template-areas:"label value" ". meta";
+  gap:0 6px;
+  border:0;
+  background:transparent;
+  text-align:left;
+  pointer-events:auto;
+}
+.ep-coordinate .ep-label{
+  grid-area:label;
+  color:var(--ep-active);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.16em;
+}
+.ep-coordinate strong{
+  grid-area:value;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.035em;
+}
+.ep-coordinate small{
+  grid-area:meta;
+  color:var(--ep-dim);
+  font-size:7px;
+  font-weight:800;
+  letter-spacing:.07em;
+}
+.ep-top-actions{
+  position:absolute;
+  top:calc(var(--ep-safe-top) - 1px);
+  right:8px;
+  display:flex;
+  gap:1px;
+  pointer-events:auto;
+}
+.ep-icon-btn{
+  width:var(--ep-touch);
+  height:var(--ep-touch);
+  display:grid;
+  place-items:center;
+  border:0;
+  background:transparent;
+  color:var(--ep-text);
+  font-size:20px!important;
+  text-shadow:var(--ep-shadow);
+}
+.ep-icon-btn:active{color:var(--ep-active)}
+
+.ep-global-tools{
+  position:absolute;
+  right:5px;
+  top:50%;
+  transform:translateY(-29%);
+  display:grid;
+  gap:3px;
+  pointer-events:auto;
+}
+.ep-global-tool{
+  width:50px;
+  height:48px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:1px;
+  border:0;
+  border-right:1px solid var(--ep-line);
+  background:rgba(4,8,5,.12);
+  text-shadow:var(--ep-shadow);
+}
+.ep-global-tool b{font-size:12px;line-height:1;font-weight:900}
+.ep-global-tool span{font-size:7px;line-height:1;color:var(--ep-dim);font-weight:800}
+.ep-global-tool.active{
+  color:var(--ep-active);
+  border-right-color:var(--ep-active);
+}
+.ep-global-tool.active span{color:var(--ep-active)}
+.ep-global-tool.recording{color:var(--field-warn,var(--ep-active))}
+.ep-global-tool.recording span{color:currentColor}
+
+.ep-bottom-nav{
+  position:absolute;
+  left:9px;
+  right:9px;
+  bottom:var(--ep-safe-bottom);
+  height:58px;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  align-items:end;
+  pointer-events:auto;
+}
+.ep-bottom-nav::before{
+  content:"";
+  position:absolute;
+  left:-9px;right:-9px;bottom:calc(-1 * var(--ep-safe-bottom));
+  height:82px;
+  background:linear-gradient(to top,rgba(3,7,4,.68),rgba(3,7,4,.18) 58%,transparent);
+  pointer-events:none;
+}
+.ep-bottom-nav button{
+  position:relative;
+  z-index:1;
+  min-height:52px;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:2px;
+  border:0;
+  background:transparent;
+  text-shadow:var(--ep-shadow);
+}
+.ep-bottom-nav b{font-size:16px;font-weight:600}
+.ep-bottom-nav span{font-size:8px;color:var(--ep-dim);font-weight:800;letter-spacing:.06em}
+.ep-bottom-nav button:active,
+.ep-bottom-nav button.active{color:var(--ep-active)}
+.ep-bottom-nav button:active span,
+.ep-bottom-nav button.active span{color:var(--ep-active)}
+
+body:not(.ep-surface-map) #epShell .ep-bottom-nav{display:none}
+body.ep-overlay-location #epShell .ep-bottom-nav,
+body.ep-overlay-search #epShell .ep-bottom-nav,
+body.ep-overlay-points #epShell .ep-bottom-nav,
+body.ep-overlay-records #epShell .ep-bottom-nav,
+body.ep-overlay-tools #epShell .ep-bottom-nav{
+  opacity:.22;
+  pointer-events:none;
+}
+
+body.ep-shell-ready .map-scale-osd{
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%);
+  bottom:calc(65px + var(--ep-safe-bottom))!important;
+  background:rgba(3,7,4,.36)!important;
+}
+body.ep-shell-ready:not(.ep-surface-map) .map-scale-osd{
+  bottom:calc(70px + var(--ep-safe-bottom))!important;
+}
+
+/* Existing SITREP becomes the transitional EP Location Card. */
+body.ep-shell-ready.ep-overlay-location .sitrep-panel{
+  display:block!important;
+  position:fixed!important;
+  left:7px!important;
+  right:7px!important;
+  top:auto!important;
+  bottom:calc(var(--ep-safe-bottom) + 4px)!important;
+  width:auto!important;
+  max-width:none!important;
+  max-height:58dvh!important;
+  overflow:auto!important;
+  z-index:1500!important;
+  padding:14px 12px 12px!important;
+  border:0!important;
+  border-top:1px solid var(--ep-active)!important;
+  border-radius:0!important;
+  background:rgba(6,10,7,.91)!important;
+  box-shadow:0 -14px 30px rgba(0,0,0,.28)!important;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+body.ep-shell-ready.ep-overlay-location .sitrep-head{
+  border-bottom:0!important;
+  padding-bottom:5px!important;
+}
+body.ep-shell-ready.ep-overlay-location .sitrep-intel{
+  background:transparent!important;
+  border-left:1px solid var(--ep-line)!important;
+}
+body.ep-shell-ready.ep-overlay-location .sitrep-actions{
+  border-top:1px solid var(--ep-line)!important;
+}
+
+.ep-shell-toast{
+  position:absolute;
+  left:50%;
+  top:24%;
+  transform:translateX(-50%);
+  max-width:78vw;
+  padding:8px 11px;
+  border-left:2px solid var(--ep-active);
+  background:rgba(4,8,5,.92);
+  color:var(--ep-text);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.04em;
+  opacity:0;
+  transition:opacity .12s;
+  pointer-events:none;
+}
+.ep-shell-toast.show{opacity:1}
+
+@media(max-width:390px){
+  .ep-top-hud{left:11px;right:98px}
+  .ep-coordinate strong{font-size:10px}
+  .ep-global-tools{right:3px}
+  .ep-global-tool{width:47px}
+}
