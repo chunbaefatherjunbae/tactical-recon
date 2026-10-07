@@ -403,7 +403,7 @@ const server = http.createServer((req, res) => {
       await page.evaluate(() => BaselineLiteMap.setMode('lite'));
       const offlineShell = await page.evaluate(async () => {
         const names=await caches.keys();
-        const shellName=names.find(name => name === 'baseline-offline-v1-shell');
+        const shellName=names.find(name => /^baseline-offline-v\d+-shell$/.test(name));
         if(!shellName)return {shell:false,index:false,app:false};
         const cache=await caches.open(shellName);
         return {
@@ -413,6 +413,7 @@ const server = http.createServer((req, res) => {
         };
       });
       assert.deepEqual(offlineShell,{shell:true,index:true,app:true});
+      assert.equal(await page.evaluate(() => BaselineLiteMap.status().label), 'MAP · LITE');
 
       // Playwright WebKit currently crashes internally on SW-controlled setOffline+reload,
       // so the real network-cut boot is exercised in Chromium and cache ownership is
