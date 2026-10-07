@@ -67,6 +67,8 @@ const server = http.createServer((req, res) => {
       assert(parseFloat(await page.locator('.bottom-nav button').first().evaluate(el => getComputedStyle(el).fontSize)) >= 14);
       assert(parseFloat(await page.locator('#positionCoord').evaluate(el => getComputedStyle(el).fontSize)) >= 13);
       assert(parseFloat(await page.locator('#positionMeta').evaluate(el => getComputedStyle(el).fontSize)) >= 11);
+      assert.equal(await page.locator('#positionMeta').evaluate(el => getComputedStyle(el).color), 'rgb(121, 200, 138)');
+      assert.equal(await page.locator('#mapModeStatus').evaluate(el => getComputedStyle(el).color), 'rgb(121, 200, 138)');
       assert.equal(await page.locator('#reticleCoord').count(), 1);
       const scaleShape = await page.locator('#scaleLine').evaluate(el => {
         const s=getComputedStyle(el);
@@ -90,7 +92,8 @@ const server = http.createServer((req, res) => {
       const topoTileFilter = await page.locator('.leaflet-tile:not(.road-boost-tiles)').first().evaluate(el => getComputedStyle(el).filter).catch(() => '');
       if (topoTileFilter) assert(topoTileFilter.includes('hue-rotate'));
       assert.equal(await page.evaluate(() => BaselineSites.getRegistered().length), 24);
-      assert.equal(await page.locator('.site-map-marker').count(), 24);
+      assert.equal(await page.locator('.site-map-marker-wrap').count(), 24);
+      assert.equal(await page.locator('.marker-registered').count(), 24);
       assert.equal(await page.locator('.reticle').count(), 1);
       assert.equal(await page.locator('[class*="corner"]').count(), 0);
       const attributionText = await page.locator('.leaflet-control-attribution').textContent();
@@ -153,7 +156,7 @@ const server = http.createServer((req, res) => {
         BaselineApp.map.setView([35.0, 129.0], 11, { animate:false });
       });
       await page.waitForTimeout(20);
-      assert.equal(await page.locator('.baseline-marker.last').count(), 1, 'GPS off must keep LAST FIX marker');
+      assert.equal(await page.locator('.marker-gps.marker-last').count(), 1, 'GPS off must keep LAST FIX marker');
       assert.equal(await page.locator('#gpsBtn').evaluate(el => el.classList.contains('inactive-state')), true);
       const savedTemp = await page.evaluate(() => BaselineState.state.temp);
       await page.locator('#tempBtn').dispatchEvent('pointerdown', { pointerType:'touch', pointerId:1, isPrimary:true });
@@ -210,7 +213,7 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#sheetTitle').textContent(), '거점 정보');
       assert.equal(await page.locator('.site-detail-grid').textContent().then(t => t.includes('미개척')), true);
       assert.equal(await page.evaluate(() => BaselineSites.getUserSites().length), beforeWild + 1);
-      assert.equal(await page.locator('.site-map-marker').count(), 25);
+      assert.equal(await page.locator('.site-map-marker-wrap').count(), 25);
       await page.locator('#sheetClose').click();
 
       await page.locator('.bottom-nav button[data-panel="sites"]').click();
@@ -308,6 +311,8 @@ const server = http.createServer((req, res) => {
       const seoulDeclination = await page.evaluate(() => BaselineNavigationCore.wmmField(37.5665,126.9780,0,new Date('2026-10-07T00:00:00Z')).declination);
       assert(seoulDeclination < -7 && seoulDeclination > -11);
       assert.equal(await page.locator('.site-map-marker-wrap').first().evaluate(el => getComputedStyle(el).display), 'none', 'site markers must hide in plan mode');
+      assert.equal(await page.locator('.route-start-marker').count(), 1);
+      assert.equal(await page.locator('.route-end-marker').count(), 1);
       assert.equal(await page.locator('[data-nav-action="CLOSE"]').count(), 1);
       await page.screenshot({ path:`ui-results-baseline/${name}-navigation-ready.png`, fullPage:true });
 
