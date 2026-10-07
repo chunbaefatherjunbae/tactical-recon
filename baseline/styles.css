@@ -3,7 +3,7 @@
   --bg-osd: rgba(3,16,7,.92);
   --bg-panel: rgba(4,24,10,.97);
   --text-main: #22ff66;
-  --text-dim: #137735;
+  --text-dim:#4f9a63;
   --accent: #9de3a4;
   --accent-glow: rgba(0,255,65,.45);
   --border: #0d3816;
@@ -22,7 +22,7 @@
   --panel: var(--bg-panel);
   --panel-soft: var(--bg-osd);
   --glow: var(--accent-glow);
-  --road-filter: grayscale(100%) sepia(35%) hue-rotate(70deg) saturate(130%) contrast(155%) brightness(66%);
+  --road-filter: grayscale(100%) sepia(18%) hue-rotate(70deg) saturate(72%) contrast(108%) brightness(61%);
   --danger: #ff8787;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -354,7 +354,7 @@ body.theme-nvg-green {
   --bg-osd:rgba(3,16,7,.92);
   --bg-panel:rgba(4,24,10,.97);
   --text-main:#22ff66;
-  --text-dim:#137735;
+  --text-dim:#4f9a63;
   --accent:#9de3a4;
   --accent-glow:rgba(0,255,65,.45);
   --border:#0d3816;
@@ -1491,4 +1491,83 @@ body.baseline-navigation-active .site-map-marker-wrap {
   .drawing-controls { left:5px; right:5px; gap:3px; }
   .nav-session-controls button,
   .drawing-controls button { font-size:12px; }
+}
+
+
+/* ---------- Field readability refinements ---------- */
+#gpsBtn.inactive-state,
+#followBtn.inactive-state {
+  color:#7b837d;
+  border-color:rgba(123,131,125,.42);
+  background:rgba(8,12,9,.86);
+  text-shadow:none;
+  box-shadow:0 1px 5px rgba(0,0,0,.28);
+}
+#gpsBtn.inactive-state svg,
+#followBtn.inactive-state svg {
+  filter:none;
+}
+
+/* LAST FIX remains visible when live GPS is powered off. */
+.baseline-marker.last {
+  border-radius:50%;
+  border-color:#87908a;
+  background:rgba(8,12,9,.74);
+  box-shadow:none;
+  opacity:.86;
+}
+.baseline-marker.last::after {
+  content:'';
+  position:absolute;
+  inset:4px;
+  border:1px solid #87908a;
+  border-radius:50%;
+  background:transparent;
+}
+
+/* Cleaner scale: no glow/shadow rail. */
+.scale-line {
+  border-top:0!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+.scale-hud {
+  text-shadow:0 1px 1px #000;
+}
+
+/* Attribution must remain visible for map licensing, but keep it unobtrusive. */
+#map .leaflet-control-attribution {
+  margin:0 2px 1px 0!important;
+  padding:1px 2px!important;
+  background:rgba(2,9,4,.38)!important;
+  color:rgba(205,225,210,.52)!important;
+  font-size:6.5px!important;
+  line-height:1.08!important;
+  box-shadow:none!important;
+}
+#map .leaflet-control-attribution a {
+  color:rgba(205,225,210,.58)!important;
+}
+
+/* Record actions */
+.record-actions {
+  display:grid;
+  grid-template-columns:1fr 88px;
+  gap:6px;
+}
+.record-actions button {
+  min-height:44px;
+  border:1px solid var(--border);
+  background:var(--bg-osd);
+  color:var(--text-main);
+  font-size:13px;
+  font-weight:800;
+}
+.record-actions .record-map-btn {
+  color:var(--accent);
+  border-color:var(--border-accent);
+}
+.record-actions .record-delete-btn {
+  color:#d98f8f;
+  border-color:rgba(217,143,143,.4);
 }
