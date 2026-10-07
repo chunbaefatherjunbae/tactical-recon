@@ -5923,6 +5923,35 @@
       }
     };
 
+    // ECHOPOINT migration port: NAV presentation mirrors MissionCore state during the transition.
+    window.__v29MissionLegacy = {
+      snapshot() {
+        if (!targetModeActive) return null;
+        return {
+          phase:String(targetModePhase || 'PLAN'),
+          navLegIndex:Number(navLegIndex || 0),
+          navStartedAt:Number(navStartedAt || 0),
+          navLegStartedAt:Number(navLegStartedAt || 0),
+          backtrackActive:Boolean(backtrackActive),
+          backtrackTarget:backtrackActive ? cloneRouteEndpoint(getBacktrackDestination()) : null
+        };
+      },
+      applyMissionState(next = {}) {
+        if (!targetModeActive) return false;
+        if (next.phase) targetModePhase=String(next.phase);
+        if (Number.isFinite(Number(next.navLegIndex))) navLegIndex=Math.max(0,Number(next.navLegIndex));
+        if (Number.isFinite(Number(next.navStartedAt)) && Number(next.navStartedAt)>0) navStartedAt=Number(next.navStartedAt);
+        if (Number.isFinite(Number(next.navLegStartedAt)) && Number(next.navLegStartedAt)>0) navLegStartedAt=Number(next.navLegStartedAt);
+        backtrackActive=Boolean(next.backtrackActive);
+        updateTargetModePanel();
+        return true;
+      },
+      trackReturnTarget() {
+        const target=getBacktrackDestination();
+        return target?.coords ? cloneRouteEndpoint(target) : null;
+      }
+    };
+
     /* PWA 업데이트: 서비스워커 자체는 HTTP 캐시를 우회해 확인한다. */
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {

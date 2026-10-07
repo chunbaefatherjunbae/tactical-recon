@@ -23,11 +23,13 @@ const STATIC_ASSETS = [
   './ep-core/search-core.js',
   './ep-core/reference-core.js',
   './ep-core/plan-core.js',
+  './ep-core/mission-core.js',
   './ep-core/plan-legacy-adapter.js',
   './ep-core/state-core.js',
   './ep-core/legacy-adapter.js',
   './ep-runtime-bridge.js',
-  './ep-plan-bridge.js'
+  './ep-plan-bridge.js',
+  './ep-mission-bridge.js'
 ];
 
 self.addEventListener('install', event => {
@@ -111,6 +113,9 @@ async function injectStableOverlay(response) {
   if (!html.includes('ep-core/plan-core.js')) {
     html = html.replace('</body>', '  <script src="./ep-core/plan-core.js"></script>\n</body>');
   }
+  if (!html.includes('ep-core/mission-core.js')) {
+    html = html.replace('</body>', '  <script src="./ep-core/mission-core.js"></script>\n</body>');
+  }
   if (!html.includes('ep-core/plan-legacy-adapter.js')) {
     html = html.replace('</body>', '  <script src="./ep-core/plan-legacy-adapter.js"></script>\n</body>');
   }
@@ -125,6 +130,9 @@ async function injectStableOverlay(response) {
   }
   if (!html.includes('ep-plan-bridge.js')) {
     html = html.replace('</body>', '  <script src="./ep-plan-bridge.js"></script>\n</body>');
+  }
+  if (!html.includes('ep-mission-bridge.js')) {
+    html = html.replace('</body>', '  <script src="./ep-mission-bridge.js"></script>\n</body>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
