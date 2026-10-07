@@ -35,7 +35,7 @@ const server = http.createServer((req, res) => {
       serviceWorkers: 'allow'
     });
     const page = await context.newPage();
-    page.setDefaultTimeout(8000);
+    page.setDefaultTimeout(15000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.route('https://*.tile.openstreetmap.org/**', route => route.abort());
@@ -78,8 +78,31 @@ const server = http.createServer((req, res) => {
       const resources = await page.evaluate(() => performance.getEntriesByType('resource').map(x => x.name));
       assert.equal(resources.some(url => /\/(?:v27|v28|v29|ep-ui|ep-runtime|ep-overlay|ep-plan|ep-mission|ep-surface)/.test(url)), false, 'BASELINE must not load legacy runtime/UI layers');
 
-      const registrations = await page.evaluate(async () => navigator.serviceWorker ? (await navigator.serviceWorker.getRegistrations()).length : 0);
-      assert.equal(registrations, 0, 'BASELINE must not register legacy service worker');
+      await page.waitForFunction(async () => navigator.serviceWorker && (await navigator.serviceWorker.getRegistrations()).length === 1);
+      const registrations = await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).map(reg => ({scope:reg.scope,script:reg.active?.scriptURL || ''})));
+      assert.equal(registrations.length, 1);
+      assert.equal(registrations[0].scope.endsWith('/baseline/'), true, 'BASELINE service worker must be isolated to /baseline/');
+      assert.equal(registrations[0].script.endsWith('/baseline/sw.js'), true);
+      await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+      const liteBundleBytes = fs.statSync(path.join(root,'baseline/data/lite-map-osm.js')).size;
+      assert(liteBundleBytes < 4_000_000, 'lite vector bundle must remain mobile-sized');
+      assert.equal(await page.evaluate(() => BaselineLiteMap.status().dataReady), true);
+      assert.equal(await page.evaluate(() => BaselineLiteMap.status().requested), 'auto');
+
+      await page.evaluate(() => BaselineLiteMap.setMode('lite'));
+      await page.waitForFunction(() => BaselineLiteMap.status().effective === 'lite');
+      assert.equal(await page.locator('#mapModeStatus').textContent(), 'MAP · LITE');
+      assert.equal(await page.evaluate(() => BaselineApp.map.hasLayer(BaselineLiteMap.terrainLayer)), true);
+      assert.equal(await page.evaluate(() => BaselineApp.map.hasLayer(BaselineLiteMap.vectorLayer)), true);
+      const liteVectorLayerCount = await page.evaluate(() => BaselineLiteMap.vectorLayer.getLayers().length);
+      assert(liteVectorLayerCount > 0 && liteVectorLayerCount <= 8, 'lite vectors should be grouped, not one Leaflet layer per OSM way');
+      assert.equal(await page.evaluate(() => BaselineApp.map.hasLayer(BaselineApp.siteLayer)), true, 'operational site overlay must survive base map switch');
+      await page.screenshot({ path:`ui-results-baseline/${name}-lite-map.png`, fullPage:true });
+
+      await page.evaluate(() => BaselineLiteMap.setMode('online'));
+      await page.waitForFunction(() => BaselineLiteMap.status().effective === 'online');
+      assert.equal(await page.locator('#mapModeStatus').textContent(), 'MAP · ONLINE');
 
       await page.locator('#tempBtn').click();
       let temp = await page.evaluate(() => BaselineState.state.temp);
@@ -372,7 +395,21 @@ const server = http.createServer((req, res) => {
       await page.locator('#settingsBtn').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '설정');
       assert.equal(await page.locator('#sheetBody').textContent().then(t => t.includes('NVG-G')), true);
+      assert.equal(await page.locator('[data-map-mode]').count(), 3);
+      assert.equal(await page.locator('#litePackBtn').count(), 1);
       await page.locator('#sheetClose').click();
+
+      // Offline shell boot: the BASELINE SW must restart the app with no network.
+      await page.evaluate(() => BaselineLiteMap.setMode('lite'));
+      await context.setOffline(true);
+      await page.reload({ waitUntil:'domcontentloaded' });
+      await page.waitForFunction(() => window.BaselineApp?.version === 'R0.1-BASELINE' && window.BaselineLiteMap);
+      assert.equal(await page.evaluate(() => BaselineLiteMap.status().effective), 'lite');
+      assert.equal(await page.locator('#mapModeStatus').textContent(), 'MAP · LITE');
+      assert.equal(await page.locator('.bottom-nav button').count(), 4);
+      assert.equal(await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length), 1);
+      await context.setOffline(false);
+      await page.evaluate(() => BaselineLiteMap.setMode('online'));
 
       for (const width of [320, 390, 768]) {
         await page.setViewportSize({ width, height: 844 });
