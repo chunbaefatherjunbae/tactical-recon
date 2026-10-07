@@ -195,7 +195,7 @@ button, input { font:inherit; }
 
 .sheet {
   position:absolute;
-  z-index:760;
+  z-index:930;
   left:8px;
   right:8px;
   bottom:calc(var(--bottom-h) + 8px);
