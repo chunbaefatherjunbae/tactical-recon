@@ -70,6 +70,9 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#positionMeta').evaluate(el => getComputedStyle(el).color), 'rgb(142, 211, 156)');
       assert.equal(await page.locator('#mapModeStatus').evaluate(el => getComputedStyle(el).color), 'rgb(121, 189, 136)');
       assert.equal(await page.locator('#reticleCoord').count(), 1);
+      assert.equal(await page.locator('.map-tech-grid').count(), 1);
+      assert.equal(await page.locator('#layerBtn').count(), 1);
+      assert.equal(await page.locator('.position-hud').evaluate(el => getComputedStyle(el,'::before').content !== 'none'), true);
       const scaleShape = await page.locator('#scaleLine').evaluate(el => {
         const s=getComputedStyle(el);
         return {top:s.borderTopStyle,left:s.borderLeftStyle,right:s.borderRightStyle,bottom:s.borderBottomStyle,shadow:s.boxShadow};
@@ -459,6 +462,15 @@ const server = http.createServer((req, res) => {
       await page.locator('#searchBtn').click();
       assert.equal(await page.locator('#sheetTitle').textContent(), '검색');
       assert(await page.locator('#baselineSearchInput').isVisible());
+      await page.locator('#sheetClose').click();
+
+      await page.locator('#layerBtn').click();
+      assert.equal(await page.locator('#sheetTitle').textContent(), '레이어');
+      assert.equal(await page.locator('[data-layer-key]').count(), 6);
+      await page.locator('[data-layer-key="registered"]').click();
+      assert.equal(await page.evaluate(() => document.body.classList.contains('layer-hide-registered')), true);
+      await page.locator('[data-layer-key="registered"]').click();
+      assert.equal(await page.evaluate(() => document.body.classList.contains('layer-hide-registered')), false);
       await page.locator('#sheetClose').click();
 
       await page.locator('#settingsBtn').click();
