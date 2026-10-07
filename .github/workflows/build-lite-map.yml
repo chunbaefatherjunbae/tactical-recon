@@ -1,0 +1,62 @@
+name: Build BASELINE Lite Map Data
+
+on:
+  push:
+    branches:
+      - rebuild/baseline
+    paths:
+      - .github/workflows/build-lite-map.yml
+      - scripts/build-lite-map.py
+      - scripts/lite-map-build-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: rebuild/baseline
+          fetch-depth: 0
+
+      - name: Install osmium
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y osmium-tool
+
+      - name: Download South Korea OSM
+        run: |
+          curl -L --fail --retry 3 \
+            https://download.geofabrik.de/asia/south-korea-latest.osm.pbf \
+            -o /tmp/south-korea.osm.pbf
+
+      - name: Extract lite navigation features
+        run: |
+          osmium tags-filter /tmp/south-korea.osm.pbf \
+            w/highway=motorway,trunk,primary,secondary \
+            w/waterway=river,canal \
+            w/railway=rail,light_rail \
+            w/natural=coastline \
+            n/place=city,town \
+            -o /tmp/lite.osm.pbf --overwrite
+          osmium export /tmp/lite.osm.pbf -f geojson -o /tmp/lite.geojson --overwrite
+
+      - name: Build compact JS bundle
+        run: |
+          python scripts/build-lite-map.py /tmp/lite.geojson baseline/data/lite-map-osm.js
+          wc -c baseline/data/lite-map-osm.js
+
+      - name: Commit generated map data
+        run: |
+          if git diff --quiet -- baseline/data/lite-map-osm.js; then
+            echo "No lite map data changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/data/lite-map-osm.js
+          git commit -m "BASELINE: refresh lite map OSM bundle"
+          git push origin HEAD:rebuild/baseline
