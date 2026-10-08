@@ -1797,13 +1797,13 @@ body.baseline-navigation-active .site-map-marker-wrap {
   z-index:315;
   inset:0 0 var(--bottom-h);
   pointer-events:none;
-  opacity:.68;
+  opacity:.72;
   background-image:
-    linear-gradient(rgba(34,255,102,.075) 1px, transparent 1px),
-    linear-gradient(90deg,rgba(34,255,102,.075) 1px, transparent 1px),
-    linear-gradient(rgba(34,255,102,.022) 1px, transparent 1px),
-    linear-gradient(90deg,rgba(34,255,102,.022) 1px, transparent 1px);
-  background-size:96px 96px,96px 96px,24px 24px,24px 24px;
+    linear-gradient(rgba(34,255,102,.105) 1px, transparent 1px),
+    linear-gradient(90deg,rgba(34,255,102,.105) 1px, transparent 1px),
+    linear-gradient(rgba(34,255,102,.020) 1px, transparent 1px),
+    linear-gradient(90deg,rgba(34,255,102,.020) 1px, transparent 1px);
+  background-size:112px 112px,112px 112px,28px 28px,28px 28px;
   box-shadow:inset 0 0 110px rgba(34,255,102,.025);
 }
 
@@ -1833,13 +1833,13 @@ body.baseline-navigation-active .site-map-marker-wrap {
   z-index:0;
   left:-4px;
   top:-5px;
-  right:-22px;
+  right:-8px;
   bottom:-5px;
   background:rgba(0,8,3,.21);
   -webkit-backdrop-filter:blur(2px);
   backdrop-filter:blur(2px);
-  -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 44%,rgba(0,0,0,.55) 66%,transparent 92%);
-  mask-image:linear-gradient(90deg,#000 0%,#000 44%,rgba(0,0,0,.55) 66%,transparent 92%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 36%,rgba(0,0,0,.48) 57%,transparent 82%);
+  mask-image:linear-gradient(90deg,#000 0%,#000 36%,rgba(0,0,0,.48) 57%,transparent 82%);
   pointer-events:none;
 }
 .position-hud #positionCoord,
@@ -1901,9 +1901,9 @@ body.baseline-navigation-active .site-map-marker-wrap {
   top:9px;
   width:12px;
   height:12px;
-  border:1px solid rgba(157,227,164,.82);
+  border:1px solid rgba(157,227,164,.94);
   border-radius:50%;
-  box-shadow:0 0 7px rgba(34,255,102,.24);
+  box-shadow:0 0 9px rgba(34,255,102,.34), inset 0 0 4px rgba(34,255,102,.10);
 }
 .reticle-h::before,
 .reticle-h::after,
@@ -1931,10 +1931,24 @@ body.baseline-navigation-active .site-map-marker-wrap {
 .reticle-v::before { top:0; }
 .reticle-v::after { bottom:0; }
 
+.reticle-core::after {
+  content:'';
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:2px;
+  height:2px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 6px rgba(34,255,102,.70);
+}
 .reticle-h,
-.reticle-v,
+.reticle-v {
+  box-shadow:0 0 4px rgba(34,255,102,.24);
+}
 .reticle-core {
-  box-shadow:0 0 5px rgba(34,255,102,.34);
+  box-shadow:0 0 8px rgba(34,255,102,.48);
 }
 .marker-symbol,
 .tactical-route-wrapper,
