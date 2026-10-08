@@ -72,10 +72,11 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.locator('#reticleCoord').count(), 1);
       const bodyText = await page.locator('body').textContent();
       assert.equal(bodyText.includes('\\n'), false, 'escaped newline text must never render');
-      assert.equal(await page.locator('.map-tech-grid').evaluate(el => getComputedStyle(el).opacity), '0.68');
+      assert.equal(await page.locator('.map-tech-grid').evaluate(el => getComputedStyle(el).opacity), '0.72');
       assert.equal(await page.locator('.position-hud').evaluate(el => getComputedStyle(el,'::before').backgroundColor), 'rgba(0, 8, 3, 0.21)');
       assert.equal(await page.locator('.position-hud').evaluate(el => getComputedStyle(el,'::after').content !== 'none'), true);
       assert.equal(await page.locator('.reticle').evaluate(el => getComputedStyle(el,'::before').content !== 'none'), true);
+      assert.equal(await page.locator('.reticle-core').evaluate(el => getComputedStyle(el,'::after').content !== 'none'), true);
       assert.equal(await page.locator('.map-tech-grid').count(), 1);
       assert.equal(await page.locator('#layerBtn').count(), 1);
       assert.equal(await page.locator('.position-hud').evaluate(el => getComputedStyle(el,'::before').content !== 'none'), true);
